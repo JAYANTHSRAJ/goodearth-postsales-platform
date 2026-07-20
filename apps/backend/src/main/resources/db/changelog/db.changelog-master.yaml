@@ -39,4 +39,6 @@ databaseChangeLog:
       file: db/changelog/db.changelog-2.8.yaml
   - include:
       file: db/changelog/db.changelog-2.9.yaml
+  - include:
+      file: db/changelog/db.changelog-3.0.yaml
 
