@@ -18,19 +18,28 @@ public interface WebhookEventRepository extends JpaRepository<WebhookEvent, UUID
     Optional<WebhookEvent> findByPayloadHash(String payloadHash);
     List<WebhookEvent> findByStatusAndNextRetryAtBefore(WebhookStatus status, LocalDateTime dateTime);
 
-    @Query("SELECT COUNT(w) FROM WebhookEvent w WHERE w.status = 'RECEIVED' OR w.status = 'RETRYING'")
-    long countPendingQueue();
+    long countByStatusIn(List<WebhookStatus> statuses);
+    long countByStatus(WebhookStatus status);
+    long countByStatusAndProcessedAtGreaterThanEqual(WebhookStatus status, LocalDateTime startOfDay);
+    long countByStatusAndUpdatedAtGreaterThanEqual(WebhookStatus status, LocalDateTime startOfDay);
 
-    @Query("SELECT COUNT(w) FROM WebhookEvent w WHERE w.status = 'RETRYING'")
-    long countRetryQueue();
+    default long countPendingQueue() {
+        return countByStatusIn(List.of(WebhookStatus.RECEIVED, WebhookStatus.RETRYING));
+    }
 
-    @Query("SELECT COUNT(w) FROM WebhookEvent w WHERE w.status = 'PROCESSED' AND w.processedAt >= :startOfDay")
-    long countProcessedToday(LocalDateTime startOfDay);
+    default long countRetryQueue() {
+        return countByStatus(WebhookStatus.RETRYING);
+    }
 
-    @Query("SELECT COUNT(w) FROM WebhookEvent w WHERE w.status = 'FAILED' AND w.updatedAt >= :startOfDay")
-    long countFailedToday(LocalDateTime startOfDay);
+    default long countProcessedToday(LocalDateTime startOfDay) {
+        return countByStatusAndProcessedAtGreaterThanEqual(WebhookStatus.PROCESSED, startOfDay);
+    }
 
-    @Query("SELECT AVG(w.processingDurationMs) FROM WebhookEvent w WHERE w.status = 'PROCESSED'")
+    default long countFailedToday(LocalDateTime startOfDay) {
+        return countByStatusAndUpdatedAtGreaterThanEqual(WebhookStatus.FAILED, startOfDay);
+    }
+
+    @Query("SELECT AVG(w.processingDurationMs) FROM WebhookEvent w WHERE w.status = com.goodearth.postsales.webhook.entity.WebhookStatus.PROCESSED")
     Double getAverageProcessingTimeMs();
 
     Optional<WebhookEvent> findFirstByStatusInOrderByCreatedAtAsc(List<WebhookStatus> statuses);

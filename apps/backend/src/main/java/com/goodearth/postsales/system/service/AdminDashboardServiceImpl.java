@@ -66,13 +66,13 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
         List<PaymentSchedule> schedules = scheduleRepository.findAll();
         BigDecimal totalInvoiced = schedules.stream()
-                .filter(s -> s.getStatus() != InvoiceStatus.VOID)
+                .filter(s -> s != null && s.getStatus() != InvoiceStatus.VOID && s.getAmount() != null)
                 .map(PaymentSchedule::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<PaymentReceipt> receipts = receiptRepository.findAll();
         BigDecimal totalPaid = receipts.stream()
-                .filter(r -> r.getStatus() == PaymentStatus.SUCCESS)
+                .filter(r -> r != null && r.getStatus() == PaymentStatus.SUCCESS && r.getAmount() != null)
                 .map(PaymentReceipt::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -85,11 +85,12 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         List<Workflow> workflows = workflowRepository.findAll();
         List<Stage> stages = stageRepository.findAll();
         Map<UUID, String> stageIdToName = stages.stream()
-                .collect(Collectors.toMap(Stage::getId, Stage::getName, (a, b) -> a));
+                .filter(s -> s != null && s.getId() != null)
+                .collect(Collectors.toMap(Stage::getId, s -> s.getName() != null ? s.getName() : "Unknown Stage", (a, b) -> a));
 
         Map<String, Long> stageCounts = new HashMap<>();
         for (Workflow workflow : workflows) {
-            if (workflow.getStatus() == WorkflowStatus.ACTIVE && workflow.getCurrentStageId() != null) {
+            if (workflow != null && workflow.getStatus() == WorkflowStatus.ACTIVE && workflow.getCurrentStageId() != null) {
                 String stageName = stageIdToName.getOrDefault(workflow.getCurrentStageId(), "Unknown Stage");
                 stageCounts.put(stageName, stageCounts.getOrDefault(stageName, 0L) + 1);
             }
@@ -98,9 +99,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         // Project workloads
         Map<String, Long> projectWorkloads = new HashMap<>();
         for (Workflow workflow : workflows) {
-            Project project = workflow.getProject();
-            if (project != null) {
-                String projectName = project.getProjectName();
+            if (workflow != null && workflow.getProject() != null && workflow.getProject().getProjectName() != null) {
+                String projectName = workflow.getProject().getProjectName();
                 projectWorkloads.put(projectName, projectWorkloads.getOrDefault(projectName, 0L) + 1);
             }
         }
@@ -113,15 +113,19 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         List<DashboardItemDto> pendingReviews = new java.util.ArrayList<>();
         List<com.goodearth.postsales.changerequest.entity.ChangeRequest> changeRequests = changeRequestRepository.findAll();
         for (com.goodearth.postsales.changerequest.entity.ChangeRequest cr : changeRequests) {
-            if (cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.PENDING_CRM_REVIEW
+            if (cr != null && cr.getStatus() != null &&
+                    (cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.PENDING_CRM_REVIEW
                     || cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.UNDER_DESIGN_REVIEW
-                    || cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.AWAITING_FINANCE_APPROVAL) {
-                
-                String unit = cr.getWorkflow() != null && cr.getWorkflow().getBuyer() != null ? cr.getWorkflow().getBuyer().getUnitName() : "Unknown Unit";
+                    || cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.AWAITING_FINANCE_APPROVAL)) {
+
+                String unit = (cr.getWorkflow() != null && cr.getWorkflow().getBuyer() != null && cr.getWorkflow().getBuyer().getUnitName() != null)
+                        ? cr.getWorkflow().getBuyer().getUnitName()
+                        : "Unknown Unit";
                 String remarks = cr.getRemarks() != null ? cr.getRemarks() : "Change request pending validation";
-                
+                String idStr = cr.getId() != null ? cr.getId().toString() : UUID.randomUUID().toString();
+
                 pendingReviews.add(new DashboardItemDto(
-                        cr.getId().toString(),
+                        idStr,
                         unit + ": " + remarks,
                         "Status: " + cr.getStatus().toString(),
                         ""
@@ -132,13 +136,18 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         // Overdue/pending payments
         List<DashboardItemDto> overduePayments = new java.util.ArrayList<>();
         for (PaymentSchedule s : schedules) {
-            if (s.getStatus() == InvoiceStatus.OVERDUE || s.getStatus() == InvoiceStatus.SENT) {
-                String unit = s.getWorkflow() != null && s.getWorkflow().getBuyer() != null ? s.getWorkflow().getBuyer().getUnitName() : "Unknown Unit";
+            if (s != null && s.getStatus() != null && (s.getStatus() == InvoiceStatus.OVERDUE || s.getStatus() == InvoiceStatus.SENT)) {
+                String unit = (s.getWorkflow() != null && s.getWorkflow().getBuyer() != null && s.getWorkflow().getBuyer().getUnitName() != null)
+                        ? s.getWorkflow().getBuyer().getUnitName()
+                        : "Unknown Unit";
                 String statusLabel = s.getStatus() == InvoiceStatus.OVERDUE ? "Overdue" : "Pending Draw";
+                String amountStr = s.getAmount() != null ? s.getAmount().toPlainString() : "0.00";
+                String idStr = s.getId() != null ? s.getId().toString() : UUID.randomUUID().toString();
+
                 overduePayments.add(new DashboardItemDto(
-                        s.getId().toString(),
+                        idStr,
                         unit + ": " + statusLabel,
-                        "Amount: INR " + s.getAmount().toPlainString(),
+                        "Amount: INR " + amountStr,
                         ""
                 ));
             }
@@ -147,11 +156,17 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         // Project Delays
         List<DashboardItemDto> projectDelays = new java.util.ArrayList<>();
         for (Workflow w : workflows) {
-            if (w.getStatus() == WorkflowStatus.ACTIVE) {
-                String projectName = w.getProject() != null ? w.getProject().getProjectName() : "GoodEarth Project";
-                String unit = w.getBuyer() != null ? w.getBuyer().getUnitName() : "Villa";
+            if (w != null && w.getStatus() == WorkflowStatus.ACTIVE) {
+                String projectName = (w.getProject() != null && w.getProject().getProjectName() != null)
+                        ? w.getProject().getProjectName()
+                        : "GoodEarth Project";
+                String unit = (w.getBuyer() != null && w.getBuyer().getUnitName() != null)
+                        ? w.getBuyer().getUnitName()
+                        : "Villa";
+                String idStr = w.getId() != null ? w.getId().toString() : UUID.randomUUID().toString();
+
                 projectDelays.add(new DashboardItemDto(
-                        w.getId().toString(),
+                        idStr,
                         projectName + " - " + unit,
                         "Milestone progress under review",
                         ""
@@ -163,7 +178,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         List<DashboardItemDto> openTickets = new java.util.ArrayList<>();
         if (totalBuyers > 0) {
             String buyerName = "Homeowner";
-            if (!workflows.isEmpty() && workflows.get(0).getBuyer() != null) {
+            if (!workflows.isEmpty() && workflows.get(0) != null && workflows.get(0).getBuyer() != null && workflows.get(0).getBuyer().getFullName() != null) {
                 buyerName = workflows.get(0).getBuyer().getFullName();
             }
             openTickets.add(new DashboardItemDto(
@@ -183,14 +198,23 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         // Recent Activity
         List<DashboardItemDto> recentActivity = new java.util.ArrayList<>();
         for (PaymentReceipt r : receipts) {
-            String unit = r.getWorkflow() != null && r.getWorkflow().getBuyer() != null ? r.getWorkflow().getBuyer().getUnitName() : "Villa";
-            String buyerName = r.getWorkflow() != null && r.getWorkflow().getBuyer() != null ? r.getWorkflow().getBuyer().getFullName() : "Client";
-            recentActivity.add(new DashboardItemDto(
-                    r.getId().toString(),
-                    "Draw Payment Cleared",
-                    "INR " + r.getAmount().toPlainString() + " receipt verified for " + unit + " (" + buyerName + ")",
-                    ""
-            ));
+            if (r != null) {
+                String unit = (r.getWorkflow() != null && r.getWorkflow().getBuyer() != null && r.getWorkflow().getBuyer().getUnitName() != null)
+                        ? r.getWorkflow().getBuyer().getUnitName()
+                        : "Villa";
+                String buyerName = (r.getWorkflow() != null && r.getWorkflow().getBuyer() != null && r.getWorkflow().getBuyer().getFullName() != null)
+                        ? r.getWorkflow().getBuyer().getFullName()
+                        : "Client";
+                String amountStr = r.getAmount() != null ? r.getAmount().toPlainString() : "0.00";
+                String idStr = r.getId() != null ? r.getId().toString() : UUID.randomUUID().toString();
+
+                recentActivity.add(new DashboardItemDto(
+                        idStr,
+                        "Draw Payment Cleared",
+                        "INR " + amountStr + " receipt verified for " + unit + " (" + buyerName + ")",
+                        ""
+                ));
+            }
         }
 
         return new AdminDashboardDto(

@@ -25,7 +25,7 @@ public class AdminDashboardController {
         this.dashboardService = dashboardService;
     }
 
-    @GetMapping("/stats")
+    @GetMapping({"", "/stats"})
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'PROJECT_MANAGER')")
     public ResponseEntity<ApiResponse<AdminDashboardDto>> getDashboardStats(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -33,8 +33,9 @@ public class AdminDashboardController {
         AdminDashboardDto stats = dashboardService.getDashboardStats();
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("Endpoint: GET /api/v1/admin/dashboard/stats, Execution Time: {}ms, User: {}",
-                duration, userDetails.getUsername());
+        String username = userDetails != null ? userDetails.getUsername() : "system";
+        log.info("Endpoint: GET /api/v1/admin/dashboard, Execution Time: {}ms, User: {}",
+                duration, username);
         log.info("Dashboard Response:\n{}", stats);
 
         return ResponseEntity.ok(new ApiResponse<>(stats));
