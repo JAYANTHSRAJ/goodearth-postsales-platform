@@ -58,12 +58,6 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
 
         - createTable:
             tableName: kyc_applications
@@ -104,10 +98,4 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
 

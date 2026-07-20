@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 30-add-audit-fields-to-client-profiles-and-kyc
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: client_profiles
+            columnName: created_by
+      changes:
+        - addColumn:
+            tableName: client_profiles
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
