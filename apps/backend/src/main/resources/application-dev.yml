@@ -1,0 +1,68 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postsales}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  mail:
+    host: ${SMTP_HOST:mail.smtp2go.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:mock-username}
+    password: ${SMTP_PASS:mock-password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: ${SMTP_REQUIRE_TLS:true}
+          ssl:
+            enable: ${SMTP_SECURE:false}
+          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${SMTP_SOCKET_TIMEOUT_MS:5000}
+          writetimeout: ${SMTP_SOCKET_TIMEOUT_MS:5000}
+
+app:
+  swagger:
+    enabled: true
+  hsts:
+    enabled: false
+  cors:
+    allowed-origins:
+      - "*"
+  jwt:
+    secret: ${JWT_SECRET:very_long_random_development_only_jwt_signing_key_secret_key_goodearth}
+    expiration-ms: 86400000 # 24 hours
+  auth:
+    test-mode: ${TEST_MODE:false}
+    test-master-password: ${TEST_MASTER_PASSWORD:GoodEarth@123}
+  zoho:
+    client-id: ${ZOHO_CLIENT_ID:mock-client-id}
+    client-secret: ${ZOHO_CLIENT_SECRET:mock-client-secret}
+    refresh-token: ${ZOHO_REFRESH_TOKEN:mock-refresh-token}
+    accounts-url: ${ZOHO_ACCOUNTS_URL:https://accounts.zoho.in}
+    crm-api-url: ${ZOHO_CRM_API_URL:https://crm.zoho.in/crm/v2}
+    sync:
+      enabled: ${ZOHO_SYNC_ENABLED:true}
+      cron: ${ZOHO_SYNC_CRON:0 */15 * * * *}
+  workdrive:
+    api-url: ${ZOHO_WORKDRIVE_API_URL:https://workdrive.zoho.in/api/v1}
+  books:
+    api-url: ${ZOHO_BOOKS_API_URL:https://books.zoho.in/api/v3}
+
+zoho:
+  webhook:
+    crm-secret: ${ZOHO_WEBHOOK_CRM_SECRET:mock-crm-secret}
+    books-secret: ${ZOHO_WEBHOOK_BOOKS_SECRET:mock-books-secret}
+    workdrive-secret: ${ZOHO_WEBHOOK_WORKDRIVE_SECRET:mock-workdrive-secret}
+
+razorpay:
+  webhook:
+    secret: ${RAZORPAY_WEBHOOK_SECRET:mock-razorpay-secret}
+

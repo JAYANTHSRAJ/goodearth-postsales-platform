@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 27-add-co-applicant-and-unit-name-to-buyers
+      author: integrity-architect
+      changes:
+        - addColumn:
+            tableName: buyers
+            columns:
+              - column:
+                  name: co_applicant_name
+                  type: VARCHAR(255)
+              - column:
+                  name: unit_name
+                  type: VARCHAR(255)

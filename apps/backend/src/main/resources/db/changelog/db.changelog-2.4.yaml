@@ -1,0 +1,54 @@
+databaseChangeLog:
+  - changeSet:
+      id: 16-create-system-settings
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: system_settings
+            columns:
+              - column:
+                  name: key
+                  type: VARCHAR(100)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: value
+                  type: VARCHAR(1000)
+              - column:
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - insert:
+            tableName: system_settings
+            columns:
+              - column: { name: key, value: "SYNC_INTERVAL_MINUTES" }
+              - column: { name: value, value: "60" }
+              - column: { name: description, value: "Zoho CRM and Books sync interval in minutes" }
+              - column: { name: created_at, valueDate: "2026-07-13T10:00:00" }
+              - column: { name: updated_at, valueDate: "2026-07-13T10:00:00" }
+              - column: { name: created_by, value: "system" }
+        - insert:
+            tableName: system_settings
+            columns:
+              - column: { name: key, value: "ZOHO_AUTO_SYNC_ENABLED" }
+              - column: { name: value, value: "true" }
+              - column: { name: description, value: "Enable automated background Zoho synchronization" }
+              - column: { name: created_at, valueDate: "2026-07-13T10:00:00" }
+              - column: { name: updated_at, valueDate: "2026-07-13T10:00:00" }
+              - column: { name: created_by, value: "system" }

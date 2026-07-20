@@ -1,0 +1,399 @@
+databaseChangeLog:
+  - changeSet:
+      id: 11-create-notification-tables
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: notification_templates
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject
+                  type: VARCHAR(255)
+              - column:
+                  name: body
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: channel
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addUniqueConstraint:
+            tableName: notification_templates
+            columnNames: code, channel
+            constraintName: uq_template_code_channel
+
+        - createTable:
+            tableName: notification_preferences
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_pref_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: email_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sms_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: whatsapp_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: in_app_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: push_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_notif_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: target_role
+                  type: VARCHAR(50)
+              - column:
+                  name: is_broadcast
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notification_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notification_category
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_type
+                  type: VARCHAR(100)
+              - column:
+                  name: reference_id
+                  type: UUID
+              - column:
+                  name: target_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: icon
+                  type: VARCHAR(100)
+              - column:
+                  name: primary_action_label
+                  type: VARCHAR(100)
+              - column:
+                  name: primary_action_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: secondary_action_label
+                  type: VARCHAR(100)
+              - column:
+                  name: secondary_action_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: scheduled_time
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: user_notification_states
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_state_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: notification_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_state_notif
+                    referencedTableName: notifications
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: is_read
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: read_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: deleted_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: deleted_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addUniqueConstraint:
+            tableName: user_notification_states
+            columnNames: user_id, notification_id
+            constraintName: uq_user_notification
+
+        - createTable:
+            tableName: notification_delivery_logs
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: notification_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_delivery_notif
+                    referencedTableName: notifications
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: channel
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempt
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_response
+                  type: TEXT
+              - column:
+                  name: failure_reason
+                  type: VARCHAR(1000)
+              - column:
+                  name: sent_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createIndex:
+            indexName: idx_notif_user_id
+            tableName: notifications
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_notif_role
+            tableName: notifications
+            columns:
+              - column:
+                  name: target_role
+        - createIndex:
+            indexName: idx_notif_type_priority
+            tableName: notifications
+            columns:
+              - column:
+                  name: notification_type
+              - column:
+                  name: priority
+        - createIndex:
+            indexName: idx_notif_created_at
+            tableName: notifications
+            columns:
+              - column:
+                  name: created_at
+        - createIndex:
+            indexName: idx_notif_expires_at
+            tableName: notifications
+            columns:
+              - column:
+                  name: expires_at
+
+        - createIndex:
+            indexName: idx_user_notif_state_read
+            tableName: user_notification_states
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: is_read
+        - createIndex:
+            indexName: idx_delivery_logs_notif_id
+            tableName: notification_delivery_logs
+            columns:
+              - column:
+                  name: notification_id

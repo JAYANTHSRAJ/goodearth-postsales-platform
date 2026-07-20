@@ -1,0 +1,114 @@
+databaseChangeLog:
+  - changeSet:
+      id: 14-create-webhook-events-table
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: webhook_events
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: 'RECEIVED'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: retry_count
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_retry_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: error_message
+                  type: TEXT
+              - column:
+                  name: processed_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: processing_duration_ms
+                  type: BIGINT
+              - column:
+                  name: correlation_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - addUniqueConstraint:
+            tableName: webhook_events
+            columnNames: provider, event_id
+            constraintName: uq_webhook_provider_event
+
+        - createIndex:
+            indexName: idx_webhook_status
+            tableName: webhook_events
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_webhook_next_retry
+            tableName: webhook_events
+            columns:
+              - column:
+                  name: next_retry_at
+        - createIndex:
+            indexName: idx_webhook_hash
+            tableName: webhook_events
+            columns:
+              - column:
+                  name: payload_hash

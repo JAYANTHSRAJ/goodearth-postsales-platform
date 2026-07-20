@@ -1,0 +1,87 @@
+databaseChangeLog:
+  - changeSet:
+      id: 7-create-documents
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: documents
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: workflow_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_documents_workflows
+                    referencedTableName: workflows
+                    referencedColumnNames: id
+              - column:
+                  name: workdrive_file_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: document_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: mime_type
+                  type: VARCHAR(100)
+              - column:
+                  name: file_size
+                  type: BIGINT
+              - column:
+                  name: uploaded_by
+                  type: VARCHAR(255)
+              - column:
+                  name: uploaded_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_documents_workflow_id
+            tableName: documents
+            columns:
+              - column:
+                  name: workflow_id
+        - createIndex:
+            indexName: idx_documents_workdrive_file_id
+            tableName: documents
+            columns:
+              - column:
+                  name: workdrive_file_id

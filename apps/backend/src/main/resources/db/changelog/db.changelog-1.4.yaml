@@ -1,0 +1,202 @@
+databaseChangeLog:
+  - changeSet:
+      id: 5-create-stages
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: stages
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(1000)
+              - column:
+                  name: sequence_order
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+  - changeSet:
+      id: 6-seed-default-stages
+      author: antigravity
+      changes:
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb1111" }
+              - column: { name: code, value: "BOOKING_CONFIRMED" }
+              - column: { name: name, value: "Booking Confirmed" }
+              - column: { name: description, value: "Initial booking confirmation stage" }
+              - column: { name: sequence_order, value: 1 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb2222" }
+              - column: { name: code, value: "DOCUMENTATION" }
+              - column: { name: name, value: "Documentation" }
+              - column: { name: description, value: "Agreement and paper processing stage" }
+              - column: { name: sequence_order, value: 2 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb3333" }
+              - column: { name: code, value: "DESIGN_STUDIO" }
+              - column: { name: name, value: "Design Studio" }
+              - column: { name: description, value: "Floor plan and customization design stage" }
+              - column: { name: sequence_order, value: 3 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb4444" }
+              - column: { name: code, value: "CUSTOMER_REVIEW" }
+              - column: { name: name, value: "Customer Review" }
+              - column: { name: description, value: "Review of proposed design specifications by customer" }
+              - column: { name: sequence_order, value: 4 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb5555" }
+              - column: { name: code, value: "CRM_REVIEW" }
+              - column: { name: name, value: "CRM Review" }
+              - column: { name: description, value: "Review of final changes by CRM coordinator" }
+              - column: { name: sequence_order, value: 5 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb6666" }
+              - column: { name: code, value: "FINANCE_APPROVAL" }
+              - column: { name: name, value: "Finance Approval" }
+              - column: { name: description, value: "Verification of financial balances and payments" }
+              - column: { name: sequence_order, value: 6 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb7777" }
+              - column: { name: code, value: "DESIGN_REVISION" }
+              - column: { name: name, value: "Design Revision" }
+              - column: { name: description, value: "Implementation of revisions if requested" }
+              - column: { name: sequence_order, value: 7 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb8888" }
+              - column: { name: code, value: "CONSTRUCTION" }
+              - column: { name: name, value: "Construction" }
+              - column: { name: description, value: "On-site construction and development stage" }
+              - column: { name: sequence_order, value: 8 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfb9999" }
+              - column: { name: code, value: "SITE_VISIT" }
+              - column: { name: name, value: "Site Visit" }
+              - column: { name: description, value: "Site visit and quality inspection stage" }
+              - column: { name: sequence_order, value: 9 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfbaaaa" }
+              - column: { name: code, value: "HANDOVER" }
+              - column: { name: name, value: "Handover" }
+              - column: { name: description, value: "Final key handover and documentation closure" }
+              - column: { name: sequence_order, value: 10 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }
+        - insert:
+            tableName: stages
+            columns:
+              - column: { name: id, value: "8fa6498a-79a6-4444-a1db-a2d98bfbbbbb" }
+              - column: { name: code, value: "WARRANTY" }
+              - column: { name: name, value: "Warranty" }
+              - column: { name: description, value: "Post-handover warranty and maintenance support" }
+              - column: { name: sequence_order, value: 11 }
+              - column: { name: status, value: "ACTIVE" }
+              - column: { name: created_at, value: "2026-07-10T10:25:00" }
+              - column: { name: updated_at, value: "2026-07-10T10:25:00" }
+              - column: { name: created_by, value: "system" }
+              - column: { name: updated_by, value: "system" }

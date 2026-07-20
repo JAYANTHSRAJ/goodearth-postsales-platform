@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postsales-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: goodearth_postsales
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: postsales-backend
+    ports:
+      - "4000:4000"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/goodearth_postsales
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      JWT_SECRET: production_only_ultra_secure_jwt_signing_key_for_goodearth_postsales_platform
+      RAZORPAY_WEBHOOK_SECRET: razorpay_webhook_secret_production
+      ZOHO_WEBHOOK_CRM_SECRET: zoho_crm_webhook_secret_production
+      ZOHO_WEBHOOK_BOOKS_SECRET: zoho_books_webhook_secret_production
+      ZOHO_WEBHOOK_WORKDRIVE_SECRET: zoho_workdrive_webhook_secret_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: postsales-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

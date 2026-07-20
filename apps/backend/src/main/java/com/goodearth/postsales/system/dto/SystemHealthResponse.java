@@ -1,0 +1,17 @@
+package com.goodearth.postsales.system.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class SystemHealthResponse {
+    private String application;
+    private String database;
+    private String authentication;
+    private String liquibase;
+}

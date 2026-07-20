@@ -1,0 +1,143 @@
+databaseChangeLog:
+  - changeSet:
+      id: 8-create-change-requests
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: change_requests
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: workflow_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_change_requests_workflows
+                    referencedTableName: workflows
+                    referencedColumnNames: id
+              - column:
+                  name: document_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_change_requests_documents
+                    referencedTableName: documents
+                    referencedColumnNames: id
+              - column:
+                  name: annotation_id
+                  type: VARCHAR(255)
+              - column:
+                  name: requested_by
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: assigned_to
+                  type: VARCHAR(255)
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: estimated_cost
+                  type: NUMERIC(19, 2)
+              - column:
+                  name: estimated_completion_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: remarks
+                  type: VARCHAR(1000)
+              - column:
+                  name: workdrive_file_id
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createTable:
+            tableName: change_request_history
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: change_request_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cr_history_change_requests
+                    referencedTableName: change_requests
+                    referencedColumnNames: id
+              - column:
+                  name: action
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: performed_by
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: old_status
+                  type: VARCHAR(50)
+              - column:
+                  name: new_status
+                  type: VARCHAR(50)
+              - column:
+                  name: remarks
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_change_requests_workflow_id
+            tableName: change_requests
+            columns:
+              - column:
+                  name: workflow_id
+        - createIndex:
+            indexName: idx_cr_history_request_id
+            tableName: change_request_history
+            columns:
+              - column:
+                  name: change_request_id

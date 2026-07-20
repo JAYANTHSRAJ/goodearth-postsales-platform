@@ -1,0 +1,160 @@
+databaseChangeLog:
+  - changeSet:
+      id: 12-create-project-update-tables
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: project_updates
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: workflow_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_pu_workflows
+                    referencedTableName: workflows
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: stage_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_pu_stages
+                    referencedTableName: stages
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: update_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: progress_percentage
+                  type: NUMERIC(5, 2)
+              - column:
+                  name: published_by
+                  type: VARCHAR(255)
+              - column:
+                  name: published_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: is_visible_to_client
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: location
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: project_update_media
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: project_update_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_pum_updates
+                    referencedTableName: project_updates
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: workdrive_file_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: media_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: thumbnail_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: preview_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: download_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: uploaded_by
+                  type: VARCHAR(255)
+              - column:
+                  name: uploaded_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createIndex:
+            indexName: idx_pu_workflow_id
+            tableName: project_updates
+            columns:
+              - column:
+                  name: workflow_id
+        - createIndex:
+            indexName: idx_pu_stage_id
+            tableName: project_updates
+            columns:
+              - column:
+                  name: stage_id
+        - createIndex:
+            indexName: idx_pum_update_id
+            tableName: project_update_media
+            columns:
+              - column:
+                  name: project_update_id

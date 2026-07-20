@@ -1,0 +1,159 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-users-and-refresh-tokens
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email_verified
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password_changed_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_login_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: account_locked
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failed_login_attempts
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: token
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_refresh_tokens_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+              - column:
+                  name: expiry_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: device_name
+                  type: VARCHAR(255)
+              - column:
+                  name: ip_address
+                  type: VARCHAR(100)
+              - column:
+                  name: user_agent
+                  type: VARCHAR(500)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_users_email
+            tableName: users
+            columns:
+              - column:
+                  name: email
+        - createIndex:
+            indexName: idx_refresh_tokens_token
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: token
+        - createIndex:
+            indexName: idx_refresh_tokens_user_id
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_refresh_tokens_expiry_date
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: expiry_date

@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 25-add-zoho-deals-onboarding-fields
+      author: antigravity
+      changes:
+        - addColumn:
+            tableName: buyers
+            columns:
+              - column:
+                  name: zoho_deal_id
+                  type: VARCHAR(255)
+              - column:
+                  name: portal_activated
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: last_sync_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: sync_status
+                  type: VARCHAR(50)
+              - column:
+                  name: welcome_email_sent
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: temp_password
+                  type: VARCHAR(255)
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: password_change_required
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: portal_activated
+                  type: BOOLEAN
+                  defaultValueBoolean: false

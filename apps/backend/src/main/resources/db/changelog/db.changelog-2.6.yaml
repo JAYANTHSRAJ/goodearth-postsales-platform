@@ -1,0 +1,71 @@
+databaseChangeLog:
+  - changeSet:
+      id: 26-remove-temp-password-and-add-otp-features
+      author: integrity-architect
+      changes:
+        - dropColumn:
+            tableName: buyers
+            columnName: temp_password
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: account_activated
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: first_login_completed
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: last_password_change
+                  type: TIMESTAMP WITHOUT TIME ZONE
+        - createTable:
+            tableName: user_otps
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_otp_user
+                    referencedTableName: users
+                    referencedColumnNames: id
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: otp_hash
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempts
+                  type: INT
+                  defaultValueNumeric: 0
+              - column:
+                  name: used
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false

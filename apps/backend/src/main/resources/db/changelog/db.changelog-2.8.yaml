@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 28-add-activation-columns-to-users
+      author: integrity-architect
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: activation_token
+                  type: VARCHAR(255)
+              - column:
+                  name: activation_token_expiry
+                  type: TIMESTAMP
+              - column:
+                  name: activated_at
+                  type: TIMESTAMP

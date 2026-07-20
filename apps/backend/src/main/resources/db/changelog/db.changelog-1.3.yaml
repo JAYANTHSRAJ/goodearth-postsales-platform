@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4-create-workflows
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: workflows
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: buyer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_workflows_buyers
+                    referencedTableName: buyers
+                    referencedColumnNames: id
+              - column:
+                  name: project_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_workflows_projects
+                    referencedTableName: projects
+                    referencedColumnNames: id
+              - column:
+                  name: current_stage_id
+                  type: UUID
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: started_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: completed_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addUniqueConstraint:
+            constraintName: uq_workflows_buyer_project
+            tableName: workflows
+            columnNames: buyer_id, project_id

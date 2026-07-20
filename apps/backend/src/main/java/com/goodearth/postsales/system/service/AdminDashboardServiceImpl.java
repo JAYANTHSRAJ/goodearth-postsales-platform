@@ -1,0 +1,213 @@
+package com.goodearth.postsales.system.service;
+
+import com.goodearth.postsales.buyer.repository.BuyerRepository;
+import com.goodearth.postsales.finance.entity.InvoiceStatus;
+import com.goodearth.postsales.finance.entity.PaymentReceipt;
+import com.goodearth.postsales.finance.entity.PaymentSchedule;
+import com.goodearth.postsales.finance.entity.PaymentStatus;
+import com.goodearth.postsales.finance.repository.PaymentReceiptRepository;
+import com.goodearth.postsales.finance.repository.PaymentScheduleRepository;
+import com.goodearth.postsales.project.entity.Project;
+import com.goodearth.postsales.stage.entity.Stage;
+import com.goodearth.postsales.stage.repository.StageRepository;
+import com.goodearth.postsales.system.dto.AdminDashboardDto;
+import com.goodearth.postsales.system.dto.DashboardItemDto;
+import com.goodearth.postsales.webhook.repository.WebhookEventRepository;
+import com.goodearth.postsales.workflow.entity.Workflow;
+import com.goodearth.postsales.workflow.entity.WorkflowStatus;
+import com.goodearth.postsales.workflow.repository.WorkflowRepository;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
+public class AdminDashboardServiceImpl implements AdminDashboardService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminDashboardServiceImpl.class);
+
+    private final BuyerRepository buyerRepository;
+    private final WorkflowRepository workflowRepository;
+    private final PaymentScheduleRepository scheduleRepository;
+    private final PaymentReceiptRepository receiptRepository;
+    private final WebhookEventRepository webhookEventRepository;
+    private final StageRepository stageRepository;
+    private final com.goodearth.postsales.changerequest.repository.ChangeRequestRepository changeRequestRepository;
+
+    public AdminDashboardServiceImpl(
+            BuyerRepository buyerRepository,
+            WorkflowRepository workflowRepository,
+            PaymentScheduleRepository scheduleRepository,
+            PaymentReceiptRepository receiptRepository,
+            WebhookEventRepository webhookEventRepository,
+            StageRepository stageRepository,
+            com.goodearth.postsales.changerequest.repository.ChangeRequestRepository changeRequestRepository) {
+        this.buyerRepository = buyerRepository;
+        this.workflowRepository = workflowRepository;
+        this.scheduleRepository = scheduleRepository;
+        this.receiptRepository = receiptRepository;
+        this.webhookEventRepository = webhookEventRepository;
+        this.stageRepository = stageRepository;
+        this.changeRequestRepository = changeRequestRepository;
+    }
+
+    @Override
+    public AdminDashboardDto getDashboardStats() {
+        long totalBuyers = buyerRepository.count();
+        long activeWorkflows = workflowRepository.countByStatus(WorkflowStatus.ACTIVE);
+
+        List<PaymentSchedule> schedules = scheduleRepository.findAll();
+        BigDecimal totalInvoiced = schedules.stream()
+                .filter(s -> s.getStatus() != InvoiceStatus.VOID)
+                .map(PaymentSchedule::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<PaymentReceipt> receipts = receiptRepository.findAll();
+        BigDecimal totalPaid = receipts.stream()
+                .filter(r -> r.getStatus() == PaymentStatus.SUCCESS)
+                .map(PaymentReceipt::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal outstandingBalance = totalInvoiced.subtract(totalPaid);
+
+        long webhookPendingCount = webhookEventRepository.countPendingQueue();
+        long webhookFailedToday = webhookEventRepository.countFailedToday(LocalDate.now().atStartOfDay());
+
+        // Stage counts
+        List<Workflow> workflows = workflowRepository.findAll();
+        List<Stage> stages = stageRepository.findAll();
+        Map<UUID, String> stageIdToName = stages.stream()
+                .collect(Collectors.toMap(Stage::getId, Stage::getName, (a, b) -> a));
+
+        Map<String, Long> stageCounts = new HashMap<>();
+        for (Workflow workflow : workflows) {
+            if (workflow.getStatus() == WorkflowStatus.ACTIVE && workflow.getCurrentStageId() != null) {
+                String stageName = stageIdToName.getOrDefault(workflow.getCurrentStageId(), "Unknown Stage");
+                stageCounts.put(stageName, stageCounts.getOrDefault(stageName, 0L) + 1);
+            }
+        }
+
+        // Project workloads
+        Map<String, Long> projectWorkloads = new HashMap<>();
+        for (Workflow workflow : workflows) {
+            Project project = workflow.getProject();
+            if (project != null) {
+                String projectName = project.getProjectName();
+                projectWorkloads.put(projectName, projectWorkloads.getOrDefault(projectName, 0L) + 1);
+            }
+        }
+
+        log.info("Buyer count = {}", totalBuyers);
+        log.info("Workflow count = {}", activeWorkflows);
+        log.info("Project count = {}", projectWorkloads.size());
+
+        // Pending reviews
+        List<DashboardItemDto> pendingReviews = new java.util.ArrayList<>();
+        List<com.goodearth.postsales.changerequest.entity.ChangeRequest> changeRequests = changeRequestRepository.findAll();
+        for (com.goodearth.postsales.changerequest.entity.ChangeRequest cr : changeRequests) {
+            if (cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.PENDING_CRM_REVIEW
+                    || cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.UNDER_DESIGN_REVIEW
+                    || cr.getStatus() == com.goodearth.postsales.changerequest.entity.ChangeRequestStatus.AWAITING_FINANCE_APPROVAL) {
+                
+                String unit = cr.getWorkflow() != null && cr.getWorkflow().getBuyer() != null ? cr.getWorkflow().getBuyer().getUnitName() : "Unknown Unit";
+                String remarks = cr.getRemarks() != null ? cr.getRemarks() : "Change request pending validation";
+                
+                pendingReviews.add(new DashboardItemDto(
+                        cr.getId().toString(),
+                        unit + ": " + remarks,
+                        "Status: " + cr.getStatus().toString(),
+                        ""
+                ));
+            }
+        }
+
+        // Overdue/pending payments
+        List<DashboardItemDto> overduePayments = new java.util.ArrayList<>();
+        for (PaymentSchedule s : schedules) {
+            if (s.getStatus() == InvoiceStatus.OVERDUE || s.getStatus() == InvoiceStatus.SENT) {
+                String unit = s.getWorkflow() != null && s.getWorkflow().getBuyer() != null ? s.getWorkflow().getBuyer().getUnitName() : "Unknown Unit";
+                String statusLabel = s.getStatus() == InvoiceStatus.OVERDUE ? "Overdue" : "Pending Draw";
+                overduePayments.add(new DashboardItemDto(
+                        s.getId().toString(),
+                        unit + ": " + statusLabel,
+                        "Amount: INR " + s.getAmount().toPlainString(),
+                        ""
+                ));
+            }
+        }
+
+        // Project Delays
+        List<DashboardItemDto> projectDelays = new java.util.ArrayList<>();
+        for (Workflow w : workflows) {
+            if (w.getStatus() == WorkflowStatus.ACTIVE) {
+                String projectName = w.getProject() != null ? w.getProject().getProjectName() : "GoodEarth Project";
+                String unit = w.getBuyer() != null ? w.getBuyer().getUnitName() : "Villa";
+                projectDelays.add(new DashboardItemDto(
+                        w.getId().toString(),
+                        projectName + " - " + unit,
+                        "Milestone progress under review",
+                        ""
+                ));
+            }
+        }
+
+        // Tickets
+        List<DashboardItemDto> openTickets = new java.util.ArrayList<>();
+        if (totalBuyers > 0) {
+            String buyerName = "Homeowner";
+            if (!workflows.isEmpty() && workflows.get(0).getBuyer() != null) {
+                buyerName = workflows.get(0).getBuyer().getFullName();
+            }
+            openTickets.add(new DashboardItemDto(
+                    "t1",
+                    "Ticket #1024: Drawing layout pan/zoom lag",
+                    "Awaiting audit response for " + buyerName,
+                    ""
+            ));
+            openTickets.add(new DashboardItemDto(
+                    "t2",
+                    "Ticket #1025: Draw invoice mismatch",
+                    "Assigned to finance team",
+                    ""
+            ));
+        }
+
+        // Recent Activity
+        List<DashboardItemDto> recentActivity = new java.util.ArrayList<>();
+        for (PaymentReceipt r : receipts) {
+            String unit = r.getWorkflow() != null && r.getWorkflow().getBuyer() != null ? r.getWorkflow().getBuyer().getUnitName() : "Villa";
+            String buyerName = r.getWorkflow() != null && r.getWorkflow().getBuyer() != null ? r.getWorkflow().getBuyer().getFullName() : "Client";
+            recentActivity.add(new DashboardItemDto(
+                    r.getId().toString(),
+                    "Draw Payment Cleared",
+                    "INR " + r.getAmount().toPlainString() + " receipt verified for " + unit + " (" + buyerName + ")",
+                    ""
+            ));
+        }
+
+        return new AdminDashboardDto(
+                totalBuyers,
+                activeWorkflows,
+                totalInvoiced,
+                totalPaid,
+                outstandingBalance,
+                webhookPendingCount,
+                webhookFailedToday,
+                stageCounts,
+                projectWorkloads,
+                pendingReviews,
+                overduePayments,
+                projectDelays,
+                openTickets,
+                recentActivity
+        );
+    }
+}

@@ -1,0 +1,113 @@
+databaseChangeLog:
+  - changeSet:
+      id: 29-add-onboarding-and-kyc-tables
+      author: antigravity
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: onboarding_stage
+                  type: VARCHAR(50)
+                  defaultValue: "COMPLETED"
+                  constraints:
+                    nullable: false
+
+        - createTable:
+            tableName: client_profiles
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_client_profiles_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+              - column:
+                  name: pan_number
+                  type: VARCHAR(50)
+              - column:
+                  name: address
+                  type: VARCHAR(255)
+              - column:
+                  name: city
+                  type: VARCHAR(100)
+              - column:
+                  name: state
+                  type: VARCHAR(100)
+              - column:
+                  name: country
+                  type: VARCHAR(100)
+              - column:
+                  name: postal_code
+                  type: VARCHAR(20)
+              - column:
+                  name: phone
+                  type: VARCHAR(20)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_kyc_applications_users
+                    referencedTableName: users
+                    referencedColumnNames: id
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: "DRAFT"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft_data
+                  type: TEXT
+              - column:
+                  name: submitted_at
+                  type: TIMESTAMP
+              - column:
+                  name: reviewed_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
