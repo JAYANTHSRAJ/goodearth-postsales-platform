@@ -199,6 +199,12 @@ export const clientService = {
     return api.post<any>('/client/kyc/submit', data);
   },
 
+  uploadKycFile(file: File): Promise<{ fileUrl: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ fileUrl: string }>('/client/kyc/upload', formData);
+  },
+
   simulatePayment(paymentDetails: any): Promise<any> {
     return api.post<any>('/client/payment/simulate', paymentDetails);
   },

@@ -307,26 +307,17 @@ export const OnboardingPage: React.FC = () => {
   const handleKycFileUpload = async (field: string, file: File) => {
     if (!file) return;
     setUploadingField(field);
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('/api/v1/client/kyc/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        handleKycFieldChange(field, data.data.fileUrl);
+      const res: any = await clientService.uploadKycFile(file);
+      const fileUrl = res?.fileUrl || res?.data?.fileUrl;
+      if (fileUrl) {
+        handleKycFieldChange(field, fileUrl);
       } else {
-        alert(data.message || 'File upload failed');
+        alert('File upload failed: No file URL returned.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Failed to connect to file server.');
+      alert(e?.message || 'Failed to upload document to server.');
     } finally {
       setUploadingField(null);
     }
