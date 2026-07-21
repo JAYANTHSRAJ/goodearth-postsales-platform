@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/workflows")
+@RequestMapping({"/api/v1/workflows", "/workflows"})
 public class WorkflowController {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowController.class);

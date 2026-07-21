@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/change-requests")
+@RequestMapping({"/api/v1/change-requests", "/change-requests"})
 public class ChangeRequestController {
 
     private static final Logger log = LoggerFactory.getLogger(ChangeRequestController.class);

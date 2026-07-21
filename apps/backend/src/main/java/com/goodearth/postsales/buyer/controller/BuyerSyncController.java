@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/buyers")
+@RequestMapping({"/api/v1/buyers", "/buyers"})
 public class BuyerSyncController {
 
     private static final Logger log = LoggerFactory.getLogger(BuyerSyncController.class);

@@ -47,7 +47,7 @@ public class NotificationController {
     }
 
     // 1. GET /api/v1/notifications (with filters, pagination, infinite scroll support)
-    @GetMapping("/api/v1/notifications")
+    @GetMapping({"/api/v1/notifications", "/notifications"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Page<NotificationDto>>> getNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -68,7 +68,7 @@ public class NotificationController {
     }
 
     // 2. GET /api/v1/notifications/unread (alias 1)
-    @GetMapping("/api/v1/notifications/unread")
+    @GetMapping({"/api/v1/notifications/unread", "/notifications/unread"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotificationsList(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -84,7 +84,7 @@ public class NotificationController {
     }
 
     // 2b. GET /api/v1/notifications/unread-count (alias 2)
-    @GetMapping("/api/v1/notifications/unread-count")
+    @GetMapping({"/api/v1/notifications/unread-count", "/notifications/unread-count"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Long>> getUnreadNotificationsCount(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -99,7 +99,7 @@ public class NotificationController {
     }
 
     // 3. GET /api/v1/notifications/latest (dropdown bell latest 10)
-    @GetMapping("/api/v1/notifications/latest")
+    @GetMapping({"/api/v1/notifications/latest", "/notifications/latest"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getLatestNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -115,7 +115,7 @@ public class NotificationController {
     }
 
     // 4. PATCH /api/v1/notifications/{id}/read
-    @PatchMapping("/api/v1/notifications/{id}/read")
+    @PatchMapping({"/api/v1/notifications/{id}/read", "/notifications/{id}/read"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> markAsRead(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -129,7 +129,7 @@ public class NotificationController {
     }
 
     // 5. PATCH /api/v1/notifications/read-all
-    @PatchMapping("/api/v1/notifications/read-all")
+    @PatchMapping({"/api/v1/notifications/read-all", "/notifications/read-all"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> markAllAsRead(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -143,7 +143,7 @@ public class NotificationController {
     }
 
     // 6. DELETE /api/v1/notifications/{id} (soft-delete)
-    @DeleteMapping("/api/v1/notifications/{id}")
+    @DeleteMapping({"/api/v1/notifications/{id}", "/notifications/{id}"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteNotification(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -157,7 +157,7 @@ public class NotificationController {
     }
 
     // 7. GET /api/v1/notification-preferences (alias 1)
-    @GetMapping("/api/v1/notification-preferences")
+    @GetMapping({"/api/v1/notification-preferences", "/notification-preferences"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<NotificationPreferenceDto>> getPreferences(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -170,7 +170,7 @@ public class NotificationController {
     }
 
     // 7b. GET /api/v1/notifications/preferences (alias 2)
-    @GetMapping("/api/v1/notifications/preferences")
+    @GetMapping({"/api/v1/notifications/preferences", "/notifications/preferences"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<NotificationPreferenceDto>> getNotificationsPreferences(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -183,7 +183,7 @@ public class NotificationController {
     }
 
     // 8. PATCH /api/v1/notification-preferences (alias 1)
-    @PatchMapping("/api/v1/notification-preferences")
+    @PatchMapping({"/api/v1/notification-preferences", "/notification-preferences"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<NotificationPreferenceDto>> updatePreferences(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -197,7 +197,7 @@ public class NotificationController {
     }
 
     // 8b. PATCH /api/v1/notifications/preferences (alias 2)
-    @PatchMapping("/api/v1/notifications/preferences")
+    @PatchMapping({"/api/v1/notifications/preferences", "/notifications/preferences"})
     @PreAuthorize("hasAnyRole('CLIENT', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<NotificationPreferenceDto>> updateNotificationsPreferences(
             @AuthenticationPrincipal CustomUserDetails userDetails,

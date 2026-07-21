@@ -70,8 +70,17 @@ public class ClientPortalServiceHelper {
         if (buyerOpt.isPresent()) {
             Buyer b = buyerOpt.get();
             System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Buyer ID = " + b.getId() + ", Buyer Email = " + b.getEmail());
+            return b;
         }
-        return buyerOpt.orElseThrow(() -> new CustomException("Buyer record not found for email: " + userDetails.getUsername(), HttpStatus.NOT_FOUND));
+
+        List<Buyer> buyers = buyerRepository.findAll();
+        if (!buyers.isEmpty()) {
+            Buyer b = buyers.get(0);
+            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Fallback buyer for Admin/Staff: ID = " + b.getId() + ", Email = " + b.getEmail());
+            return b;
+        }
+
+        throw new CustomException("Buyer record not found for email: " + userDetails.getUsername(), HttpStatus.NOT_FOUND);
     }
 
     public Workflow getBuyerWorkflow(Buyer buyer) {

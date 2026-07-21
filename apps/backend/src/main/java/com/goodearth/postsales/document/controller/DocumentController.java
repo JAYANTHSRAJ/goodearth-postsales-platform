@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping({"/api/v1", ""})
 public class DocumentController {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentController.class);

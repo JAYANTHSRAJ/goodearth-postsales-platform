@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/stages")
+@RequestMapping({"/api/v1/stages", "/stages"})
 public class StageController {
 
     private static final Logger log = LoggerFactory.getLogger(StageController.class);

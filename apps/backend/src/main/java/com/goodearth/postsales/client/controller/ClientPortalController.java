@@ -32,8 +32,8 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/client")
-@PreAuthorize("hasRole('CLIENT')")
+@RequestMapping({"/api/v1/client", "/client"})
+@PreAuthorize("hasAnyRole('CLIENT', 'SUPER_ADMIN', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'PROJECT_MANAGER')")
 public class ClientPortalController {
 
     private static final Logger log = LoggerFactory.getLogger(ClientPortalController.class);

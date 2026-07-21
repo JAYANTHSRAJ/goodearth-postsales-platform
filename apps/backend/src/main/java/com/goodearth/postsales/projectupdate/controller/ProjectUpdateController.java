@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/project-updates")
+@RequestMapping({"/api/v1/project-updates", "/project-updates"})
 public class ProjectUpdateController {
 
     private static final Logger log = LoggerFactory.getLogger(ProjectUpdateController.class);
