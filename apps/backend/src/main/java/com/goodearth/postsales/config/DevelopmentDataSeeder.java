@@ -135,19 +135,30 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
     }
 
     private void createSuperAdminIfMissing() {
-        if (!userRepository.existsByRole(UserRole.SUPER_ADMIN)) {
+        User admin = userRepository.findByEmailIgnoreCase("admin@goodearth.com").orElse(null);
+        if (admin == null) {
             log.info("Creating default SUPER_ADMIN user...");
-            User admin = new User();
+            admin = new User();
             admin.setEmail("admin@goodearth.com");
             admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
             admin.setFullName("System Administrator");
             admin.setRole(UserRole.SUPER_ADMIN);
             admin.setEnabled(true);
             admin.setEmailVerified(true);
+            admin.setAccountActivated(true);
+            admin.setPortalActivated(true);
             admin.setAccountLocked(false);
             admin.setFailedLoginAttempts(0);
             userRepository.save(admin);
             log.info("Default SUPER_ADMIN created: admin@goodearth.com");
+        } else {
+            admin.setAccountActivated(true);
+            admin.setPortalActivated(true);
+            admin.setEnabled(true);
+            admin.setAccountLocked(false);
+            admin.setFailedLoginAttempts(0);
+            admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
+            userRepository.save(admin);
         }
     }
 
