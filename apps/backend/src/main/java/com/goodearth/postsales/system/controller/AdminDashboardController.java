@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/admin/dashboard")
+@RequestMapping({"/api/v1/admin/dashboard", "/admin/dashboard"})
 public class AdminDashboardController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDashboardController.class);
@@ -34,7 +34,7 @@ public class AdminDashboardController {
         long duration = System.currentTimeMillis() - startTime;
 
         String username = userDetails != null ? userDetails.getUsername() : "system";
-        log.info("Endpoint: GET /api/v1/admin/dashboard, Execution Time: {}ms, User: {}",
+        log.info("Endpoint: GET /admin/dashboard/stats, Execution Time: {}ms, User: {}",
                 duration, username);
         log.info("Dashboard Response:\n{}", stats);
 
