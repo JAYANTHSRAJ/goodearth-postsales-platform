@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   User,
   ClipboardCheck,
-  CreditCard,
   Check,
   ChevronRight,
   MapPin,
@@ -12,18 +11,20 @@ import {
 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { useAuthStore } from '../../../store/authStore';
+import { useUnitStore } from '../../../store/unitStore';
 import { clientService } from '../../../services/client.service';
-import { KycWelcomeScreen } from '../components/KycWelcomeScreen';
+import { KycOptionSelector } from '../components/KycOptionSelector';
 import { KycWizardHeader } from '../components/KycWizardHeader';
 import { KycBottomActionBar } from '../components/KycBottomActionBar';
 import { Step1PersonalDetails } from '../components/wizard-steps/Step1PersonalDetails';
 import { Step2CoApplicants } from '../components/wizard-steps/Step2CoApplicants';
 import { Step3DocumentVault } from '../components/wizard-steps/Step3DocumentVault';
 import { Step4ReviewSubmit } from '../components/wizard-steps/Step4ReviewSubmit';
-import { BookingPaymentScreen } from '../components/BookingPaymentScreen';
 
 export const OnboardingPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
+  const { activeUnit, setUnits } = useUnitStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [profileForm, setProfileForm] = useState({
@@ -103,24 +104,29 @@ export const OnboardingPage: React.FC = () => {
     coPanUrl: '',
     coVoterIdUrl: '',
     coAddressProofUrl: '',
-
-    // General preferences
-    familySize: 'Couple',
-    purposeOfPurchase: 'Primary Residence',
-    homeLoan: 'No',
-
-    // Payment proof
-    paymentReceiptUrl: '',
   });
 
   const [kycErrors, setKycErrors] = useState<Record<string, string>>({});
   const [kycDraftSuccess, setKycDraftSuccess] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
-  // Active stage determination from URL search params or user state
+  // Active stage determination
   const urlStage = searchParams.get('stage');
   const userStage = user?.onboardingStage || 'PROFILE_PENDING';
-  const activeStage = urlStage || userStage;
+  const activeStage = urlStage || (userStage === 'COMPLETED' ? 'KYC_PENDING' : userStage);
+
+  // Fetch owned units
+  const { data: fetchedUnits } = useQuery({
+    queryKey: ['clientUnits'],
+    queryFn: () => clientService.getOwnedUnits(),
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (fetchedUnits && Array.isArray(fetchedUnits)) {
+      setUnits(fetchedUnits);
+    }
+  }, [fetchedUnits, setUnits]);
 
   // Fetch current profile details
   const { data: profile, isLoading: isProfileLoading, refetch: refetchProfile } = useQuery({
@@ -129,14 +135,15 @@ export const OnboardingPage: React.FC = () => {
     enabled: !!user,
   });
 
-  // Fetch current KYC application details
+  // Fetch unit-scoped KYC application details
+  const currentWorkflowId = activeUnit?.workflowId;
   const { data: kycData, isLoading: isKycLoading, refetch: refetchKyc } = useQuery({
-    queryKey: ['clientKyc'],
-    queryFn: () => clientService.getKyc(),
+    queryKey: ['clientKyc', currentWorkflowId],
+    queryFn: () => clientService.getKyc(currentWorkflowId),
     enabled: !!user,
   });
 
-  // Update profile mutation
+  // Update profile mutation (Shared per customer)
   const updateProfileMutation = useMutation({
     mutationFn: (data: any) => clientService.updateProfile(data),
     onSuccess: (response: any) => {
@@ -144,19 +151,20 @@ export const OnboardingPage: React.FC = () => {
       if (updatedProfile) {
         updateUser({
           name: updatedProfile.fullName,
-          onboardingStage: updatedProfile.onboardingStage || 'KYC_PENDING',
+          onboardingStage: 'KYC_PENDING',
         });
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       }
       refetchProfile();
-      setSearchParams({ stage: 'KYC_PENDING' });
+      // Redirect to My Home after profile completion
+      navigate('/my-home');
     },
   });
 
   // Save KYC draft mutation
   const saveKycDraftMutation = useMutation({
-    mutationFn: (data: any) => clientService.saveKycDraft(data),
+    mutationFn: (data: any) => clientService.saveKycDraft(data, currentWorkflowId),
     onSuccess: () => {
       setKycDraftSuccess(true);
       setTimeout(() => setKycDraftSuccess(false), 3000);
@@ -166,26 +174,36 @@ export const OnboardingPage: React.FC = () => {
 
   // Submit KYC mutation
   const submitKycMutation = useMutation({
-    mutationFn: (data: any) => clientService.submitKyc(data),
+    mutationFn: (data: any) => clientService.submitKyc(data, currentWorkflowId),
     onSuccess: () => {
       updateUser({
-        onboardingStage: 'PAYMENT_PENDING',
+        onboardingStage: 'COMPLETED',
       });
       refetchKyc();
-      setSearchParams({ stage: 'PAYMENT_PENDING' });
+      navigate('/my-home');
     },
   });
 
-  // Payment simulation mutation
-  const simulatePaymentMutation = useMutation({
-    mutationFn: (data: any) => clientService.simulatePayment(data),
-    onSuccess: (response: any) => {
-      const result = response?.data || response;
-      if (result && result.success) {
-        updateUser({
-          onboardingStage: result.onboardingStage || 'COMPLETED',
-        });
-      }
+  // Reuse KYC mutation
+  const reuseKycMutation = useMutation({
+    mutationFn: (sourceKycId: string) => {
+      if (!currentWorkflowId) throw new Error('No active property unit selected');
+      return clientService.reuseKyc(currentWorkflowId, sourceKycId);
+    },
+    onSuccess: () => {
+      refetchKyc();
+      navigate('/my-home');
+    },
+  });
+
+  // Request KYC Modification mutation
+  const requestModificationMutation = useMutation({
+    mutationFn: (reason: string) => {
+      if (!currentWorkflowId) throw new Error('No active property unit selected');
+      return clientService.requestKycModification(currentWorkflowId, reason);
+    },
+    onSuccess: () => {
+      refetchKyc();
     },
   });
 
@@ -194,7 +212,7 @@ export const OnboardingPage: React.FC = () => {
     if (profile) {
       const data = profile.data || profile;
       setProfileForm({
-        fullName: data.fullName || '',
+        fullName: data.fullName || user?.name || '',
         phone: data.phone || '',
         panNumber: data.panNumber || '',
         address: data.address || '',
@@ -204,7 +222,7 @@ export const OnboardingPage: React.FC = () => {
         postalCode: data.postalCode || '',
       });
     }
-  }, [profile]);
+  }, [profile, user]);
 
   // Pre-populate KYC draft form if exists
   useEffect(() => {
@@ -214,7 +232,10 @@ export const OnboardingPage: React.FC = () => {
         try {
           const parsed = JSON.parse(data.draftData);
           setKycForm((prev) => ({ ...prev, ...parsed }));
-          setHasStartedKyc(true);
+          if (data.isLocked || data.status === 'SUBMITTED' || data.status === 'VERIFIED') {
+            setHasStartedKyc(true);
+            setKycSubStep(4); // View summary review
+          }
         } catch (e) {
           console.error('Failed to parse KYC draft data', e);
         }
@@ -222,7 +243,6 @@ export const OnboardingPage: React.FC = () => {
     }
   }, [kycData]);
 
-  // Calculate profile completion percentage
   const calculateCompletion = () => {
     let filled = 0;
     const fields = [
@@ -402,77 +422,55 @@ export const OnboardingPage: React.FC = () => {
     );
   }
 
-  const steps = [
-    { key: 'PROFILE_PENDING', label: 'Complete Profile', icon: User },
-    { key: 'KYC_PENDING', label: 'KYC Verification', icon: ClipboardCheck },
-    { key: 'PAYMENT_PENDING', label: 'Booking Payment', icon: CreditCard },
-  ];
-
-  const getStepStatus = (stepKey: string) => {
-    const stageOrder = ['PROFILE_PENDING', 'KYC_PENDING', 'PAYMENT_PENDING', 'COMPLETED'];
-    const activeIndex = stageOrder.indexOf(userStage);
-    const stepIndex = stageOrder.indexOf(stepKey);
-
-    if (stepKey === activeStage) return 'active';
-    if (stepIndex < activeIndex) return 'completed';
-    return 'locked';
-  };
+  const kycDataObj = kycData?.data || kycData;
+  const isKycLocked = kycDataObj?.isLocked || kycDataObj?.status === 'SUBMITTED' || kycDataObj?.status === 'VERIFIED';
+  const availableVerifiedKycs = kycDataObj?.availableVerifiedKycs || [];
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 text-left pb-16">
       {/* Welcome Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-brand-800 to-brand-900 p-6 text-white shadow-xl dark:from-brand-900 dark:to-brand-950">
-        <h1 className="font-serif text-3xl font-bold">Welcome to GoodEarth Homeowner Portal</h1>
+        <h1 className="font-serif text-3xl font-bold">GoodEarth Homeowner Account & Verification</h1>
         <p className="mt-2 text-sm text-brand-200">
-          Before getting full access to the portal, we need you to complete three simple onboarding milestones to verify your registry records and prepare your legal agreement.
+          Complete your customer profile once and verify identity records for your registered property units.
         </p>
       </div>
 
-      {/* Stepper Progress Indicator */}
-      <div className="grid grid-cols-3 gap-4">
-        {steps.map((step, idx) => {
-          const status = getStepStatus(step.key);
-          return (
-            <button
-              key={step.key}
-              type="button"
-              onClick={() => setSearchParams({ stage: step.key })}
-              className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all duration-200 ${
-                status === 'active'
-                  ? 'border-brand-500 bg-brand-50/50 dark:border-brand-600 dark:bg-brand-900/20 ring-1 ring-brand-500/20'
-                  : status === 'completed'
-                  ? 'border-green-200 bg-green-50/20 dark:border-green-900/20 hover:border-green-300'
-                  : 'border-brand-200 opacity-60 bg-white dark:border-brand-850 dark:bg-brand-900 hover:opacity-100'
-              }`}
-            >
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                  status === 'completed'
-                    ? 'bg-green-600 text-white'
-                    : status === 'active'
-                    ? 'bg-brand-700 text-white'
-                    : 'bg-brand-100 text-brand-500 dark:bg-brand-800'
-                }`}
-              >
-                {status === 'completed' ? <Check className="h-5 w-5" /> : idx + 1}
-              </div>
-              <div className="min-w-0">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-brand-400">
-                  Step {idx + 1}
-                </span>
-                <span className="block truncate text-xs font-semibold text-brand-800 dark:text-white">
-                  {step.label}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+      {/* Navigation Pills */}
+      <div className="grid grid-cols-2 gap-4 max-w-md">
+        <button
+          type="button"
+          onClick={() => setSearchParams({ stage: 'PROFILE_PENDING' })}
+          className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+            activeStage === 'PROFILE_PENDING'
+              ? 'border-brand-500 bg-brand-50/50 dark:border-brand-600 dark:bg-brand-900/20 font-bold'
+              : 'border-brand-200 bg-white dark:border-brand-850 dark:bg-brand-900'
+          }`}
+        >
+          <User className="h-4 w-4 text-brand-600" />
+          <span className="text-xs font-semibold text-brand-800 dark:text-white">1. Customer Profile</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSearchParams({ stage: 'KYC_PENDING' })}
+          className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
+            activeStage === 'KYC_PENDING'
+              ? 'border-brand-500 bg-brand-50/50 dark:border-brand-600 dark:bg-brand-900/20 font-bold'
+              : 'border-brand-200 bg-white dark:border-brand-850 dark:bg-brand-900'
+          }`}
+        >
+          <ClipboardCheck className="h-4 w-4 text-brand-600" />
+          <span className="text-xs font-semibold text-brand-800 dark:text-white">
+            2. Property KYC ({activeUnit ? activeUnit.unitName : 'Select Unit'})
+          </span>
+        </button>
       </div>
 
       {/* Active Stage Content */}
       <div className="space-y-6">
         {activeStage === 'PROFILE_PENDING' && (
-          <Card title="Stage 1: Complete Personal Profile" subtitle="Verify and complete your official contact details">
+          <Card title="Customer Profile" subtitle="Shared profile information filled once for all your GoodEarth properties">
             <div className="mb-6 rounded-xl bg-brand-50/50 p-4 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-850">
               <div className="flex justify-between items-center text-xs font-semibold text-brand-800 dark:text-brand-200">
                 <span>Profile Completion Progress</span>
@@ -637,7 +635,7 @@ export const OnboardingPage: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      Save & Continue
+                      Save & Proceed to My Homes
                       <ChevronRight className="h-4.5 w-4.5" />
                     </>
                   )}
@@ -647,21 +645,28 @@ export const OnboardingPage: React.FC = () => {
           </Card>
         )}
 
-        {/* Stage 2: KYC Verification */}
+        {/* Stage 2: Unit-Level KYC Verification */}
         {activeStage === 'KYC_PENDING' && (
           <>
-            {!hasStartedKyc ? (
-              <KycWelcomeScreen onStartWizard={() => setHasStartedKyc(true)} />
+            {!hasStartedKyc && !isKycLocked ? (
+              <KycOptionSelector
+                availableVerifiedKycs={availableVerifiedKycs}
+                onReuseKyc={(sourceKycId) => reuseKycMutation.mutate(sourceKycId)}
+                onStartNewKyc={() => setHasStartedKyc(true)}
+                isReusing={reuseKycMutation.isPending}
+              />
             ) : (
               <div className="space-y-6">
-                <KycWizardHeader
-                  currentStep={kycSubStep}
-                  onStepClick={(step) => {
-                    if (step < kycSubStep || validateStep(kycSubStep)) {
-                      setKycSubStep(step);
-                    }
-                  }}
-                />
+                {!isKycLocked && (
+                  <KycWizardHeader
+                    currentStep={kycSubStep}
+                    onStepClick={(step) => {
+                      if (step < kycSubStep || validateStep(kycSubStep)) {
+                        setKycSubStep(step);
+                      }
+                    }}
+                  />
+                )}
 
                 {kycSubStep === 1 && (
                   <Step1PersonalDetails
@@ -692,35 +697,30 @@ export const OnboardingPage: React.FC = () => {
                 {kycSubStep === 4 && (
                   <Step4ReviewSubmit
                     form={kycForm}
+                    isLocked={isKycLocked}
+                    hasPendingModificationRequest={kycDataObj?.hasPendingModificationRequest}
+                    modificationRequestReason={kycDataObj?.modificationRequestReason}
                     onEditStep={(step) => setKycSubStep(step)}
+                    onRequestModification={(reason) => requestModificationMutation.mutate(reason)}
+                    isSubmittingModification={requestModificationMutation.isPending}
                   />
                 )}
 
-                <KycBottomActionBar
-                  currentStep={kycSubStep}
-                  totalSteps={4}
-                  isSubmitting={submitKycMutation.isPending}
-                  isSavingDraft={saveKycDraftMutation.isPending}
-                  draftSuccess={kycDraftSuccess}
-                  onPrevStep={handlePrevStep}
-                  onNextStep={handleNextStep}
-                  onSaveDraft={handleKycSaveDraft}
-                />
+                {!isKycLocked && (
+                  <KycBottomActionBar
+                    currentStep={kycSubStep}
+                    totalSteps={4}
+                    isSubmitting={submitKycMutation.isPending}
+                    isSavingDraft={saveKycDraftMutation.isPending}
+                    draftSuccess={kycDraftSuccess}
+                    onPrevStep={handlePrevStep}
+                    onNextStep={handleNextStep}
+                    onSaveDraft={handleKycSaveDraft}
+                  />
+                )}
               </div>
             )}
           </>
-        )}
-
-        {/* Stage 3: Booking Payment */}
-        {activeStage === 'PAYMENT_PENDING' && (
-          <BookingPaymentScreen
-            receiptUrl={kycForm.paymentReceiptUrl || ''}
-            isUploading={uploadingField === 'paymentReceiptUrl'}
-            isSubmitting={simulatePaymentMutation.isPending}
-            onFileUpload={handleKycFileUpload}
-            onFileRemove={handleKycFileRemove}
-            onSubmitPayment={(details) => simulatePaymentMutation.mutate(details)}
-          />
         )}
       </div>
     </div>
