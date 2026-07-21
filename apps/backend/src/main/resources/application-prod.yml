@@ -3,30 +3,25 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:${JDBC_DATABASE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:goodearth}}}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: none
     show-sql: false
   mail:
-    host: ${SMTP_HOST}
-    port: ${SMTP_PORT}
-    username: ${SMTP_USER}
-    password: ${SMTP_PASS}
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASS:}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: ${SMTP_REQUIRE_TLS}
-          ssl:
-            enable: ${SMTP_SECURE}
-          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT_MS}
-          timeout: ${SMTP_SOCKET_TIMEOUT_MS}
-          writetimeout: ${SMTP_SOCKET_TIMEOUT_MS}
+            enable: false
 
 app:
   swagger:
@@ -39,31 +34,31 @@ app:
       - https://*.goodearth.in
       - https://goodearth-postsales-platform.vercel.app
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b}
     expiration-ms: 3600000 # 1 hour session time limits
   auth:
     test-mode: ${TEST_MODE:false}
     test-master-password: ${TEST_MASTER_PASSWORD:}
   zoho:
-    client-id: ${ZOHO_CLIENT_ID}
-    client-secret: ${ZOHO_CLIENT_SECRET}
-    refresh-token: ${ZOHO_REFRESH_TOKEN}
-    accounts-url: ${ZOHO_ACCOUNTS_URL}
-    crm-api-url: ${ZOHO_CRM_API_URL}
+    client-id: ${ZOHO_CLIENT_ID:}
+    client-secret: ${ZOHO_CLIENT_SECRET:}
+    refresh-token: ${ZOHO_REFRESH_TOKEN:}
+    accounts-url: ${ZOHO_ACCOUNTS_URL:https://accounts.zoho.in}
+    crm-api-url: ${ZOHO_CRM_API_URL:https://www.zohoapis.in/crm/v3}
   workdrive:
-    api-url: ${ZOHO_WORKDRIVE_API_URL}
+    api-url: ${ZOHO_WORKDRIVE_API_URL:https://workdrive.zoho.in/api/v1}
   books:
-    api-url: ${ZOHO_BOOKS_API_URL}
+    api-url: ${ZOHO_BOOKS_API_URL:https://www.zohoapis.in/books/v3}
 
 zoho:
   webhook:
-    crm-secret: ${ZOHO_WEBHOOK_CRM_SECRET}
-    books-secret: ${ZOHO_WEBHOOK_BOOKS_SECRET}
-    workdrive-secret: ${ZOHO_WEBHOOK_WORKDRIVE_SECRET}
+    crm-secret: ${ZOHO_WEBHOOK_CRM_SECRET:}
+    books-secret: ${ZOHO_WEBHOOK_BOOKS_SECRET:}
+    workdrive-secret: ${ZOHO_WEBHOOK_WORKDRIVE_SECRET:}
 
 razorpay:
   webhook:
-    secret: ${RAZORPAY_WEBHOOK_SECRET}
+    secret: ${RAZORPAY_WEBHOOK_SECRET:}
 
 management:
   endpoints:
