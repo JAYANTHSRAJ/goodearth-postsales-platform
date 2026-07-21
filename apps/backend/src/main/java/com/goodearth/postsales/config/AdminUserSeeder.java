@@ -24,33 +24,45 @@ public class AdminUserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        User admin = userRepository.findByEmailIgnoreCase("admin@goodearth.com").orElse(null);
+        java.util.List<User> superAdmins = userRepository.findByRole(UserRole.SUPER_ADMIN);
 
-        if (admin == null) {
-            log.info("Creating default SUPER_ADMIN user...");
-            admin = new User();
-            admin.setEmail("admin@goodearth.com");
-            admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
-            admin.setFullName("System Administrator");
-            admin.setRole(UserRole.SUPER_ADMIN);
-            admin.setEnabled(true);
-            admin.setEmailVerified(true);
+        for (User admin : superAdmins) {
             admin.setAccountActivated(true);
             admin.setPortalActivated(true);
+            admin.setEnabled(true);
             admin.setAccountLocked(false);
             admin.setFailedLoginAttempts(0);
-
+            admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
             userRepository.save(admin);
-            log.info("Default SUPER_ADMIN created successfully. Email: admin@goodearth.com");
+            log.info("Updated SUPER_ADMIN user: {}", admin.getEmail());
+        }
+
+        User defaultAdmin = userRepository.findByEmailIgnoreCase("admin@goodearth.com").orElse(null);
+        if (defaultAdmin == null) {
+            log.info("Creating default SUPER_ADMIN user admin@goodearth.com...");
+            defaultAdmin = new User();
+            defaultAdmin.setEmail("admin@goodearth.com");
+            defaultAdmin.setPassword(passwordEncoder.encode("AdminPassword123!"));
+            defaultAdmin.setFullName("System Administrator");
+            defaultAdmin.setRole(UserRole.SUPER_ADMIN);
+            defaultAdmin.setEnabled(true);
+            defaultAdmin.setEmailVerified(true);
+            defaultAdmin.setAccountActivated(true);
+            defaultAdmin.setPortalActivated(true);
+            defaultAdmin.setAccountLocked(false);
+            defaultAdmin.setFailedLoginAttempts(0);
+            userRepository.save(defaultAdmin);
+            log.info("Default SUPER_ADMIN admin@goodearth.com created.");
         } else {
-            admin.setAccountActivated(true);
-            admin.setPortalActivated(true);
-            admin.setEnabled(true);
-            admin.setAccountLocked(false);
-            admin.setFailedLoginAttempts(0);
-            admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
-            userRepository.save(admin);
-            log.info("SUPER_ADMIN admin@goodearth.com updated and activated successfully.");
+            defaultAdmin.setRole(UserRole.SUPER_ADMIN);
+            defaultAdmin.setAccountActivated(true);
+            defaultAdmin.setPortalActivated(true);
+            defaultAdmin.setEnabled(true);
+            defaultAdmin.setAccountLocked(false);
+            defaultAdmin.setFailedLoginAttempts(0);
+            defaultAdmin.setPassword(passwordEncoder.encode("AdminPassword123!"));
+            userRepository.save(defaultAdmin);
+            log.info("Default SUPER_ADMIN admin@goodearth.com updated.");
         }
     }
 }
