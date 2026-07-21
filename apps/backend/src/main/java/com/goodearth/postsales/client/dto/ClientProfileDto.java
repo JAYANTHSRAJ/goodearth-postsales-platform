@@ -19,4 +19,5 @@ public class ClientProfileDto {
     private String postalCode;
     private int completionPercent;
     private String onboardingStage;
+    private java.util.UUID lastSelectedUnitId;
 }

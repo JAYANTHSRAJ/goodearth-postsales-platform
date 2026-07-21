@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "kyc_applications")
@@ -36,6 +37,15 @@ public class KycApplication extends BaseEntity {
 
     @Column(name = "is_locked")
     private boolean isLocked = false;
+
+    @Column(name = "version")
+    private int version = 1;
+
+    @Column(name = "parent_kyc_id")
+    private UUID parentKycId;
+
+    @Column(name = "is_current_version")
+    private boolean isCurrentVersion = true;
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;

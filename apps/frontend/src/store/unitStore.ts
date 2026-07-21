@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { clientService } from '../services/client.service';
 
 export interface ClientUnit {
   id: string; // Buyer ID
@@ -45,6 +46,7 @@ export const useUnitStore = create<UnitState>((set) => ({
   setActiveUnit: (unit) => {
     localStorage.setItem(LAST_UNIT_KEY, unit.id);
     set({ activeUnit: unit });
+    clientService.setActiveUnit(unit.id).catch((e) => console.error('Failed to sync active unit to backend', e));
   },
   clearActiveUnit: () => {
     localStorage.removeItem(LAST_UNIT_KEY);

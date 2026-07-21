@@ -142,6 +142,10 @@ export const clientService = {
     return api.get<ClientUnit[]>('/client/units');
   },
 
+  setActiveUnit(buyerId: string): Promise<any> {
+    return api.post<any>(`/client/units/active?buyerId=${buyerId}`, {});
+  },
+
   getDashboard(workflowId?: string | null): Promise<ClientDashboardData> {
     const url = workflowId ? `/client/dashboard?workflowId=${workflowId}` : '/client/dashboard';
     return api.get<ClientDashboardData>(url);

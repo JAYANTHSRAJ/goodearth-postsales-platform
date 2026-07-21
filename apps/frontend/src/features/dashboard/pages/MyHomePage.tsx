@@ -25,8 +25,12 @@ export const MyHomePage: React.FC = () => {
   useEffect(() => {
     if (fetchedUnits && Array.isArray(fetchedUnits)) {
       setUnits(fetchedUnits);
+      if (fetchedUnits.length === 1) {
+        setActiveUnit(fetchedUnits[0]);
+        navigate('/');
+      }
     }
-  }, [fetchedUnits, setUnits]);
+  }, [fetchedUnits, setUnits, setActiveUnit, navigate]);
 
   if (isLoading) {
     return <LoadingScreen />;

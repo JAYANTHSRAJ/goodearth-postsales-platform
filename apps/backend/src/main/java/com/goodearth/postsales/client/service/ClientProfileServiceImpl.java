@@ -108,6 +108,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
         dto.setPostalCode(profile.getPostalCode());
         dto.setCompletionPercent(calculateCompletion(user, profile));
         dto.setOnboardingStage(user.getOnboardingStage().name());
+        dto.setLastSelectedUnitId(user.getLastSelectedUnitId());
         return dto;
     }
 }

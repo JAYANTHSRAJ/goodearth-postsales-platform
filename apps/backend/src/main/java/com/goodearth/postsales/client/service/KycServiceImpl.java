@@ -7,8 +7,10 @@ import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.client.dto.ClientUnitDto;
 import com.goodearth.postsales.client.dto.KycApplicationDto;
 import com.goodearth.postsales.client.dto.KycModificationRequestDto;
+import com.goodearth.postsales.client.entity.BuyerKycAssociation;
 import com.goodearth.postsales.client.entity.KycApplication;
 import com.goodearth.postsales.client.entity.KycModificationRequest;
+import com.goodearth.postsales.client.repository.BuyerKycAssociationRepository;
 import com.goodearth.postsales.client.repository.KycApplicationRepository;
 import com.goodearth.postsales.client.repository.KycModificationRequestRepository;
 import com.goodearth.postsales.common.enumeration.OnboardingStage;
@@ -34,18 +36,21 @@ public class KycServiceImpl implements KycService {
     private final WorkflowRepository workflowRepository;
     private final KycApplicationRepository kycApplicationRepository;
     private final KycModificationRequestRepository modificationRequestRepository;
+    private final BuyerKycAssociationRepository associationRepository;
 
     public KycServiceImpl(
             UserRepository userRepository,
             BuyerRepository buyerRepository,
             WorkflowRepository workflowRepository,
             KycApplicationRepository kycApplicationRepository,
-            KycModificationRequestRepository modificationRequestRepository) {
+            KycModificationRequestRepository modificationRequestRepository,
+            BuyerKycAssociationRepository associationRepository) {
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
         this.kycApplicationRepository = kycApplicationRepository;
         this.modificationRequestRepository = modificationRequestRepository;
+        this.associationRepository = associationRepository;
     }
 
     private Buyer resolveBuyer(User user, UUID workflowId) {
@@ -57,6 +62,12 @@ public class KycServiceImpl implements KycService {
                 throw new CustomException("User does not own this property unit", HttpStatus.FORBIDDEN);
             }
             return buyer;
+        }
+        if (user.getLastSelectedUnitId() != null) {
+            Optional<Buyer> lastUnit = buyerRepository.findById(user.getLastSelectedUnitId());
+            if (lastUnit.isPresent() && lastUnit.get().getEmail().equalsIgnoreCase(user.getEmail())) {
+                return lastUnit.get();
+            }
         }
         List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(user.getEmail());
         if (buyers.isEmpty()) {
@@ -78,6 +89,12 @@ public class KycServiceImpl implements KycService {
     }
 
     private KycApplication resolveKycForBuyer(User user, Buyer buyer) {
+        // Check association table first
+        Optional<BuyerKycAssociation> assoc = associationRepository.findFirstByBuyerIdAndStatusOrderByAssociatedAtDesc(buyer.getId(), "ACTIVE");
+        if (assoc.isPresent()) {
+            return assoc.get().getKycApplication();
+        }
+
         if (buyer.getKycApplicationId() != null) {
             Optional<KycApplication> linkedKyc = kycApplicationRepository.findById(buyer.getKycApplicationId());
             if (linkedKyc.isPresent()) {
@@ -90,19 +107,19 @@ public class KycServiceImpl implements KycService {
             return buyerKyc.get();
         }
 
-        // Fallback: Check if user has an existing user-level KYC
         Optional<KycApplication> userKyc = kycApplicationRepository.findFirstByUserIdOrderByCreatedAtDesc(user.getId());
         if (userKyc.isPresent()) {
             return userKyc.get();
         }
 
-        // Create new DRAFT KycApplication for buyer
         KycApplication newKyc = new KycApplication();
         newKyc.setUser(user);
         newKyc.setBuyer(buyer);
         newKyc.setStatus("DRAFT");
         newKyc.setLocked(false);
         newKyc.setVerified(false);
+        newKyc.setVersion(1);
+        newKyc.setCurrentVersion(true);
         return newKyc;
     }
 
@@ -142,14 +159,66 @@ public class KycServiceImpl implements KycService {
         Buyer buyer = resolveBuyer(user, workflowId);
         KycApplication kyc = resolveKycForBuyer(user, buyer);
 
+        // Immutable Versioning: If current KYC was already submitted/verified, create a NEW version
+        if (kyc.isVerified() || kyc.getSubmittedAt() != null) {
+            kyc.setCurrentVersion(false);
+            kycApplicationRepository.save(kyc);
+
+            KycApplication newVersion = new KycApplication();
+            newVersion.setUser(user);
+            newVersion.setBuyer(buyer);
+            newVersion.setDraftData(finalData);
+            newVersion.setStatus("SUBMITTED");
+            newVersion.setVerified(true);
+            newVersion.setLocked(true);
+            newVersion.setSubmittedAt(LocalDateTime.now());
+            newVersion.setVersion(kyc.getVersion() + 1);
+            newVersion.setParentKycId(kyc.getId());
+            newVersion.setCurrentVersion(true);
+            KycApplication savedVersion = kycApplicationRepository.save(newVersion);
+
+            // Association
+            BuyerKycAssociation assoc = new BuyerKycAssociation();
+            assoc.setBuyer(buyer);
+            assoc.setKycApplication(savedVersion);
+            assoc.setVersion(savedVersion.getVersion());
+            assoc.setStatus("ACTIVE");
+            assoc.setAssociatedAt(LocalDateTime.now());
+            assoc.setAssociatedBy(user.getEmail());
+            associationRepository.save(assoc);
+
+            buyer.setKycApplicationId(savedVersion.getId());
+            buyer.setStatus("KYC_COMPLETED");
+            buyerRepository.save(buyer);
+
+            if (user.getOnboardingStage() == OnboardingStage.PROFILE_PENDING || user.getOnboardingStage() == OnboardingStage.KYC_PENDING) {
+                user.setOnboardingStage(OnboardingStage.COMPLETED);
+                userRepository.save(user);
+            }
+
+            return mapToDto(user, buyer, savedVersion);
+        }
+
+        // Standard First Submission
         kyc.setDraftData(finalData);
         kyc.setStatus("SUBMITTED");
         kyc.setVerified(true);
-        kyc.setLocked(true); // Lock upon submission
+        kyc.setLocked(true);
         kyc.setSubmittedAt(LocalDateTime.now());
         kyc.setUser(user);
         kyc.setBuyer(buyer);
+        kyc.setVersion(1);
+        kyc.setCurrentVersion(true);
         KycApplication saved = kycApplicationRepository.save(kyc);
+
+        BuyerKycAssociation assoc = new BuyerKycAssociation();
+        assoc.setBuyer(buyer);
+        assoc.setKycApplication(saved);
+        assoc.setVersion(1);
+        assoc.setStatus("ACTIVE");
+        assoc.setAssociatedAt(LocalDateTime.now());
+        assoc.setAssociatedBy(user.getEmail());
+        associationRepository.save(assoc);
 
         buyer.setKycApplicationId(saved.getId());
         buyer.setStatus("KYC_COMPLETED");
@@ -177,7 +246,15 @@ public class KycServiceImpl implements KycService {
             throw new CustomException("Target source KYC belongs to a different customer", HttpStatus.FORBIDDEN);
         }
 
-        // Link unit to existing verified KYC without duplicating database record
+        BuyerKycAssociation assoc = new BuyerKycAssociation();
+        assoc.setBuyer(buyer);
+        assoc.setKycApplication(sourceKyc);
+        assoc.setVersion(sourceKyc.getVersion());
+        assoc.setStatus("ACTIVE");
+        assoc.setAssociatedAt(LocalDateTime.now());
+        assoc.setAssociatedBy(user.getEmail());
+        associationRepository.save(assoc);
+
         buyer.setKycApplicationId(sourceKyc.getId());
         buyer.setStatus("KYC_COMPLETED");
         buyerRepository.save(buyer);
@@ -236,7 +313,6 @@ public class KycServiceImpl implements KycService {
         dto.setSubmittedAt(kyc.getSubmittedAt());
         dto.setReviewedAt(kyc.getReviewedAt());
 
-        // Check if there is a pending modification request
         Optional<KycModificationRequest> pendingReq = modificationRequestRepository
                 .findFirstByBuyerIdAndStatusOrderByRequestedAtDesc(buyer.getId(), "PENDING");
         if (pendingReq.isPresent()) {
@@ -246,7 +322,6 @@ public class KycServiceImpl implements KycService {
             dto.setHasPendingModificationRequest(false);
         }
 
-        // Find available verified KYCs from customer's other owned units for 1-click reuse
         List<Buyer> allCustomerBuyers = buyerRepository.findAllByEmailIgnoreCase(user.getEmail());
         List<ClientUnitDto> availableVerifiedKycs = new ArrayList<>();
 

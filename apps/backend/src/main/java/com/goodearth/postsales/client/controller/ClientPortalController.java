@@ -132,6 +132,27 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(dtos));
     }
 
+    @PostMapping("/units/active")
+    public ResponseEntity<ApiResponse<String>> setActiveUnit(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam UUID buyerId) {
+        log.info("Endpoint: POST /api/v1/client/units/active, User: {}, UnitId: {}", userDetails.getUsername(), buyerId);
+        User user = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Buyer buyer = buyerRepository.findById(buyerId)
+                .orElseThrow(() -> new CustomException("Unit not found", HttpStatus.NOT_FOUND));
+
+        if (!buyer.getEmail().equalsIgnoreCase(user.getEmail())) {
+            throw new CustomException("Customer does not own this unit", HttpStatus.FORBIDDEN);
+        }
+
+        user.setLastSelectedUnitId(buyer.getId());
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new ApiResponse<>("Active unit updated successfully"));
+    }
+
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<ClientDashboardDto>> getDashboard(
             @AuthenticationPrincipal UserDetails userDetails,

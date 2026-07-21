@@ -80,4 +80,7 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "onboarding_stage", nullable = false, length = 50)
     private OnboardingStage onboardingStage = OnboardingStage.COMPLETED;
+
+    @Column(name = "last_selected_unit_id")
+    private java.util.UUID lastSelectedUnitId;
 }
