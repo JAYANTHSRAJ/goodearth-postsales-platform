@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@org.springframework.core.annotation.Order(1)
 public class AdminUserSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminUserSeeder.class);
@@ -35,7 +36,7 @@ public class AdminUserSeeder implements CommandLineRunner {
             admin.setAccountLocked(false);
             admin.setFailedLoginAttempts(0);
             admin.setPassword(passwordEncoder.encode("AdminPassword123!"));
-            userRepository.save(admin);
+            userRepository.saveAndFlush(admin);
             log.info("Updated SUPER_ADMIN user: {}", admin.getEmail());
         }
 
@@ -53,7 +54,7 @@ public class AdminUserSeeder implements CommandLineRunner {
             defaultAdmin.setPortalActivated(true);
             defaultAdmin.setAccountLocked(false);
             defaultAdmin.setFailedLoginAttempts(0);
-            userRepository.save(defaultAdmin);
+            userRepository.saveAndFlush(defaultAdmin);
             log.info("Default SUPER_ADMIN admin@goodearth.com created.");
         } else {
             defaultAdmin.setRole(UserRole.SUPER_ADMIN);
@@ -63,7 +64,7 @@ public class AdminUserSeeder implements CommandLineRunner {
             defaultAdmin.setAccountLocked(false);
             defaultAdmin.setFailedLoginAttempts(0);
             defaultAdmin.setPassword(passwordEncoder.encode("AdminPassword123!"));
-            userRepository.save(defaultAdmin);
+            userRepository.saveAndFlush(defaultAdmin);
             log.info("Default SUPER_ADMIN admin@goodearth.com updated.");
         }
     }
