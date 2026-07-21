@@ -1,0 +1,12 @@
+[providers]
+providers = ['java']
+
+[variables]
+NIXPACKS_JDK_VERSION = '17'
+SPRING_PROFILES_ACTIVE = 'prod'
+
+[phases.build]
+cmds = ['cd apps/backend && mvn clean package -DskipTests']
+
+[start]
+cmd = 'java -Dserver.port=$PORT -jar apps/backend/target/postsales-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod'
