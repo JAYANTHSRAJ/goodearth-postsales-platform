@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class AdminUserSeeder implements CommandLineRunner {
@@ -23,6 +24,7 @@ public class AdminUserSeeder implements CommandLineRunner {
     }
 
     @Override
+    @Transactional
     public void run(String... args) throws Exception {
         java.util.List<User> superAdmins = userRepository.findByRole(UserRole.SUPER_ADMIN);
 
