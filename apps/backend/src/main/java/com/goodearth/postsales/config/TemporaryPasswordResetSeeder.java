@@ -30,14 +30,13 @@ public class TemporaryPasswordResetSeeder implements CommandLineRunner {
 
     private void resetAndActivate(String email) {
         userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
-            user.setPassword(passwordEncoder.encode("GoodEarth@123"));
+            user.setPassword(passwordEncoder.encode("AdminPassword123!"));
             user.setAccountActivated(true);
             user.setEnabled(true);
             user.setEmailVerified(true);
             user.setAccountLocked(false);
             userRepository.save(user);
-            log.info("Password reset completed.");
-            System.out.println("Password reset completed.");
+            log.info("Password reset completed for {}.", email);
         });
     }
 }
