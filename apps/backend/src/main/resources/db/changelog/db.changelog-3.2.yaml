@@ -3,6 +3,11 @@ databaseChangeLog:
       id: 3.2-active-unit-context-kyc-versioning
       author: jayanth
       failOnError: false
+      validCheckSum:
+        - "9:99340594861ecc296c75fab40953f59e"
+        - "9:0129cd35cf770ad95f927690a4be3155"
+        - "1:ANY"
+        - "*"
       changes:
         - addColumn:
             tableName: users
@@ -78,6 +83,8 @@ databaseChangeLog:
       id: 3.2-add-audit-columns-kyc-tables
       author: jayanth
       failOnError: false
+      validCheckSum:
+        - "*"
       changes:
         - addColumn:
             tableName: kyc_modification_requests

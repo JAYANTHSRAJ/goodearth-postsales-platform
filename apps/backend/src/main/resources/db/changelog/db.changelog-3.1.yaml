@@ -3,6 +3,8 @@ databaseChangeLog:
       id: 3.1-multi-unit-kyc-redesign
       author: jayanth
       failOnError: false
+      validCheckSum:
+        - "*"
       changes:
         - addColumn:
             tableName: buyers
