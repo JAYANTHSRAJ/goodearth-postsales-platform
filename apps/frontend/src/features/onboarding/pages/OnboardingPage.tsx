@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   User,
   ClipboardCheck,
@@ -19,9 +20,12 @@ import { Step1PersonalDetails } from '../components/wizard-steps/Step1PersonalDe
 import { Step2CoApplicants } from '../components/wizard-steps/Step2CoApplicants';
 import { Step3DocumentVault } from '../components/wizard-steps/Step3DocumentVault';
 import { Step4ReviewSubmit } from '../components/wizard-steps/Step4ReviewSubmit';
+import { BookingPaymentScreen } from '../components/BookingPaymentScreen';
 
 export const OnboardingPage: React.FC = () => {
   const { user, updateUser } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [profileForm, setProfileForm] = useState({
     fullName: '',
     phone: '',
@@ -104,11 +108,19 @@ export const OnboardingPage: React.FC = () => {
     familySize: 'Couple',
     purposeOfPurchase: 'Primary Residence',
     homeLoan: 'No',
+
+    // Payment proof
+    paymentReceiptUrl: '',
   });
 
   const [kycErrors, setKycErrors] = useState<Record<string, string>>({});
   const [kycDraftSuccess, setKycDraftSuccess] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // Active stage determination from URL search params or user state
+  const urlStage = searchParams.get('stage');
+  const userStage = user?.onboardingStage || 'PROFILE_PENDING';
+  const activeStage = urlStage || userStage;
 
   // Fetch current profile details
   const { data: profile, isLoading: isProfileLoading, refetch: refetchProfile } = useQuery({
@@ -121,7 +133,7 @@ export const OnboardingPage: React.FC = () => {
   const { data: kycData, isLoading: isKycLoading, refetch: refetchKyc } = useQuery({
     queryKey: ['clientKyc'],
     queryFn: () => clientService.getKyc(),
-    enabled: !!user && user?.onboardingStage === 'KYC_PENDING',
+    enabled: !!user,
   });
 
   // Update profile mutation
@@ -132,12 +144,13 @@ export const OnboardingPage: React.FC = () => {
       if (updatedProfile) {
         updateUser({
           name: updatedProfile.fullName,
-          onboardingStage: updatedProfile.onboardingStage,
+          onboardingStage: updatedProfile.onboardingStage || 'KYC_PENDING',
         });
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       }
       refetchProfile();
+      setSearchParams({ stage: 'KYC_PENDING' });
     },
   });
 
@@ -159,6 +172,20 @@ export const OnboardingPage: React.FC = () => {
         onboardingStage: 'PAYMENT_PENDING',
       });
       refetchKyc();
+      setSearchParams({ stage: 'PAYMENT_PENDING' });
+    },
+  });
+
+  // Payment simulation mutation
+  const simulatePaymentMutation = useMutation({
+    mutationFn: (data: any) => clientService.simulatePayment(data),
+    onSuccess: (response: any) => {
+      const result = response?.data || response;
+      if (result && result.success) {
+        updateUser({
+          onboardingStage: result.onboardingStage || 'COMPLETED',
+        });
+      }
     },
   });
 
@@ -194,8 +221,6 @@ export const OnboardingPage: React.FC = () => {
       }
     }
   }, [kycData]);
-
-  const activeStage = user?.onboardingStage || 'PROFILE_PENDING';
 
   // Calculate profile completion percentage
   const calculateCompletion = () => {
@@ -385,11 +410,11 @@ export const OnboardingPage: React.FC = () => {
 
   const getStepStatus = (stepKey: string) => {
     const stageOrder = ['PROFILE_PENDING', 'KYC_PENDING', 'PAYMENT_PENDING', 'COMPLETED'];
-    const activeIndex = stageOrder.indexOf(activeStage);
+    const activeIndex = stageOrder.indexOf(userStage);
     const stepIndex = stageOrder.indexOf(stepKey);
 
+    if (stepKey === activeStage) return 'active';
     if (stepIndex < activeIndex) return 'completed';
-    if (stepIndex === activeIndex) return 'active';
     return 'locked';
   };
 
@@ -408,14 +433,16 @@ export const OnboardingPage: React.FC = () => {
         {steps.map((step, idx) => {
           const status = getStepStatus(step.key);
           return (
-            <div
+            <button
               key={step.key}
-              className={`flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 ${
+              type="button"
+              onClick={() => setSearchParams({ stage: step.key })}
+              className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all duration-200 ${
                 status === 'active'
-                  ? 'border-brand-500 bg-brand-50/50 dark:border-brand-600 dark:bg-brand-900/20'
+                  ? 'border-brand-500 bg-brand-50/50 dark:border-brand-600 dark:bg-brand-900/20 ring-1 ring-brand-500/20'
                   : status === 'completed'
-                  ? 'border-green-200 bg-green-50/20 dark:border-green-900/20'
-                  : 'border-brand-200 opacity-60 bg-white dark:border-brand-850 dark:bg-brand-900'
+                  ? 'border-green-200 bg-green-50/20 dark:border-green-900/20 hover:border-green-300'
+                  : 'border-brand-200 opacity-60 bg-white dark:border-brand-850 dark:bg-brand-900 hover:opacity-100'
               }`}
             >
               <div
@@ -437,7 +464,7 @@ export const OnboardingPage: React.FC = () => {
                   {step.label}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -682,6 +709,18 @@ export const OnboardingPage: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {/* Stage 3: Booking Payment */}
+        {activeStage === 'PAYMENT_PENDING' && (
+          <BookingPaymentScreen
+            receiptUrl={kycForm.paymentReceiptUrl || ''}
+            isUploading={uploadingField === 'paymentReceiptUrl'}
+            isSubmitting={simulatePaymentMutation.isPending}
+            onFileUpload={handleKycFileUpload}
+            onFileRemove={handleKycFileRemove}
+            onSubmitPayment={(details) => simulatePaymentMutation.mutate(details)}
+          />
         )}
       </div>
     </div>

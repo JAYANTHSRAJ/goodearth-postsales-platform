@@ -1,5 +1,5 @@
 import { ComponentType } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Home,
@@ -62,20 +62,23 @@ export const Sidebar: React.FC = () => {
   const { user } = useAuthStore();
 
   const isClient = user?.role === 'buyer';
-  
   let visibleNavItems = isClient ? clientNavItems : crmNavItems;
+
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const currentStageParam = searchParams.get('stage');
 
   if (isClient && user?.onboardingStage && user.onboardingStage !== 'COMPLETED') {
     const stage = user.onboardingStage;
     const items = [];
     if (stage === 'PROFILE_PENDING' || stage === 'KYC_PENDING' || stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'Profile', path: '/onboarding', icon: User });
+      items.push({ name: 'Profile', path: '/onboarding?stage=PROFILE_PENDING', icon: User, stageKey: 'PROFILE_PENDING' });
     }
     if (stage === 'KYC_PENDING' || stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'KYC', path: '/onboarding', icon: ClipboardCheck });
+      items.push({ name: 'KYC', path: '/onboarding?stage=KYC_PENDING', icon: ClipboardCheck, stageKey: 'KYC_PENDING' });
     }
     if (stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'Booking Payment', path: '/onboarding', icon: CreditCard });
+      items.push({ name: 'Booking Payment', path: '/onboarding?stage=PAYMENT_PENDING', icon: CreditCard, stageKey: 'PAYMENT_PENDING' });
     }
     visibleNavItems = items;
   }
@@ -125,14 +128,18 @@ export const Sidebar: React.FC = () => {
         <nav className="flex-1 space-y-1.5 px-3 py-4 overflow-y-auto">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
+            const isItemActive = (item as any).stageKey
+              ? (currentStageParam === (item as any).stageKey || (!currentStageParam && (user?.onboardingStage || 'PROFILE_PENDING') === (item as any).stageKey))
+              : (location.pathname === item.path);
+
             return (
               <NavLink
                 key={item.name}
                 to={item.path}
-                className={({ isActive }) => `
+                className={`
                   relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 group
                   ${
-                    isActive
+                    isItemActive
                       ? 'bg-brand-100 text-brand-900 dark:bg-brand-800 dark:text-white font-semibold'
                       : 'text-brand-600 hover:bg-brand-50 hover:text-brand-900 dark:text-brand-400 dark:hover:bg-brand-800/40 dark:hover:text-white'
                   }
@@ -141,16 +148,12 @@ export const Sidebar: React.FC = () => {
                   if (mobileSidebarOpen) toggleMobileSidebar();
                 }}
               >
-                {({ isActive }) => (
-                  <>
-                    {/* Active Accent Left Border */}
-                    {isActive && (
-                      <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded bg-accent-600 dark:bg-accent-400" />
-                    )}
-                    <Icon className="h-5 w-5 shrink-0 transition-transform group-hover:scale-105" />
-                    {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
-                  </>
+                {/* Active Accent Left Border */}
+                {isItemActive && (
+                  <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded bg-accent-600 dark:bg-accent-400" />
                 )}
+                <Icon className="h-5 w-5 shrink-0 transition-transform group-hover:scale-105" />
+                {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
               </NavLink>
             );
           })}
