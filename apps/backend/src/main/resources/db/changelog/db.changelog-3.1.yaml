@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.1-multi-unit-kyc-redesign
+      author: jayanth
+      failOnError: false
+      changes:
+        - addColumn:
+            tableName: buyers
+            columns:
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+        - dropUniqueConstraint:
+            tableName: kyc_applications
+            constraintName: kyc_applications_user_id_key
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: buyer_id
+                  type: UUID
+              - column:
+                  name: is_verified
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: is_locked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+        - createTable:
+            tableName: kyc_modification_requests
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: buyer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+              - column:
+                  name: reason
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: "PENDING"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requested_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reviewed_at
+                  type: TIMESTAMP
+              - column:
+                  name: reviewed_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP

@@ -1,4 +1,4 @@
-import { ComponentType } from 'react';
+import React, { ComponentType, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -19,26 +19,30 @@ import {
   Settings,
   Shield,
   X,
+  Lock,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
+import { useUnitStore } from '../../store/unitStore';
+import { clientService } from '../../services/client.service';
 
 interface NavItem {
   name: string;
   path: string;
   icon: ComponentType<{ className?: string }>;
+  requiresUnit?: boolean;
 }
 
 const clientNavItems: NavItem[] = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'My Home', path: '/my-home', icon: Home },
-  { name: 'Design Studio', path: '/design-studio', icon: Highlighter },
-  { name: 'Construction Updates', path: '/construction-updates', icon: Hammer },
-  { name: 'Finance', path: '/finance', icon: CreditCard },
-  { name: 'My Selections', path: '/selections', icon: ClipboardCheck },
-  { name: 'Support', path: '/support', icon: LifeBuoy },
-  { name: 'Notifications', path: '/notifications', icon: Bell },
-  { name: 'Profile', path: '/profile', icon: User },
+  { name: 'Profile', path: '/onboarding?stage=PROFILE_PENDING', icon: User, requiresUnit: false },
+  { name: 'My Home', path: '/my-home', icon: Home, requiresUnit: false },
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiresUnit: true },
+  { name: 'Design Studio', path: '/design-studio', icon: Highlighter, requiresUnit: true },
+  { name: 'Construction Updates', path: '/construction-updates', icon: Hammer, requiresUnit: true },
+  { name: 'Finance', path: '/finance', icon: CreditCard, requiresUnit: true },
+  { name: 'My Selections', path: '/selections', icon: ClipboardCheck, requiresUnit: true },
+  { name: 'Support', path: '/support', icon: LifeBuoy, requiresUnit: true },
+  { name: 'Notifications', path: '/notifications', icon: Bell, requiresUnit: true },
 ];
 
 const crmNavItems: NavItem[] = [
@@ -60,28 +64,28 @@ const crmNavItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useUIStore();
   const { user } = useAuthStore();
+  const { activeUnit, setUnits } = useUnitStore();
+  const location = useLocation();
 
   const isClient = user?.role === 'buyer';
-  let visibleNavItems = isClient ? clientNavItems : crmNavItems;
 
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const currentStageParam = searchParams.get('stage');
+  // Automatically fetch owned units for buyer on sidebar load
+  useEffect(() => {
+    if (isClient && user) {
+      clientService
+        .getOwnedUnits()
+        .then((units) => {
+          if (Array.isArray(units)) {
+            setUnits(units);
+          }
+        })
+        .catch((e) => console.error('Failed to load owned units', e));
+    }
+  }, [isClient, user]);
 
-  if (isClient && user?.onboardingStage && user.onboardingStage !== 'COMPLETED') {
-    const stage = user.onboardingStage;
-    const items = [];
-    if (stage === 'PROFILE_PENDING' || stage === 'KYC_PENDING' || stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'Profile', path: '/onboarding?stage=PROFILE_PENDING', icon: User, stageKey: 'PROFILE_PENDING' });
-    }
-    if (stage === 'KYC_PENDING' || stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'KYC', path: '/onboarding?stage=KYC_PENDING', icon: ClipboardCheck, stageKey: 'KYC_PENDING' });
-    }
-    if (stage === 'PAYMENT_PENDING') {
-      items.push({ name: 'Booking Payment', path: '/onboarding?stage=PAYMENT_PENDING', icon: CreditCard, stageKey: 'PAYMENT_PENDING' });
-    }
-    visibleNavItems = items;
-  }
+  const visibleNavItems = isClient ? clientNavItems : crmNavItems;
+
+  const isUnitUnlocked = activeUnit && (activeUnit.isKycVerified || activeUnit.kycStatus === 'SUBMITTED' || activeUnit.kycStatus === 'VERIFIED');
 
   const sidebarClass = `
     fixed inset-y-0 left-0 z-50 flex flex-col border-r border-brand-200 bg-white transition-all duration-300 dark:border-brand-800 dark:bg-brand-900
@@ -128,9 +132,24 @@ export const Sidebar: React.FC = () => {
         <nav className="flex-1 space-y-1.5 px-3 py-4 overflow-y-auto">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
-            const isItemActive = (item as any).stageKey
-              ? (currentStageParam === (item as any).stageKey || (!currentStageParam && (user?.onboardingStage || 'PROFILE_PENDING') === (item as any).stageKey))
-              : (location.pathname === item.path);
+            const isDisabled = isClient && item.requiresUnit && !isUnitUnlocked;
+            const isItemActive = location.pathname === item.path || (location.pathname + location.search) === item.path;
+
+            if (isDisabled) {
+              return (
+                <div
+                  key={item.name}
+                  className="relative flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-medium opacity-45 cursor-not-allowed bg-brand-50/40 dark:bg-brand-950/20 text-brand-400 dark:text-brand-600"
+                  title="Select an active property unit and complete KYC to unlock"
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
+                  </div>
+                  {!sidebarCollapsed && <Lock className="h-3.5 w-3.5 shrink-0 text-brand-400" />}
+                </div>
+              );
+            }
 
             return (
               <NavLink
@@ -159,15 +178,15 @@ export const Sidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Footer info (collapsible) */}
-        {!sidebarCollapsed && (
+        {/* Active Unit Footer Badge */}
+        {!sidebarCollapsed && isClient && (
           <div className="border-t border-brand-100 p-4 dark:border-brand-800">
-            <div className="rounded-xl bg-brand-50 p-3 dark:bg-brand-950/40">
-              <p className="text-xs font-semibold text-brand-800 dark:text-brand-200">
-                Environment:
+            <div className="rounded-xl bg-brand-50 p-3 dark:bg-brand-950/40 border border-brand-200/50 dark:border-brand-850">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-400">
+                Active Property:
               </p>
-              <p className="text-[10px] font-mono text-brand-500 dark:text-brand-400 mt-0.5">
-                {import.meta.env.VITE_APP_ENV || 'development'}
+              <p className="text-xs font-bold text-brand-800 dark:text-brand-200 truncate mt-0.5">
+                {activeUnit ? activeUnit.unitName : 'None Selected'}
               </p>
             </div>
           </div>

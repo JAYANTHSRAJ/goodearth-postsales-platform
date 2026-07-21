@@ -50,4 +50,7 @@ public class Buyer extends BaseEntity {
 
     @Column(name = "unit_name")
     private String unitName;
+
+    @Column(name = "kyc_application_id")
+    private java.util.UUID kycApplicationId;
 }

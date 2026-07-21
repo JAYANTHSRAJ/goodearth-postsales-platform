@@ -1,4 +1,5 @@
 import { api } from './api';
+import { ClientUnit } from '../store/unitStore';
 
 export interface ClientBuyerSummary {
   id: string;
@@ -137,6 +138,14 @@ export interface FamilyMember {
 }
 
 export const clientService = {
+  getOwnedUnits(): Promise<ClientUnit[]> {
+    return api.get<ClientUnit[]>('/client/units');
+  },
+
+  setActiveUnit(buyerId: string): Promise<any> {
+    return api.post<any>(`/client/units/active?buyerId=${buyerId}`, {});
+  },
+
   getDashboard(workflowId?: string | null): Promise<ClientDashboardData> {
     const url = workflowId ? `/client/dashboard?workflowId=${workflowId}` : '/client/dashboard';
     return api.get<ClientDashboardData>(url);
@@ -187,16 +196,27 @@ export const clientService = {
     return api.put<any>('/client/profile', profile);
   },
 
-  getKyc(): Promise<any> {
-    return api.get<any>('/client/kyc');
+  getKyc(workflowId?: string | null): Promise<any> {
+    const url = workflowId ? `/client/kyc?workflowId=${workflowId}` : '/client/kyc';
+    return api.get<any>(url);
   },
 
-  saveKycDraft(data: any): Promise<any> {
-    return api.post<any>('/client/kyc/draft', data);
+  saveKycDraft(data: any, workflowId?: string | null): Promise<any> {
+    const url = workflowId ? `/client/kyc/draft?workflowId=${workflowId}` : '/client/kyc/draft';
+    return api.post<any>(url, data);
   },
 
-  submitKyc(data: any): Promise<any> {
-    return api.post<any>('/client/kyc/submit', data);
+  submitKyc(data: any, workflowId?: string | null): Promise<any> {
+    const url = workflowId ? `/client/kyc/submit?workflowId=${workflowId}` : '/client/kyc/submit';
+    return api.post<any>(url, data);
+  },
+
+  reuseKyc(workflowId: string, sourceKycId: string): Promise<any> {
+    return api.post<any>(`/client/kyc/reuse?workflowId=${workflowId}&sourceKycId=${sourceKycId}`, {});
+  },
+
+  requestKycModification(workflowId: string, reason: string): Promise<any> {
+    return api.post<any>(`/client/kyc/request-modification?workflowId=${workflowId}`, { reason });
   },
 
   uploadKycFile(file: File): Promise<{ fileUrl: string }> {
@@ -205,8 +225,16 @@ export const clientService = {
     return api.post<{ fileUrl: string }>('/client/kyc/upload', formData);
   },
 
-  simulatePayment(paymentDetails: any): Promise<any> {
-    return api.post<any>('/client/payment/simulate', paymentDetails);
+  getAdminKycModifications(): Promise<any[]> {
+    return api.get<any[]>('/admin/kyc-modifications');
+  },
+
+  approveKycModification(id: string): Promise<any> {
+    return api.post<any>(`/admin/kyc-modifications/${id}/approve`, {});
+  },
+
+  rejectKycModification(id: string): Promise<any> {
+    return api.post<any>(`/admin/kyc-modifications/${id}/reject`, {});
   },
 };
 

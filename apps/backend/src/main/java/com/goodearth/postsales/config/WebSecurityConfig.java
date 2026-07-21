@@ -42,14 +42,17 @@ public class WebSecurityConfig {
     private boolean hstsEnabled;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.goodearth.postsales.client.context.ActiveUnitFilter activeUnitFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
     public WebSecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            com.goodearth.postsales.client.context.ActiveUnitFilter activeUnitFilter,
             CustomAuthenticationEntryPoint authenticationEntryPoint,
             CustomAccessDeniedHandler accessDeniedHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.activeUnitFilter = activeUnitFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
     }
@@ -80,7 +83,7 @@ public class WebSecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/actuator/health").permitAll()
+                auth.requestMatchers("/actuator/**").permitAll()
                     .requestMatchers(
                         "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/activation/**", "/api/v1/auth/password-reset/**",
                         "/api/v1/auth/activate", "/api/v1/auth/resend-activation",
@@ -97,7 +100,8 @@ public class WebSecurityConfig {
                 
                 auth.anyRequest().authenticated();
             })
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(activeUnitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -117,7 +121,9 @@ public class WebSecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control", "X-Active-Unit-ID"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
 

@@ -12,5 +12,6 @@ public interface BuyerRepository extends JpaRepository<Buyer, UUID> {
     Optional<Buyer> findByZohoContactId(String zohoContactId);
     boolean existsByZohoContactId(String zohoContactId);
     Optional<Buyer> findByEmailIgnoreCase(String email);
+    java.util.List<Buyer> findAllByEmailIgnoreCase(String email);
     Optional<Buyer> findByZohoDealId(String zohoDealId);
 }

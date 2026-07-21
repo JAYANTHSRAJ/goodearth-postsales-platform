@@ -1,0 +1,99 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.2-active-unit-context-kyc-versioning
+      author: jayanth
+      failOnError: false
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: last_selected_unit_id
+                  type: UUID
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  name: parent_kyc_id
+                  type: UUID
+              - column:
+                  name: is_current_version
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+        - createTable:
+            tableName: buyer_kyc_associations
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: buyer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: "ACTIVE"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: associated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: associated_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.2-add-audit-columns-kyc-tables
+      author: jayanth
+      failOnError: false
+      changes:
+        - addColumn:
+            tableName: kyc_modification_requests
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addColumn:
+            tableName: buyer_kyc_associations
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   CreditCard,
   AlertTriangle,
@@ -16,9 +16,19 @@ import { useAuthStore } from '../../../store/authStore';
 import { AdminDashboardView } from '../components/AdminDashboardView';
 import { JourneyEngine } from '../components/JourneyEngine';
 
+import { useUnitStore } from '../../../store/unitStore';
+import { useNavigate } from 'react-router-dom';
+
 const ClientDashboardPage: React.FC = () => {
   const { dashboardData, isLoading } = useDashboard();
-  const [selectedProperty, setSelectedProperty] = useState<string>('prop-01');
+  const { units, activeUnit, setActiveUnit } = useUnitStore();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!activeUnit && !isLoading) {
+      navigate('/my-home');
+    }
+  }, [activeUnit, isLoading, navigate]);
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -33,10 +43,6 @@ const ClientDashboardPage: React.FC = () => {
       />
     );
   }
-
-  const properties = [
-    { id: 'prop-01', name: `${dashboardData.customer.projectName} — ${dashboardData.customer.unitName || 'Villa 14'}` },
-  ];
 
   return (
     <div className="space-y-6">
@@ -55,13 +61,16 @@ const ClientDashboardPage: React.FC = () => {
           <div className="flex-1">
             <span className="text-[9px] uppercase font-bold text-brand-400 block tracking-wider font-mono">Active Residence</span>
             <select
-              value={selectedProperty}
-              onChange={(e) => setSelectedProperty(e.target.value)}
+              value={activeUnit?.id || ''}
+              onChange={(e) => {
+                const target = units.find((u) => u.id === e.target.value);
+                if (target) setActiveUnit(target);
+              }}
               className="w-full bg-transparent text-xs font-bold text-brand-900 dark:text-white outline-none cursor-pointer mt-0.5"
             >
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.projectName ? `${u.projectName} — ${u.unitName}` : u.unitName}
                 </option>
               ))}
             </select>
