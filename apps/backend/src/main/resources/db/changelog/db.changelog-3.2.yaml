@@ -66,3 +66,32 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.2-add-audit-columns-kyc-tables
+      author: jayanth
+      changes:
+        - addColumn:
+            tableName: kyc_modification_requests
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addColumn:
+            tableName: buyer_kyc_associations
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
