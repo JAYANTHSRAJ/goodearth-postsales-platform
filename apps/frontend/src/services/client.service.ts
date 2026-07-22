@@ -212,8 +212,12 @@ export const clientService = {
     return api.get<any>(url);
   },
 
+  getKycById(kycId: string): Promise<any> {
+    return api.get<any>(`/v1/kyc/${kycId}`);
+  },
+
   saveKycDraft(data: any, workflowId?: string | null): Promise<any> {
-    const url = workflowId ? `/v1/kyc/draft` : '/v1/kyc/draft';
+    const url = `/v1/kyc/draft`;
     return api.post<any>(url, { ...data, workflowId });
   },
 
@@ -258,16 +262,33 @@ export const clientService = {
     return api.get<DocumentMetadata[]>(`/v1/kyc/documents/${documentId}/versions`);
   },
 
-  getAdminKycModifications(): Promise<any[]> {
-    return api.get<any[]>('/admin/kyc-modifications');
+  // Phase 7 Admin Review Portal APIs
+  getAdminAllKycApplications(): Promise<any[]> {
+    return api.get<any[]>('/v1/kyc/admin/all');
   },
 
-  approveKycModification(id: string): Promise<any> {
-    return api.post<any>(`/admin/kyc-modifications/${id}/approve`, {});
+  adminReviewKyc(kycId: string, action: string, comments?: string): Promise<any> {
+    return api.post<any>(`/v1/kyc/${kycId}/admin-review`, { action, comments });
   },
 
-  rejectKycModification(id: string): Promise<any> {
-    return api.post<any>(`/admin/kyc-modifications/${id}/reject`, {});
+  getKycAuditLogs(kycId: string): Promise<any[]> {
+    return api.get<any[]>(`/v1/kyc/${kycId}/audit`);
+  },
+
+  getCrmSyncLogs(kycId: string): Promise<any[]> {
+    return api.get<any[]>(`/v1/admin/kyc/sync/logs?kycId=${kycId}`);
+  },
+
+  retryCrmSync(syncLogId: string): Promise<any> {
+    return api.post<any>(`/v1/admin/kyc/sync/${syncLogId}/retry`, {});
+  },
+
+  getWorkDriveSyncLogs(kycId: string): Promise<any[]> {
+    return api.get<any[]>(`/v1/admin/kyc/workdrive/logs?kycId=${kycId}`);
+  },
+
+  retryWorkDriveSync(syncLogId: string): Promise<any> {
+    return api.post<any>(`/v1/admin/kyc/workdrive/${syncLogId}/retry`, {});
   },
 };
 

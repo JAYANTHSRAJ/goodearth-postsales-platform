@@ -49,6 +49,11 @@ const DesignStudioPage = withSuspense(() => import('../features/annotations/page
 const ClientSupportPage = withSuspense(() => import('../features/dashboard/pages/ClientSupportPage'), 'ClientSupportPage');
 const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages/ClientProfilePage'), 'ClientProfilePage');
 const OnboardingPage = withSuspense(() => import('../features/onboarding/pages/OnboardingPage'), 'OnboardingPage');
+
+// Phase 7 Admin KYC Portal Pages
+const AdminKycDashboardPage = withSuspense(() => import('../features/admin/kyc/AdminKycDashboardPage'), 'AdminKycDashboardPage');
+const AdminKycReviewPage = withSuspense(() => import('../features/admin/kyc/AdminKycReviewPage'), 'AdminKycReviewPage');
+
 const Unauthorized = withSuspense(() => import('../pages/Unauthorized'), 'Unauthorized');
 const NotFound = withSuspense(() => import('../pages/NotFound'), 'NotFound');
 
@@ -105,7 +110,7 @@ export const router = createBrowserRouter([
             path: '/unauthorized',
             element: <Unauthorized />,
           },
-          // CRM-only routes
+          // CRM & Staff routes
           {
             element: <ProtectedRoute allowedRoles={['admin', 'employee']} />,
             children: [
@@ -148,6 +153,14 @@ export const router = createBrowserRouter([
               {
                 path: '/settings',
                 element: <AdminPage />,
+              },
+              {
+                path: '/admin/kyc',
+                element: <AdminKycDashboardPage />,
+              },
+              {
+                path: '/admin/kyc/:id',
+                element: <AdminKycReviewPage />,
               },
             ],
           },

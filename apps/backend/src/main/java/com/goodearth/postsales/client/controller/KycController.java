@@ -2,6 +2,8 @@ package com.goodearth.postsales.client.controller;
 
 import com.goodearth.postsales.auth.entity.User;
 import com.goodearth.postsales.client.dto.*;
+import com.goodearth.postsales.client.entity.KycApplication;
+import com.goodearth.postsales.client.repository.KycApplicationRepository;
 import com.goodearth.postsales.client.service.KycService;
 import com.goodearth.postsales.common.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -12,15 +14,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/kyc")
 public class KycController {
 
     private final KycService kycService;
+    private final KycApplicationRepository kycApplicationRepository;
 
-    public KycController(KycService kycService) {
+    public KycController(KycService kycService, KycApplicationRepository kycApplicationRepository) {
         this.kycService = kycService;
+        this.kycApplicationRepository = kycApplicationRepository;
     }
 
     @GetMapping
@@ -96,5 +101,15 @@ public class KycController {
             @Valid @RequestBody AdminReviewRequestDto reviewDto) {
         KycReviewSummaryDto summary = kycService.adminReview(adminUser.getId(), id, reviewDto);
         return ResponseEntity.ok(new ApiResponse<>(summary));
+    }
+
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<KycReviewSummaryDto>>> getAllKycApplicationsForAdmin() {
+        List<KycApplication> all = kycApplicationRepository.findAll();
+        List<KycReviewSummaryDto> summaries = all.stream()
+                .map(kyc -> kycService.getKycById(null, kyc.getId()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(new ApiResponse<>(summaries));
     }
 }

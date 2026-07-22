@@ -13,6 +13,7 @@ import com.goodearth.postsales.integration.zoho.ZohoApiClient;
 import com.goodearth.postsales.integration.zoho.ZohoProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,6 +33,7 @@ public class ZohoCrmSyncServiceImpl implements ZohoCrmSyncService {
     private final ZohoSyncLogRepository syncLogRepository;
     private final ZohoApiClient apiClient;
     private final ZohoProperties properties;
+    private final ZohoWorkDriveSyncService workDriveSyncService;
     private final ObjectMapper objectMapper;
 
     public ZohoCrmSyncServiceImpl(
@@ -39,11 +41,13 @@ public class ZohoCrmSyncServiceImpl implements ZohoCrmSyncService {
             ZohoSyncLogRepository syncLogRepository,
             ZohoApiClient apiClient,
             ZohoProperties properties,
+            @Lazy ZohoWorkDriveSyncService workDriveSyncService,
             ObjectMapper objectMapper) {
         this.kycRepository = kycRepository;
         this.syncLogRepository = syncLogRepository;
         this.apiClient = apiClient;
         this.properties = properties;
+        this.workDriveSyncService = workDriveSyncService;
         this.objectMapper = objectMapper;
     }
 
@@ -129,6 +133,13 @@ public class ZohoCrmSyncServiceImpl implements ZohoCrmSyncService {
             syncLog.setSyncStatus("SUCCESS");
             syncLog.setLastErrorMessage(null);
             log.info("Successfully synchronized KYC details to Zoho Deal ID: {}", zohoDealId);
+
+            // WORKFLOW CORRECTION: Upon CRM SUCCESS, trigger WorkDrive document sync enqueue!
+            try {
+                workDriveSyncService.enqueueWorkDriveSync(kycApplicationId);
+            } catch (Exception e) {
+                log.error("Failed to enqueue WorkDrive sync after CRM SUCCESS for KYC ID: {}", kycApplicationId, e);
+            }
 
         } catch (Exception ex) {
             log.error("Failed to update Zoho Deal ID: {}", zohoDealId, ex);

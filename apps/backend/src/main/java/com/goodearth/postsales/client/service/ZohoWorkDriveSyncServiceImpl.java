@@ -56,6 +56,17 @@ public class ZohoWorkDriveSyncServiceImpl implements ZohoWorkDriveSyncService {
         KycApplication kyc = kycRepository.findById(kycApplicationId)
                 .orElseThrow(() -> new CustomException("KYC application not found", HttpStatus.NOT_FOUND));
 
+        // WORKFLOW CORRECTION: Avoid duplicate queue entries if WorkDrive sync is already SUCCESS or PROCESSING
+        List<ZohoSyncLog> existingLogs = syncLogRepository.findByKycApplicationIdOrderByCreatedAtDesc(kycApplicationId);
+        boolean alreadyActive = existingLogs.stream().anyMatch(l ->
+                "WORKDRIVE_FILE".equalsIgnoreCase(l.getSyncType()) &&
+                        ("SUCCESS".equalsIgnoreCase(l.getSyncStatus()) || "PROCESSING".equalsIgnoreCase(l.getSyncStatus())));
+
+        if (alreadyActive) {
+            log.info("WorkDrive sync already active or succeeded for KYC Application ID: {}. Skipping duplicate enqueue.", kycApplicationId);
+            return;
+        }
+
         Buyer buyer = kyc.getBuyer() != null ? kyc.getBuyer() : (kyc.getWorkflow() != null ? kyc.getWorkflow().getBuyer() : null);
         String zohoDealId = buyer != null ? buyer.getZohoDealId() : null;
 
