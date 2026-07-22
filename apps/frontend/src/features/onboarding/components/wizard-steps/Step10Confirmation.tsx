@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { Card } from '../../../../components/ui/Card';
 
 interface Step10ConfirmationProps {
   form: Record<string, any>;
+  agreeAccuracy: boolean;
+  agreeTerms: boolean;
+  onAgreeAccuracyChange: (checked: boolean) => void;
+  onAgreeTermsChange: (checked: boolean) => void;
   onSubmit: (agreeAccuracy: boolean, agreeTerms: boolean) => void;
   isSubmitting: boolean;
 }
 
 export const Step10Confirmation: React.FC<Step10ConfirmationProps> = ({
+  agreeAccuracy,
+  agreeTerms,
+  onAgreeAccuracyChange,
+  onAgreeTermsChange,
   onSubmit,
   isSubmitting,
 }) => {
-  const [agreeAccuracy, setAgreeAccuracy] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-
   const canSubmit = agreeAccuracy && agreeTerms && !isSubmitting;
 
   return (
@@ -38,7 +43,7 @@ export const Step10Confirmation: React.FC<Step10ConfirmationProps> = ({
               <input
                 type="checkbox"
                 checked={agreeAccuracy}
-                onChange={(e) => setAgreeAccuracy(e.target.checked)}
+                onChange={(e) => onAgreeAccuracyChange(e.target.checked)}
                 className="mt-0.5 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
               />
               <div className="text-xs text-brand-800 dark:text-brand-200 leading-relaxed">
@@ -51,7 +56,7 @@ export const Step10Confirmation: React.FC<Step10ConfirmationProps> = ({
               <input
                 type="checkbox"
                 checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
+                onChange={(e) => onAgreeTermsChange(e.target.checked)}
                 className="mt-0.5 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
               />
               <div className="text-xs text-brand-800 dark:text-brand-200 leading-relaxed">

@@ -8,6 +8,7 @@ interface KycBottomActionBarProps {
   isSubmitting?: boolean;
   isSavingDraft?: boolean;
   isLocked?: boolean;
+  canSubmit?: boolean;
   draftSuccess?: boolean;
   onPrevStep: () => void;
   onNextStep: () => void;
@@ -22,6 +23,7 @@ export const KycBottomActionBar: React.FC<KycBottomActionBarProps> = ({
   isSubmitting = false,
   isSavingDraft = false,
   isLocked = false,
+  canSubmit = true,
   draftSuccess = false,
   onPrevStep,
   onNextStep,
@@ -119,7 +121,7 @@ export const KycBottomActionBar: React.FC<KycBottomActionBarProps> = ({
           <button
             type="button"
             onClick={onSubmitKyc}
-            disabled={isSubmitting}
+            disabled={!canSubmit || isSubmitting}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-700 to-brand-800 hover:from-brand-800 hover:to-brand-900 shadow-md transition-all duration-200 disabled:opacity-50"
           >
             {isSubmitting ? (

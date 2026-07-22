@@ -26,6 +26,8 @@ export const OnboardingPage: React.FC = () => {
   const [hasStartedKyc, setHasStartedKyc] = useState(false);
   const [kycSubStep, setKycSubStep] = useState(1);
   const [isDirty, setIsDirty] = useState(false);
+  const [agreeAccuracy, setAgreeAccuracy] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
   const [kycForm, setKycForm] = useState<Record<string, any>>({
     applicationDate: new Date().toISOString().split('T')[0],
@@ -353,6 +355,10 @@ export const OnboardingPage: React.FC = () => {
           {kycSubStep === 10 && (
             <Step10Confirmation
               form={kycForm}
+              agreeAccuracy={agreeAccuracy}
+              agreeTerms={agreeTerms}
+              onAgreeAccuracyChange={setAgreeAccuracy}
+              onAgreeTermsChange={setAgreeTerms}
               onSubmit={handleKycSubmit}
               isSubmitting={submitKycMutation.isPending}
             />
@@ -364,11 +370,12 @@ export const OnboardingPage: React.FC = () => {
             isSubmitting={submitKycMutation.isPending}
             isSavingDraft={saveKycDraftMutation.isPending}
             isLocked={isLocked}
+            canSubmit={agreeAccuracy && agreeTerms}
             draftSuccess={kycDraftSuccess}
             onPrevStep={handlePrevStep}
             onNextStep={handleNextStep}
             onSaveDraft={handleSaveDraft}
-            onSubmitKyc={() => handleKycSubmit(true, true)}
+            onSubmitKyc={() => handleKycSubmit(agreeAccuracy, agreeTerms)}
             onResumeLater={() => navigate('/my-home')}
           />
         </div>
