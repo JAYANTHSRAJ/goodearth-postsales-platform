@@ -38,6 +38,7 @@ public class KycServiceImpl implements KycService {
     private final WorkflowRepository workflowRepository;
     private final KycValidator kycValidator;
     private final ZohoCrmSyncService zohoCrmSyncService;
+    private final ZohoWorkDriveSyncService zohoWorkDriveSyncService;
     private final ObjectMapper objectMapper;
 
     public KycServiceImpl(
@@ -49,6 +50,7 @@ public class KycServiceImpl implements KycService {
             WorkflowRepository workflowRepository,
             KycValidator kycValidator,
             ZohoCrmSyncService zohoCrmSyncService,
+            ZohoWorkDriveSyncService zohoWorkDriveSyncService,
             ObjectMapper objectMapper) {
         this.kycRepository = kycRepository;
         this.auditLogRepository = auditLogRepository;
@@ -58,6 +60,7 @@ public class KycServiceImpl implements KycService {
         this.workflowRepository = workflowRepository;
         this.kycValidator = kycValidator;
         this.zohoCrmSyncService = zohoCrmSyncService;
+        this.zohoWorkDriveSyncService = zohoWorkDriveSyncService;
         this.objectMapper = objectMapper;
     }
 
@@ -141,11 +144,12 @@ public class KycServiceImpl implements KycService {
         KycApplication saved = kycRepository.save(kyc);
         recordAudit(saved, user, "SUBMIT_KYC", previousStatus, "SUBMITTED", saved.getDraftData());
 
-        // Trigger Phase 5 Asynchronous Background Zoho CRM Sync
+        // Trigger Phase 5 & 6 Asynchronous Background Syncs
         try {
             zohoCrmSyncService.enqueueKycSync(saved.getId());
+            zohoWorkDriveSyncService.enqueueWorkDriveSync(saved.getId());
         } catch (Exception e) {
-            log.error("Failed to enqueue Zoho CRM sync for KYC Application ID: {}", saved.getId(), e);
+            log.error("Failed to enqueue Zoho background syncs for KYC Application ID: {}", saved.getId(), e);
         }
 
         return buildReviewSummary(saved);
@@ -352,8 +356,9 @@ public class KycServiceImpl implements KycService {
         KycApplication saved = kycRepository.save(kyc);
         try {
             zohoCrmSyncService.enqueueKycSync(saved.getId());
+            zohoWorkDriveSyncService.enqueueWorkDriveSync(saved.getId());
         } catch (Exception e) {
-            log.error("Failed to enqueue Zoho CRM sync", e);
+            log.error("Failed to enqueue Zoho background syncs", e);
         }
 
         KycApplicationDto dto = new KycApplicationDto();

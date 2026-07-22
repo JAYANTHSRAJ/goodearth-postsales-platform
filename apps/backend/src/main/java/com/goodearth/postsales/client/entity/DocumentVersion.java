@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "document_versions")
 @Getter
@@ -46,6 +48,19 @@ public class DocumentVersion extends BaseEntity {
     @Column(name = "is_deleted")
     private boolean isDeleted = false;
 
+    // WorkDrive Phase 6 Sync Fields
     @Column(name = "workdrive_file_id", length = 100)
     private String workDriveFileId;
+
+    @Column(name = "workdrive_folder_id", length = 100)
+    private String workDriveFolderId;
+
+    @Column(name = "workdrive_upload_status", length = 50)
+    private String workDriveUploadStatus = "PENDING"; // PENDING, SUCCESS, FAILED
+
+    @Column(name = "workdrive_uploaded_at")
+    private LocalDateTime workDriveUploadedAt;
+
+    @Column(name = "workdrive_last_error", columnDefinition = "TEXT")
+    private String workDriveLastError;
 }
