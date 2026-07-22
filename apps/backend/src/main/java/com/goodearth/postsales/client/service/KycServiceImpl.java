@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goodearth.postsales.auth.entity.User;
 import com.goodearth.postsales.auth.repository.UserRepository;
-import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.client.dto.*;
 import com.goodearth.postsales.client.entity.*;
@@ -38,6 +37,7 @@ public class KycServiceImpl implements KycService {
     private final BuyerRepository buyerRepository;
     private final WorkflowRepository workflowRepository;
     private final KycValidator kycValidator;
+    private final ZohoCrmSyncService zohoCrmSyncService;
     private final ObjectMapper objectMapper;
 
     public KycServiceImpl(
@@ -48,6 +48,7 @@ public class KycServiceImpl implements KycService {
             BuyerRepository buyerRepository,
             WorkflowRepository workflowRepository,
             KycValidator kycValidator,
+            ZohoCrmSyncService zohoCrmSyncService,
             ObjectMapper objectMapper) {
         this.kycRepository = kycRepository;
         this.auditLogRepository = auditLogRepository;
@@ -56,6 +57,7 @@ public class KycServiceImpl implements KycService {
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
         this.kycValidator = kycValidator;
+        this.zohoCrmSyncService = zohoCrmSyncService;
         this.objectMapper = objectMapper;
     }
 
@@ -138,6 +140,13 @@ public class KycServiceImpl implements KycService {
 
         KycApplication saved = kycRepository.save(kyc);
         recordAudit(saved, user, "SUBMIT_KYC", previousStatus, "SUBMITTED", saved.getDraftData());
+
+        // Trigger Phase 5 Asynchronous Background Zoho CRM Sync
+        try {
+            zohoCrmSyncService.enqueueKycSync(saved.getId());
+        } catch (Exception e) {
+            log.error("Failed to enqueue Zoho CRM sync for KYC Application ID: {}", saved.getId(), e);
+        }
 
         return buildReviewSummary(saved);
     }
@@ -341,6 +350,11 @@ public class KycServiceImpl implements KycService {
         kyc.setDraftData(formPayloadJson);
 
         KycApplication saved = kycRepository.save(kyc);
+        try {
+            zohoCrmSyncService.enqueueKycSync(saved.getId());
+        } catch (Exception e) {
+            log.error("Failed to enqueue Zoho CRM sync", e);
+        }
 
         KycApplicationDto dto = new KycApplicationDto();
         dto.setId(saved.getId());

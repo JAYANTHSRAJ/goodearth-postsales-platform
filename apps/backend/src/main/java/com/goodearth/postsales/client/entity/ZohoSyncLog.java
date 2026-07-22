@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "zoho_sync_logs")
 @Getter
@@ -17,24 +19,30 @@ public class ZohoSyncLog extends BaseEntity {
     @JoinColumn(name = "kyc_application_id", referencedColumnName = "id")
     private KycApplication kycApplication;
 
-    @Column(name = "zoho_deal_id", nullable = false, length = 100)
+    @Column(name = "zoho_deal_id", length = 100)
     private String zohoDealId;
 
-    @Column(name = "sync_type", nullable = false, length = 50)
-    private String syncType; // CRM_DEAL or WORKDRIVE_FILE
+    @Column(name = "sync_type", length = 50)
+    private String syncType = "CRM_DEAL"; // CRM_DEAL or WORKDRIVE_FILE
 
     @Column(name = "sync_status", nullable = false, length = 50)
-    private String syncStatus; // PENDING, SYNCHRONIZED, FAILED
+    private String syncStatus; // PENDING, PROCESSING, SUCCESS, FAILED
 
     @Column(name = "attempt_count")
     private int attemptCount = 0;
 
     @Column(name = "max_attempts")
-    private int maxAttempts = 5;
+    private int maxAttempts = 3;
+
+    @Column(name = "last_attempt_at")
+    private LocalDateTime lastAttemptAt;
 
     @Column(name = "last_error_message", columnDefinition = "TEXT")
     private String lastErrorMessage;
 
     @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
+
+    @Column(name = "response_snapshot", columnDefinition = "TEXT")
+    private String responseSnapshot;
 }
