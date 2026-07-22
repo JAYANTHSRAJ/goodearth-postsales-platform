@@ -17,7 +17,6 @@ import { Step7LoanAndTax } from '../components/wizard-steps/Step7LoanAndTax';
 import { Step8DocumentUploadPlaceholder } from '../components/wizard-steps/Step8DocumentUploadPlaceholder';
 import { Step9ReviewSummary } from '../components/wizard-steps/Step9ReviewSummary';
 import { Step10Confirmation } from '../components/wizard-steps/Step10Confirmation';
-import { validateKycStep, scrollToFirstError } from '../utils/kycValidation';
 
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,8 +26,6 @@ export const OnboardingPage: React.FC = () => {
   const [hasStartedKyc, setHasStartedKyc] = useState(false);
   const [kycSubStep, setKycSubStep] = useState(1);
   const [isDirty, setIsDirty] = useState(false);
-  const [agreeAccuracy, setAgreeAccuracy] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
 
   const [kycForm, setKycForm] = useState<Record<string, any>>({
     applicationDate: new Date().toISOString().split('T')[0],
@@ -99,24 +96,10 @@ export const OnboardingPage: React.FC = () => {
     enabled: !!user && !!currentWorkflowId,
   });
 
-  const rawKycData = kycData?.data || kycData;
-  const isLocked = Boolean(
-    rawKycData?.locked ||
-    rawKycData?.isLocked ||
-    rawKycData?.status === 'SUBMITTED' ||
-    rawKycData?.status === 'APPROVED'
-  );
-
   // Save KYC draft mutation
   const saveKycDraftMutation = useMutation({
-    mutationFn: (data: any) => {
-      if (isLocked) {
-        return Promise.resolve(null);
-      }
-      return clientService.saveKycDraft(data, currentWorkflowId);
-    },
-    onSuccess: (res) => {
-      if (!res) return;
+    mutationFn: (data: any) => clientService.saveKycDraft(data, currentWorkflowId),
+    onSuccess: () => {
       setKycDraftSuccess(true);
       setIsDirty(false);
       setTimeout(() => setKycDraftSuccess(false), 3000);
@@ -160,23 +143,26 @@ export const OnboardingPage: React.FC = () => {
   useEffect(() => {
     if (kycData) {
       const data = kycData.data || kycData;
-      if (data.formData) {
-        setKycForm((prev) => ({ ...prev, ...data.formData }));
-        setHasStartedKyc(true);
-        const isLockedState = data.locked || data.isLocked;
-        if (isLockedState || data.status === 'SUBMITTED' || data.status === 'APPROVED') {
-          setKycSubStep(9); // View review summary
+      if (data.draftData) {
+        try {
+          const parsed = JSON.parse(data.draftData);
+          setKycForm((prev) => ({ ...prev, ...parsed }));
+          if (data.isLocked || data.status === 'SUBMITTED' || data.status === 'APPROVED') {
+            setHasStartedKyc(true);
+            setKycSubStep(9); // View review summary
+          }
+        } catch (e) {
+          console.error('Failed to parse KYC draft data JSON', e);
         }
       }
     }
   }, [kycData]);
 
-  // 30-Second Auto-Save Timer if dirty & not locked
+  // 30-Second Auto-Save Timer if dirty
   const latestFormRef = useRef(kycForm);
   latestFormRef.current = kycForm;
 
   useEffect(() => {
-    if (isLocked) return;
     const timer = setInterval(() => {
       if (isDirty && hasStartedKyc && !saveKycDraftMutation.isPending) {
         saveKycDraftMutation.mutate(latestFormRef.current);
@@ -184,10 +170,9 @@ export const OnboardingPage: React.FC = () => {
     }, 30000);
 
     return () => clearInterval(timer);
-  }, [isDirty, hasStartedKyc, isLocked]);
+  }, [isDirty, hasStartedKyc]);
 
   const handleKycFieldChange = (field: string, value: any) => {
-    if (isLocked) return;
     setKycForm((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
     if (kycErrors[field]) {
@@ -200,67 +185,24 @@ export const OnboardingPage: React.FC = () => {
   };
 
   const handleSaveDraft = () => {
-    if (isLocked) return;
     saveKycDraftMutation.mutate(kycForm);
   };
 
-  const handleHeaderStepClick = (targetStep: number) => {
-    if (isLocked) {
-      setKycSubStep(targetStep);
-      return;
-    }
-    if (targetStep > kycSubStep) {
-      const docs = kycData?.data?.documents || kycData?.documents || [];
-      const stepErrors = validateKycStep(kycSubStep, kycForm, docs);
-      if (Object.keys(stepErrors).length > 0) {
-        setKycErrors(stepErrors);
-        setTimeout(() => scrollToFirstError(stepErrors), 100);
-        return;
-      }
-    }
-    setKycErrors({});
-    setKycSubStep(targetStep);
-  };
-
   const handleNextStep = () => {
-    if (!isLocked) {
-      const docs = kycData?.data?.documents || kycData?.documents || [];
-      const stepErrors = validateKycStep(kycSubStep, kycForm, docs);
-      if (Object.keys(stepErrors).length > 0) {
-        setKycErrors(stepErrors);
-        setTimeout(() => scrollToFirstError(stepErrors), 100);
-        return;
-      }
-      setKycErrors({});
-      saveKycDraftMutation.mutate(kycForm);
-    }
+    saveKycDraftMutation.mutate(kycForm);
     if (kycSubStep < 10) {
       setKycSubStep((prev) => prev + 1);
     }
   };
 
   const handlePrevStep = () => {
-    if (!isLocked) {
-      saveKycDraftMutation.mutate(kycForm);
-    }
-    setKycErrors({});
+    saveKycDraftMutation.mutate(kycForm);
     if (kycSubStep > 1) {
       setKycSubStep((prev) => prev - 1);
     }
   };
 
   const handleKycSubmit = (agreeAccuracy: boolean, agreeTerms: boolean) => {
-    if (isLocked) return;
-    const docs = kycData?.data?.documents || kycData?.documents || [];
-    for (let s = 1; s <= 8; s++) {
-      const errors = validateKycStep(s, kycForm, docs);
-      if (Object.keys(errors).length > 0) {
-        setKycSubStep(s);
-        setKycErrors(errors);
-        setTimeout(() => scrollToFirstError(errors), 100);
-        return;
-      }
-    }
     submitKycMutation.mutate({
       form: kycForm,
       agreeAccuracy,
@@ -287,18 +229,8 @@ export const OnboardingPage: React.FC = () => {
             </div>
           </div>
           <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            {activeUnit.kycStatus || (isLocked ? 'Submitted' : 'KYC Pending')}
+            {activeUnit.kycStatus || 'KYC Pending'}
           </span>
-        </div>
-      )}
-
-      {/* Read-Only Banner for Locked Application */}
-      {isLocked && (
-        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300 flex items-center gap-3 text-xs font-semibold">
-          <span className="text-base">🔒</span>
-          <div>
-            Application Submitted & Locked for Review. Form inputs are in read-only mode.
-          </div>
         </div>
       )}
 
@@ -314,74 +246,72 @@ export const OnboardingPage: React.FC = () => {
         <div className="space-y-6">
           <KycWizardHeader
             currentStep={kycSubStep}
-            onStepClick={handleHeaderStepClick}
+            onStepClick={(step) => setKycSubStep(step)}
           />
 
-          <fieldset disabled={isLocked} className={isLocked ? "pointer-events-none opacity-90" : ""}>
-            {kycSubStep === 1 && (
-              <Step1ApplicationDetails
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 1 && (
+            <Step1ApplicationDetails
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 2 && (
-              <Step2PrimaryApplicant
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 2 && (
+            <Step2PrimaryApplicant
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 3 && (
-              <Step3PrimaryAddress
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 3 && (
+            <Step3PrimaryAddress
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 4 && (
-              <Step4IdentityInformation
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 4 && (
+            <Step4IdentityInformation
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 5 && (
-              <Step5CoApplicant
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 5 && (
+            <Step5CoApplicant
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 6 && (
-              <Step6ThirdApplicant
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 6 && (
+            <Step6ThirdApplicant
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 7 && (
-              <Step7LoanAndTax
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
+          {kycSubStep === 7 && (
+            <Step7LoanAndTax
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
-            {kycSubStep === 8 && (
-              <Step8DocumentUploadPlaceholder
-                form={kycForm}
-                onChange={handleKycFieldChange}
-                errors={kycErrors}
-              />
-            )}
-          </fieldset>
+          {kycSubStep === 8 && (
+            <Step8DocumentUploadPlaceholder
+              form={kycForm}
+              onChange={handleKycFieldChange}
+              errors={kycErrors}
+            />
+          )}
 
           {kycSubStep === 9 && (
             <Step9ReviewSummary
@@ -393,10 +323,6 @@ export const OnboardingPage: React.FC = () => {
           {kycSubStep === 10 && (
             <Step10Confirmation
               form={kycForm}
-              agreeAccuracy={agreeAccuracy}
-              agreeTerms={agreeTerms}
-              onAgreeAccuracyChange={setAgreeAccuracy}
-              onAgreeTermsChange={setAgreeTerms}
               onSubmit={handleKycSubmit}
               isSubmitting={submitKycMutation.isPending}
             />
@@ -407,13 +333,10 @@ export const OnboardingPage: React.FC = () => {
             totalSteps={10}
             isSubmitting={submitKycMutation.isPending}
             isSavingDraft={saveKycDraftMutation.isPending}
-            isLocked={isLocked}
-            canSubmit={agreeAccuracy && agreeTerms}
             draftSuccess={kycDraftSuccess}
             onPrevStep={handlePrevStep}
             onNextStep={handleNextStep}
             onSaveDraft={handleSaveDraft}
-            onSubmitKyc={() => handleKycSubmit(agreeAccuracy, agreeTerms)}
             onResumeLater={() => navigate('/my-home')}
           />
         </div>

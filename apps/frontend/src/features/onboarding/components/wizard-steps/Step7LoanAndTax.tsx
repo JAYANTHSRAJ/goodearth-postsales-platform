@@ -10,10 +10,7 @@ interface Step7LoanAndTaxProps {
 export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
   form,
   onChange,
-  errors = {},
 }) => {
-  const getError = (key: string) => errors[key] || errors[key.split('.').pop() || ''];
-
   return (
     <div className="space-y-6 text-left">
       <Card
@@ -27,7 +24,6 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
               Are you considering a home loan for this booking? <span className="text-red-500">*</span>
             </label>
             <select
-              id="homeLoanRequired"
               value={form.homeLoanRequired || 'No'}
               onChange={(e) => onChange('homeLoanRequired', e.target.value)}
               className="w-full sm:w-64 rounded-xl border border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-white"
@@ -44,10 +40,9 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1.5">
-                  Account Holder Name
+                  Account Holder Name <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="bankAccountName"
                   type="text"
                   value={form.bankAccountName || ''}
                   onChange={(e) => onChange('bankAccountName', e.target.value)}
@@ -58,10 +53,9 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1.5">
-                  Bank Name
+                  Bank Name <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="bankName"
                   type="text"
                   value={form.bankName || ''}
                   onChange={(e) => onChange('bankName', e.target.value)}
@@ -72,10 +66,9 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1.5">
-                  Account Number
+                  Account Number <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="bankAccountNumber"
                   type="text"
                   value={form.bankAccountNumber || ''}
                   onChange={(e) => onChange('bankAccountNumber', e.target.value)}
@@ -86,10 +79,9 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-brand-700 dark:text-brand-300 mb-1.5">
-                  IFSC Code
+                  IFSC Code <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="bankIfsc"
                   type="text"
                   maxLength={11}
                   value={form.bankIfsc || ''}
@@ -111,14 +103,9 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
                   Tax Residency Status <span className="text-red-500">*</span>
                 </label>
                 <select
-                  id="taxResidency"
                   value={form.taxResidency || 'Resident Indian'}
                   onChange={(e) => onChange('taxResidency', e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
-                    getError('taxResidency')
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
-                      : 'border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 focus:ring-2 focus:ring-brand-500/20 dark:text-white'
-                  }`}
+                  className="w-full rounded-xl border border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-white"
                 >
                   <option value="Resident Indian">Resident Indian</option>
                   <option value="Non-Resident Indian (NRI)">Non-Resident Indian (NRI)</option>
@@ -126,9 +113,6 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
                   <option value="Overseas Citizen of India (OCI)">Overseas Citizen of India (OCI)</option>
                   <option value="Foreign National">Foreign National</option>
                 </select>
-                {getError('taxResidency') && (
-                  <span className="text-[11px] text-red-500 mt-1 block font-medium">{getError('taxResidency')}</span>
-                )}
               </div>
 
               <div>
@@ -136,7 +120,6 @@ export const Step7LoanAndTax: React.FC<Step7LoanAndTaxProps> = ({
                   GSTIN Number (Optional - For Business Entities)
                 </label>
                 <input
-                  id="gstinNo"
                   type="text"
                   maxLength={15}
                   value={form.gstinNo || ''}

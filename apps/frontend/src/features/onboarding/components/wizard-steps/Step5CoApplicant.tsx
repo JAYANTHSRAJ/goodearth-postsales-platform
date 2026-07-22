@@ -10,14 +10,11 @@ interface Step5CoApplicantProps {
 export const Step5CoApplicant: React.FC<Step5CoApplicantProps> = ({
   form,
   onChange,
-  errors = {},
 }) => {
   const hasCoApp = form.hasCoApplicant || 'No';
   const coApp = form.coApplicant || {};
   const primaryAddress = form.primaryApplicant?.address || {};
   const coAppAddress = coApp.address || {};
-
-  const getError = (key: string) => errors[key] || errors[key.split('.').pop() || ''];
 
   // Address Inheritance Effect
   useEffect(() => {
@@ -58,7 +55,6 @@ export const Step5CoApplicant: React.FC<Step5CoApplicantProps> = ({
               Do you have a Co-Applicant for this property unit? <span className="text-red-500">*</span>
             </label>
             <select
-              id="hasCoApplicant"
               value={hasCoApp}
               onChange={(e) => {
                 const val = e.target.value;
@@ -82,7 +78,6 @@ export const Step5CoApplicant: React.FC<Step5CoApplicantProps> = ({
                     Title / Salutation <span className="text-red-500">*</span>
                   </label>
                   <select
-                    id="coApplicant.salutation"
                     value={coApp.salutation || 'Mrs.'}
                     onChange={(e) => handleCoAppChange('salutation', e.target.value)}
                     className="w-full rounded-xl border border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-white"
@@ -99,21 +94,12 @@ export const Step5CoApplicant: React.FC<Step5CoApplicantProps> = ({
                     Co-Applicant First Name <span className="text-red-500">*</span>
                   </label>
                   <input
-                    id="coApplicant.firstName"
-                    name="coApplicant.firstName"
                     type="text"
                     value={coApp.firstName || ''}
                     onChange={(e) => handleCoAppChange('firstName', e.target.value)}
                     placeholder="Priyal"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
-                      getError('coApplicant.firstName')
-                        ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
-                        : 'border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 focus:ring-2 focus:ring-brand-500/20 dark:text-white'
-                    }`}
+                    className="w-full rounded-xl border border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-white"
                   />
-                  {getError('coApplicant.firstName') && (
-                    <span className="text-[11px] text-red-500 mt-1 block font-medium">{getError('coApplicant.firstName')}</span>
-                  )}
                 </div>
 
                 <div>
@@ -121,21 +107,12 @@ export const Step5CoApplicant: React.FC<Step5CoApplicantProps> = ({
                     Co-Applicant Last Name <span className="text-red-500">*</span>
                   </label>
                   <input
-                    id="coApplicant.lastName"
-                    name="coApplicant.lastName"
                     type="text"
                     value={coApp.lastName || ''}
                     onChange={(e) => handleCoAppChange('lastName', e.target.value)}
                     placeholder="Sharma"
-                    className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
-                      getError('coApplicant.lastName')
-                        ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
-                        : 'border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 focus:ring-2 focus:ring-brand-500/20 dark:text-white'
-                    }`}
+                    className="w-full rounded-xl border border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-white"
                   />
-                  {getError('coApplicant.lastName') && (
-                    <span className="text-[11px] text-red-500 mt-1 block font-medium">{getError('coApplicant.lastName')}</span>
-                  )}
                 </div>
               </div>
 
