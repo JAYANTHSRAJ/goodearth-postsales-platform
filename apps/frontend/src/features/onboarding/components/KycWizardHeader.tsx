@@ -1,9 +1,11 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
+import { StepStatus } from '../utils/kycValidation';
 
 interface KycWizardHeaderProps {
   currentStep: number;
   onStepClick?: (step: number) => void;
+  stepStatuses?: Record<number, StepStatus>;
 }
 
 const WIZARD_STEPS = [
@@ -22,8 +24,10 @@ const WIZARD_STEPS = [
 export const KycWizardHeader: React.FC<KycWizardHeaderProps> = ({
   currentStep,
   onStepClick,
+  stepStatuses = {},
 }) => {
-  const progressPercent = Math.round((currentStep / WIZARD_STEPS.length) * 100);
+  const completedCount = Object.values(stepStatuses).filter((s) => s === 'Completed').length;
+  const progressPercent = Math.round((completedCount / 8) * 100) || Math.round((currentStep / WIZARD_STEPS.length) * 100);
 
   return (
     <div className="space-y-4 text-left">
@@ -44,18 +48,27 @@ export const KycWizardHeader: React.FC<KycWizardHeaderProps> = ({
             </span>
             <div className="w-32 h-2.5 rounded-full bg-brand-100 dark:bg-brand-850 overflow-hidden">
               <div
-                className="h-full bg-brand-900 dark:bg-brand-100 transition-all duration-300"
+                className="h-full bg-emerald-500 transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Desktop Step Numbers */}
+        {/* Desktop Step Numbers & Badges */}
         <div className="hidden lg:flex items-center justify-between pt-2">
           {WIZARD_STEPS.map((step) => {
-            const isCompleted = step.id < currentStep;
+            const status = stepStatuses[step.id] || (step.id < currentStep ? 'Completed' : step.id === currentStep ? 'In Progress' : 'Not Started');
             const isCurrent = step.id === currentStep;
+
+            let badgeStyles = 'bg-brand-100 dark:bg-brand-850 text-brand-500 dark:text-brand-400 group-hover:bg-brand-200';
+            if (status === 'Completed') {
+              badgeStyles = 'bg-emerald-500 text-white shadow-sm';
+            } else if (status === 'Error') {
+              badgeStyles = 'bg-red-500 text-white shadow-sm ring-2 ring-red-500/30';
+            } else if (isCurrent) {
+              badgeStyles = 'bg-brand-900 text-white dark:bg-brand-100 dark:text-brand-950 ring-4 ring-brand-500/20';
+            }
 
             return (
               <button
@@ -65,20 +78,24 @@ export const KycWizardHeader: React.FC<KycWizardHeaderProps> = ({
                 className={`flex flex-col items-center gap-1.5 cursor-pointer group outline-none`}
               >
                 <div
-                  className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    isCompleted
-                      ? 'bg-emerald-500 text-white shadow-sm'
-                      : isCurrent
-                      ? 'bg-brand-900 text-white dark:bg-brand-100 dark:text-brand-950 ring-4 ring-brand-500/20'
-                      : 'bg-brand-100 dark:bg-brand-850 text-brand-500 dark:text-brand-400 group-hover:bg-brand-200'
-                  }`}
+                  className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${badgeStyles}`}
                 >
-                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : step.id}
+                  {status === 'Completed' ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : status === 'Error' ? (
+                    <AlertCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    step.id
+                  )}
                 </div>
                 <span
                   className={`text-[10px] font-semibold tracking-tight ${
                     isCurrent
-                      ? 'text-brand-900 dark:text-white'
+                      ? 'text-brand-900 dark:text-white font-bold'
+                      : status === 'Completed'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : status === 'Error'
+                      ? 'text-red-500 font-bold'
                       : 'text-brand-400 dark:text-brand-500'
                   }`}
                 >
