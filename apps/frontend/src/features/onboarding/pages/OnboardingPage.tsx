@@ -368,6 +368,7 @@ export const OnboardingPage: React.FC = () => {
             onPrevStep={handlePrevStep}
             onNextStep={handleNextStep}
             onSaveDraft={handleSaveDraft}
+            onSubmitKyc={() => handleKycSubmit(true, true)}
             onResumeLater={() => navigate('/my-home')}
           />
         </div>

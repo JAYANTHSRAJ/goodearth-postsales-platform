@@ -12,6 +12,7 @@ interface KycBottomActionBarProps {
   onPrevStep: () => void;
   onNextStep: () => void;
   onSaveDraft: () => void;
+  onSubmitKyc?: () => void;
   onResumeLater?: () => void;
 }
 
@@ -25,6 +26,7 @@ export const KycBottomActionBar: React.FC<KycBottomActionBarProps> = ({
   onPrevStep,
   onNextStep,
   onSaveDraft,
+  onSubmitKyc,
   onResumeLater,
 }) => {
   const navigate = useNavigate();
@@ -94,29 +96,45 @@ export const KycBottomActionBar: React.FC<KycBottomActionBarProps> = ({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={onNextStep}
-          disabled={isSubmitting}
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-700 to-brand-800 hover:from-brand-800 hover:to-brand-900 shadow-md transition-all duration-200 disabled:opacity-50"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Submitting Verification...
-            </>
-          ) : currentStep === totalSteps ? (
-            <>
-              Submit KYC Application
-              <CheckCircle className="h-4 w-4" />
-            </>
-          ) : (
-            <>
-              Next Step
-              <ChevronRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+        {currentStep < totalSteps ? (
+          <button
+            type="button"
+            onClick={onNextStep}
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-700 to-brand-800 hover:from-brand-800 hover:to-brand-900 shadow-md transition-all duration-200 disabled:opacity-50"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : isLocked ? (
+          <button
+            type="button"
+            onClick={() => navigate('/my-home')}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all duration-200"
+          >
+            Back to Dashboard
+            <CheckCircle className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSubmitKyc}
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-700 to-brand-800 hover:from-brand-800 hover:to-brand-900 shadow-md transition-all duration-200 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Submitting Verification...
+              </>
+            ) : (
+              <>
+                Submit KYC Application
+                <CheckCircle className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
