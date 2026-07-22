@@ -1,13 +1,64 @@
 databaseChangeLog:
   - changeSet:
-      id: 3.5-add-audit-columns-to-kyc-applications
+      id: 3.5-add-zoho-sync-logs-fields
       author: antigravity
       preConditions:
         onFail: MARK_RAN
         not:
           columnExists:
-            tableName: kyc_applications
-            columnName: created_by
+            tableName: zoho_sync_logs
+            columnName: last_attempt_at
+      changes:
+        - addColumn:
+            tableName: zoho_sync_logs
+            columns:
+              - column:
+                  name: last_attempt_at
+                  type: TIMESTAMP
+              - column:
+                  name: response_snapshot
+                  type: TEXT
+
+  - changeSet:
+      id: 3.5-add-document-versions-fields
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: document_versions
+            columnName: mime_type
+      changes:
+        - addColumn:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: mime_type
+                  type: VARCHAR(100)
+              - column:
+                  name: file_size
+                  type: BIGINT
+              - column:
+                  name: is_deleted
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: workdrive_folder_id
+                  type: VARCHAR(100)
+              - column:
+                  name: workdrive_upload_status
+                  type: VARCHAR(50)
+                  defaultValue: PENDING
+              - column:
+                  name: workdrive_uploaded_at
+                  type: TIMESTAMP
+              - column:
+                  name: workdrive_last_error
+                  type: TEXT
+
+  - changeSet:
+      id: 3.5-add-base-entity-audit-columns
+      author: antigravity
       changes:
         - addColumn:
             tableName: kyc_applications
@@ -19,16 +70,6 @@ databaseChangeLog:
                   name: updated_by
                   type: VARCHAR(255)
 
-  - changeSet:
-      id: 3.5-add-audit-columns-to-kyc-audit-logs
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: kyc_audit_logs
-            columnName: created_by
-      changes:
         - addColumn:
             tableName: kyc_audit_logs
             columns:
@@ -43,16 +84,6 @@ databaseChangeLog:
                   name: updated_by
                   type: VARCHAR(255)
 
-  - changeSet:
-      id: 3.5-add-audit-columns-to-zoho-sync-logs
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: zoho_sync_logs
-            columnName: created_by
-      changes:
         - addColumn:
             tableName: zoho_sync_logs
             columns:
@@ -63,16 +94,6 @@ databaseChangeLog:
                   name: updated_by
                   type: VARCHAR(255)
 
-  - changeSet:
-      id: 3.5-add-audit-columns-to-document-versions
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: document_versions
-            columnName: created_by
-      changes:
         - addColumn:
             tableName: document_versions
             columns:
@@ -86,3 +107,101 @@ databaseChangeLog:
               - column:
                   name: updated_by
                   type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.5-add-production-kyc-indexes
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_kyc_workflow_id
+      changes:
+        - createIndex:
+            indexName: idx_kyc_workflow_id
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: workflow_id
+
+  - changeSet:
+      id: 3.5-add-kyc-user-id-index
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_kyc_user_id
+      changes:
+        - createIndex:
+            indexName: idx_kyc_user_id
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 3.5-add-kyc-status-index
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_kyc_status
+      changes:
+        - createIndex:
+            indexName: idx_kyc_status
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 3.5-add-sync-log-indexes
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_sync_log_status_type
+      changes:
+        - createIndex:
+            indexName: idx_sync_log_status_type
+            tableName: zoho_sync_logs
+            columns:
+              - column:
+                  name: sync_status
+              - column:
+                  name: sync_type
+
+  - changeSet:
+      id: 3.5-add-sync-log-kyc-id-index
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_sync_log_kyc_id
+      changes:
+        - createIndex:
+            indexName: idx_sync_log_kyc_id
+            tableName: zoho_sync_logs
+            columns:
+              - column:
+                  name: kyc_application_id
+
+  - changeSet:
+      id: 3.5-add-doc-ver-kyc-id-index
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          indexExists:
+            indexName: idx_doc_ver_kyc_id
+      changes:
+        - createIndex:
+            indexName: idx_doc_ver_kyc_id
+            tableName: document_versions
+            columns:
+              - column:
+                  name: kyc_application_id
