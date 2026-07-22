@@ -59,6 +59,12 @@ databaseChangeLog:
   - changeSet:
       id: 3.5-add-base-entity-audit-columns
       author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: zoho_sync_logs
+            columnName: created_by
       changes:
         - addColumn:
             tableName: kyc_applications
