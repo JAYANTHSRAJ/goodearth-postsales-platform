@@ -208,21 +208,21 @@ export const clientService = {
   },
 
   getKyc(workflowId?: string | null): Promise<any> {
-    const url = workflowId ? `/v1/kyc?workflowId=${workflowId}` : '/v1/kyc';
+    const url = workflowId ? `/kyc?workflowId=${workflowId}` : '/kyc';
     return api.get<any>(url);
   },
 
   getKycById(kycId: string): Promise<any> {
-    return api.get<any>(`/v1/kyc/${kycId}`);
+    return api.get<any>(`/kyc/${kycId}`);
   },
 
   saveKycDraft(data: any, workflowId?: string | null): Promise<any> {
-    const url = `/v1/kyc/draft`;
+    const url = `/kyc/draft`;
     return api.post<any>(url, { ...data, workflowId });
   },
 
   submitKyc(data: any, workflowId?: string | null): Promise<any> {
-    const url = workflowId ? `/v1/kyc/${workflowId}/submit` : '/v1/kyc/submit';
+    const url = workflowId ? `/kyc/${workflowId}/submit` : '/kyc/submit';
     return api.post<any>(url, data);
   },
 
@@ -234,61 +234,61 @@ export const clientService = {
     return api.post<any>(`/client/kyc/request-modification?workflowId=${workflowId}`, { reason });
   },
 
-  // Phase 4 Document APIs
+  // Document Vault APIs
   uploadKycDocument(workflowId: string, applicantType: string, documentType: string, file: File): Promise<DocumentMetadata> {
     const formData = new FormData();
     formData.append('workflowId', workflowId);
     formData.append('applicantType', applicantType);
     formData.append('documentType', documentType);
     formData.append('file', file);
-    return api.post<DocumentMetadata>('/v1/kyc/documents/upload', formData);
+    return api.post<DocumentMetadata>('/kyc/documents/upload', formData);
   },
 
   replaceKycDocument(documentId: string, file: File): Promise<DocumentMetadata> {
     const formData = new FormData();
     formData.append('file', file);
-    return api.put<DocumentMetadata>(`/v1/kyc/documents/${documentId}/replace`, formData);
+    return api.put<DocumentMetadata>(`/kyc/documents/${documentId}/replace`, formData);
   },
 
   listKycDocuments(workflowId: string): Promise<DocumentMetadata[]> {
-    return api.get<DocumentMetadata[]>(`/v1/kyc/documents?workflowId=${workflowId}`);
+    return api.get<DocumentMetadata[]>(`/kyc/documents?workflowId=${workflowId}`);
   },
 
   deleteKycDocument(documentId: string): Promise<string> {
-    return api.delete<string>(`/v1/kyc/documents/${documentId}`);
+    return api.delete<string>(`/kyc/documents/${documentId}`);
   },
 
   getDocumentVersionHistory(documentId: string): Promise<DocumentMetadata[]> {
-    return api.get<DocumentMetadata[]>(`/v1/kyc/documents/${documentId}/versions`);
+    return api.get<DocumentMetadata[]>(`/kyc/documents/${documentId}/versions`);
   },
 
-  // Phase 7 Admin Review Portal APIs
+  // Admin Review Portal APIs
   getAdminAllKycApplications(): Promise<any[]> {
-    return api.get<any[]>('/v1/kyc/admin/all');
+    return api.get<any[]>('/kyc/admin/all');
   },
 
   adminReviewKyc(kycId: string, action: string, comments?: string): Promise<any> {
-    return api.post<any>(`/v1/kyc/${kycId}/admin-review`, { action, comments });
+    return api.post<any>(`/kyc/${kycId}/admin-review`, { action, comments });
   },
 
   getKycAuditLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/v1/kyc/${kycId}/audit`);
+    return api.get<any[]>(`/kyc/${kycId}/audit`);
   },
 
   getCrmSyncLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/v1/admin/kyc/sync/logs?kycId=${kycId}`);
+    return api.get<any[]>(`/admin/kyc/sync/logs?kycId=${kycId}`);
   },
 
   retryCrmSync(syncLogId: string): Promise<any> {
-    return api.post<any>(`/v1/admin/kyc/sync/${syncLogId}/retry`, {});
+    return api.post<any>(`/admin/kyc/sync/${syncLogId}/retry`, {});
   },
 
   getWorkDriveSyncLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/v1/admin/kyc/workdrive/logs?kycId=${kycId}`);
+    return api.get<any[]>(`/admin/kyc/workdrive/logs?kycId=${kycId}`);
   },
 
   retryWorkDriveSync(syncLogId: string): Promise<any> {
-    return api.post<any>(`/v1/admin/kyc/workdrive/${syncLogId}/retry`, {});
+    return api.post<any>(`/admin/kyc/workdrive/${syncLogId}/retry`, {});
   },
 };
 

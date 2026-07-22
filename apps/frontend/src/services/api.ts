@@ -1,7 +1,8 @@
 import { useAuthStore } from '../store/authStore';
 import { useUnitStore } from '../store/unitStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
 
 class ApiClient {
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -12,7 +13,7 @@ class ApiClient {
     if (!(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json');
     }
-    
+
     if (accessToken) {
       headers.set('Authorization', `Bearer ${accessToken}`);
     }
@@ -21,7 +22,10 @@ class ApiClient {
       headers.set('X-Active-Unit-ID', activeUnit.id);
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const url = `${API_BASE_URL}${normalizedPath}`;
+
+    const response = await fetch(url, {
       ...options,
       headers,
     });
