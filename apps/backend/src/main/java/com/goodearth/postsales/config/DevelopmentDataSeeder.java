@@ -124,14 +124,7 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        // Create SUPER_ADMIN if missing
-        createSuperAdminIfMissing();
-        if (userRepository.count() <= 1) {
-            seedDevelopmentData();
-            log.info("DevelopmentDataSeeder completed successfully.");
-        } else {
-            log.info("Database already seeded with users. Skipping development data seeding.");
-        }
+        log.info("[DEVELOPMENT_DATA_SEEDER] DevelopmentDataSeeder is disabled. Skipping demo data creation.");
     }
 
     private void createSuperAdminIfMissing() {
