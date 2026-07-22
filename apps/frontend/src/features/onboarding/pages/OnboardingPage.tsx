@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
@@ -7,77 +7,73 @@ import { clientService } from '../../../services/client.service';
 import { KycOptionSelector } from '../components/KycOptionSelector';
 import { KycWizardHeader } from '../components/KycWizardHeader';
 import { KycBottomActionBar } from '../components/KycBottomActionBar';
-import { Step1PersonalDetails } from '../components/wizard-steps/Step1PersonalDetails';
-import { Step2IdentityDetails } from '../components/wizard-steps/Step2IdentityDetails';
-import { Step3AddressDetails } from '../components/wizard-steps/Step3AddressDetails';
-import { Step4EmploymentDetails } from '../components/wizard-steps/Step4EmploymentDetails';
-import { Step5NomineeDetails } from '../components/wizard-steps/Step5NomineeDetails';
-import { Step6BankDetails } from '../components/wizard-steps/Step6BankDetails';
-import { Step7TaxDetails } from '../components/wizard-steps/Step7TaxDetails';
-import { Step8DocumentUploads } from '../components/wizard-steps/Step8DocumentUploads';
+import { Step1ApplicationDetails } from '../components/wizard-steps/Step1ApplicationDetails';
+import { Step2PrimaryApplicant } from '../components/wizard-steps/Step2PrimaryApplicant';
+import { Step3PrimaryAddress } from '../components/wizard-steps/Step3PrimaryAddress';
+import { Step4IdentityInformation } from '../components/wizard-steps/Step4IdentityInformation';
+import { Step5CoApplicant } from '../components/wizard-steps/Step5CoApplicant';
+import { Step6ThirdApplicant } from '../components/wizard-steps/Step6ThirdApplicant';
+import { Step7LoanAndTax } from '../components/wizard-steps/Step7LoanAndTax';
+import { Step8DocumentUploadPlaceholder } from '../components/wizard-steps/Step8DocumentUploadPlaceholder';
 import { Step9ReviewSummary } from '../components/wizard-steps/Step9ReviewSummary';
-import { Step10FinalSubmit } from '../components/wizard-steps/Step10FinalSubmit';
+import { Step10Confirmation } from '../components/wizard-steps/Step10Confirmation';
 
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const { activeUnit, setUnits } = useUnitStore();
 
-  // KYC Screen & Step State
   const [hasStartedKyc, setHasStartedKyc] = useState(false);
   const [kycSubStep, setKycSubStep] = useState(1);
+  const [isDirty, setIsDirty] = useState(false);
+
   const [kycForm, setKycForm] = useState<Record<string, any>>({
-    // Primary Applicant
-    appDate: new Date().toISOString().split('T')[0],
-    salutation: 'Mr.',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneCode: '91',
-    phoneNumber: '',
-    relationType: 'S/o',
-    relationNameTitle: 'Mr.',
-    relationFirstName: '',
-    relationLastName: '',
-    dob: '',
-    occupation: 'Corporate Employee',
-    industry: 'Information Technology',
-    company: '',
-    residenceType: 'Own Apartment',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: 'India',
-    postalCode: '',
-    aadhaarNo: '',
-    panNo: '',
-
-    // File URLs
-    primaryAadhaarUrl: '',
-    primaryPanUrl: '',
-    primaryVoterIdUrl: '',
-    primaryAddressProofUrl: '',
-    bankProofUrl: '',
-
-    // Bank & Tax
+    applicationDate: new Date().toISOString().split('T')[0],
+    homeLoanRequired: 'No',
+    primaryApplicant: {
+      salutation: 'Mr.',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneCode: '91',
+      phoneNumber: '',
+      relationType: 'S/o',
+      relationSalutation: 'Mr.',
+      relationFirstName: '',
+      relationLastName: '',
+      dob: '',
+      occupation: 'Corporate Employee',
+      industry: 'Information Technology',
+      company: '',
+      annualIncome: 'INR 15L - 25L',
+      aadhaarNo: '',
+      panNo: '',
+      passportNo: '',
+      voterId: '',
+      address: {
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        country: 'India',
+        postalCode: '',
+        residenceType: 'Own Apartment',
+      },
+    },
+    hasCoApplicant: 'No',
+    coApplicant: null,
+    hasThirdApplicant: 'No',
+    thirdApplicant: null,
     bankAccountName: '',
     bankName: '',
     bankAccountNumber: '',
     bankIfsc: '',
     taxResidency: 'Resident Indian',
     gstinNo: '',
-
-    // Nominee
-    nomineeName: '',
-    nomineeRelation: 'Spouse',
-    nomineeDob: '',
-    nomineePhone: '',
   });
 
   const [kycErrors, setKycErrors] = useState<Record<string, string>>({});
   const [kycDraftSuccess, setKycDraftSuccess] = useState(false);
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   // Fetch owned units
   const { data: fetchedUnits } = useQuery({
@@ -105,6 +101,7 @@ export const OnboardingPage: React.FC = () => {
     mutationFn: (data: any) => clientService.saveKycDraft(data, currentWorkflowId),
     onSuccess: () => {
       setKycDraftSuccess(true);
+      setIsDirty(false);
       setTimeout(() => setKycDraftSuccess(false), 3000);
       refetchKyc();
     },
@@ -112,11 +109,19 @@ export const OnboardingPage: React.FC = () => {
 
   // Submit KYC mutation
   const submitKycMutation = useMutation({
-    mutationFn: (data: any) => clientService.submitKyc(data, currentWorkflowId),
+    mutationFn: (payload: { form: any; agreeAccuracy: boolean; agreeTerms: boolean }) => {
+      return clientService.submitKyc(
+        {
+          workflowId: currentWorkflowId,
+          form: payload.form,
+          agreeAccuracy: payload.agreeAccuracy,
+          agreeTerms: payload.agreeTerms,
+        },
+        currentWorkflowId
+      );
+    },
     onSuccess: () => {
-      updateUser({
-        onboardingStage: 'COMPLETED',
-      });
+      updateUser({ onboardingStage: 'COMPLETED' });
       refetchKyc();
       navigate('/my-home');
     },
@@ -142,19 +147,34 @@ export const OnboardingPage: React.FC = () => {
         try {
           const parsed = JSON.parse(data.draftData);
           setKycForm((prev) => ({ ...prev, ...parsed }));
-          if (data.isLocked || data.status === 'SUBMITTED' || data.status === 'VERIFIED') {
+          if (data.isLocked || data.status === 'SUBMITTED' || data.status === 'APPROVED') {
             setHasStartedKyc(true);
-            setKycSubStep(9); // View summary review
+            setKycSubStep(9); // View review summary
           }
         } catch (e) {
-          console.error('Failed to parse KYC draft data', e);
+          console.error('Failed to parse KYC draft data JSON', e);
         }
       }
     }
   }, [kycData]);
 
+  // 30-Second Auto-Save Timer if dirty
+  const latestFormRef = useRef(kycForm);
+  latestFormRef.current = kycForm;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isDirty && hasStartedKyc && !saveKycDraftMutation.isPending) {
+        saveKycDraftMutation.mutate(latestFormRef.current);
+      }
+    }, 30000);
+
+    return () => clearInterval(timer);
+  }, [isDirty, hasStartedKyc]);
+
   const handleKycFieldChange = (field: string, value: any) => {
     setKycForm((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
     if (kycErrors[field]) {
       setKycErrors((prev) => {
         const copy = { ...prev };
@@ -169,23 +189,29 @@ export const OnboardingPage: React.FC = () => {
   };
 
   const handleNextStep = () => {
+    saveKycDraftMutation.mutate(kycForm);
     if (kycSubStep < 10) {
       setKycSubStep((prev) => prev + 1);
     }
   };
 
   const handlePrevStep = () => {
+    saveKycDraftMutation.mutate(kycForm);
     if (kycSubStep > 1) {
       setKycSubStep((prev) => prev - 1);
     }
   };
 
-  const handleKycSubmit = () => {
-    submitKycMutation.mutate(kycForm);
+  const handleKycSubmit = (agreeAccuracy: boolean, agreeTerms: boolean) => {
+    submitKycMutation.mutate({
+      form: kycForm,
+      agreeAccuracy,
+      agreeTerms,
+    });
   };
 
   const availableVerifiedKycs = (fetchedUnits || []).filter(
-    (u: any) => (u.isKycVerified || u.kycStatus === 'SUBMITTED' || u.kycStatus === 'VERIFIED') && u.id !== activeUnit?.id
+    (u: any) => (u.isKycVerified || u.kycStatus === 'SUBMITTED' || u.kycStatus === 'APPROVED') && u.id !== activeUnit?.id
   );
 
   return (
@@ -208,7 +234,7 @@ export const OnboardingPage: React.FC = () => {
         </div>
       )}
 
-      {/* KYC Choice Screen or Wizard */}
+      {/* KYC Choice Screen or 10-Step Wizard */}
       {!hasStartedKyc ? (
         <KycOptionSelector
           availableVerifiedKycs={availableVerifiedKycs}
@@ -224,7 +250,7 @@ export const OnboardingPage: React.FC = () => {
           />
 
           {kycSubStep === 1 && (
-            <Step1PersonalDetails
+            <Step1ApplicationDetails
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -232,7 +258,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 2 && (
-            <Step2IdentityDetails
+            <Step2PrimaryApplicant
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -240,7 +266,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 3 && (
-            <Step3AddressDetails
+            <Step3PrimaryAddress
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -248,7 +274,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 4 && (
-            <Step4EmploymentDetails
+            <Step4IdentityInformation
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -256,7 +282,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 5 && (
-            <Step5NomineeDetails
+            <Step5CoApplicant
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -264,7 +290,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 6 && (
-            <Step6BankDetails
+            <Step6ThirdApplicant
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -272,7 +298,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 7 && (
-            <Step7TaxDetails
+            <Step7LoanAndTax
               form={kycForm}
               onChange={handleKycFieldChange}
               errors={kycErrors}
@@ -280,11 +306,9 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 8 && (
-            <Step8DocumentUploads
+            <Step8DocumentUploadPlaceholder
               form={kycForm}
               onChange={handleKycFieldChange}
-              uploadingField={uploadingField}
-              setUploadingField={setUploadingField}
               errors={kycErrors}
             />
           )}
@@ -297,7 +321,7 @@ export const OnboardingPage: React.FC = () => {
           )}
 
           {kycSubStep === 10 && (
-            <Step10FinalSubmit
+            <Step10Confirmation
               form={kycForm}
               onSubmit={handleKycSubmit}
               isSubmitting={submitKycMutation.isPending}

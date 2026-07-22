@@ -11,6 +11,7 @@ import java.util.UUID;
 @Repository
 public interface KycApplicationRepository extends JpaRepository<KycApplication, UUID> {
     Optional<KycApplication> findByBuyerId(UUID buyerId);
+    Optional<KycApplication> findByWorkflowId(UUID workflowId);
     List<KycApplication> findByUserId(UUID userId);
     Optional<KycApplication> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 }

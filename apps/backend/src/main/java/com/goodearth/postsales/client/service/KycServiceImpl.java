@@ -1,22 +1,20 @@
 package com.goodearth.postsales.client.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goodearth.postsales.auth.entity.User;
 import com.goodearth.postsales.auth.repository.UserRepository;
 import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
-import com.goodearth.postsales.client.dto.ClientUnitDto;
-import com.goodearth.postsales.client.dto.KycApplicationDto;
-import com.goodearth.postsales.client.dto.KycModificationRequestDto;
-import com.goodearth.postsales.client.entity.BuyerKycAssociation;
-import com.goodearth.postsales.client.entity.KycApplication;
-import com.goodearth.postsales.client.entity.KycModificationRequest;
-import com.goodearth.postsales.client.repository.BuyerKycAssociationRepository;
-import com.goodearth.postsales.client.repository.KycApplicationRepository;
-import com.goodearth.postsales.client.repository.KycModificationRequestRepository;
-import com.goodearth.postsales.common.enumeration.OnboardingStage;
+import com.goodearth.postsales.client.dto.*;
+import com.goodearth.postsales.client.entity.*;
+import com.goodearth.postsales.client.repository.*;
+import com.goodearth.postsales.client.validation.KycValidator;
 import com.goodearth.postsales.common.exception.CustomException;
 import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,316 +29,429 @@ import java.util.stream.Collectors;
 @Service
 public class KycServiceImpl implements KycService {
 
+    private static final Logger log = LoggerFactory.getLogger(KycServiceImpl.class);
+
+    private final KycApplicationRepository kycRepository;
+    private final KycAuditLogRepository auditLogRepository;
+    private final KycModificationRequestRepository modificationRequestRepository;
     private final UserRepository userRepository;
     private final BuyerRepository buyerRepository;
     private final WorkflowRepository workflowRepository;
-    private final KycApplicationRepository kycApplicationRepository;
-    private final KycModificationRequestRepository modificationRequestRepository;
-    private final BuyerKycAssociationRepository associationRepository;
+    private final KycValidator kycValidator;
+    private final ObjectMapper objectMapper;
 
     public KycServiceImpl(
+            KycApplicationRepository kycRepository,
+            KycAuditLogRepository auditLogRepository,
+            KycModificationRequestRepository modificationRequestRepository,
             UserRepository userRepository,
             BuyerRepository buyerRepository,
             WorkflowRepository workflowRepository,
-            KycApplicationRepository kycApplicationRepository,
-            KycModificationRequestRepository modificationRequestRepository,
-            BuyerKycAssociationRepository associationRepository) {
+            KycValidator kycValidator,
+            ObjectMapper objectMapper) {
+        this.kycRepository = kycRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.modificationRequestRepository = modificationRequestRepository;
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
-        this.kycApplicationRepository = kycApplicationRepository;
-        this.modificationRequestRepository = modificationRequestRepository;
-        this.associationRepository = associationRepository;
+        this.kycValidator = kycValidator;
+        this.objectMapper = objectMapper;
     }
 
-    private Buyer resolveBuyer(User user, UUID workflowId) {
-        if (workflowId != null) {
-            Workflow workflow = workflowRepository.findById(workflowId)
-                    .orElseThrow(() -> new CustomException("Workflow not found", HttpStatus.NOT_FOUND));
-            Buyer buyer = workflow.getBuyer();
-            if (!buyer.getEmail().equalsIgnoreCase(user.getEmail())) {
-                throw new CustomException("User does not own this property unit", HttpStatus.FORBIDDEN);
-            }
-            return buyer;
+    @Override
+    @Transactional
+    public KycDraftDto saveDraft(UUID userId, KycDraftDto draftDto) {
+        if (draftDto.getWorkflowId() == null) {
+            throw new CustomException("Workflow ID is required to save a draft", HttpStatus.BAD_REQUEST);
         }
-        if (user.getLastSelectedUnitId() != null) {
-            Optional<Buyer> lastUnit = buyerRepository.findById(user.getLastSelectedUnitId());
-            if (lastUnit.isPresent() && lastUnit.get().getEmail().equalsIgnoreCase(user.getEmail())) {
-                return lastUnit.get();
-            }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Workflow workflow = workflowRepository.findById(draftDto.getWorkflowId())
+                .orElseThrow(() -> new CustomException("Workflow not found", HttpStatus.NOT_FOUND));
+
+        KycApplication kyc = kycRepository.findByWorkflowId(workflow.getId())
+                .orElseGet(() -> {
+                    KycApplication newKyc = new KycApplication();
+                    newKyc.setUser(user);
+                    newKyc.setWorkflow(workflow);
+                    if (workflow.getBuyer() != null) {
+                        newKyc.setBuyer(workflow.getBuyer());
+                    }
+                    newKyc.setStatus("DRAFT");
+                    return newKyc;
+                });
+
+        if (kyc.isLocked() && !"MODIFICATION_REQUESTED".equals(kyc.getStatus())) {
+            throw new CustomException("KYC application is locked for editing", HttpStatus.FORBIDDEN);
         }
-        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(user.getEmail());
-        if (buyers.isEmpty()) {
-            throw new CustomException("No property units found for customer", HttpStatus.NOT_FOUND);
+
+        try {
+            String jsonStr = objectMapper.writeValueAsString(draftDto);
+            kyc.setDraftData(jsonStr);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize KYC draft payload", e);
+            throw new CustomException("Failed to process draft data payload", HttpStatus.BAD_REQUEST, e);
         }
-        return buyers.get(0);
+
+        KycApplication saved = kycRepository.save(kyc);
+        recordAudit(saved, user, "SAVE_DRAFT", kyc.getStatus(), kyc.getStatus(), saved.getDraftData());
+
+        draftDto.setId(saved.getId());
+        return draftDto;
+    }
+
+    @Override
+    @Transactional
+    public KycReviewSummaryDto submitKyc(UUID userId, SubmitKycRequestDto submitDto) {
+        kycValidator.validateSubmitPayload(submitDto.getForm());
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Workflow workflow = workflowRepository.findById(submitDto.getWorkflowId())
+                .orElseThrow(() -> new CustomException("Workflow not found", HttpStatus.NOT_FOUND));
+
+        KycApplication kyc = kycRepository.findByWorkflowId(workflow.getId())
+                .orElseGet(() -> {
+                    KycApplication newKyc = new KycApplication();
+                    newKyc.setUser(user);
+                    newKyc.setWorkflow(workflow);
+                    if (workflow.getBuyer() != null) {
+                        newKyc.setBuyer(workflow.getBuyer());
+                    }
+                    return newKyc;
+                });
+
+        String previousStatus = kyc.getStatus();
+        kyc.setStatus("SUBMITTED");
+        kyc.setLocked(true);
+        kyc.setSubmittedAt(LocalDateTime.now());
+
+        try {
+            kyc.setDraftData(objectMapper.writeValueAsString(submitDto.getForm()));
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize submit payload", e);
+        }
+
+        KycApplication saved = kycRepository.save(kyc);
+        recordAudit(saved, user, "SUBMIT_KYC", previousStatus, "SUBMITTED", saved.getDraftData());
+
+        return buildReviewSummary(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public KycApplicationDto getKycApplication(String email, UUID workflowId) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-
-        Buyer buyer = resolveBuyer(user, workflowId);
-        KycApplication kyc = resolveKycForBuyer(user, buyer);
-
-        return mapToDto(user, buyer, kyc);
+    public KycReviewSummaryDto getKycByWorkflowId(UUID userId, UUID workflowId) {
+        KycApplication kyc = kycRepository.findByWorkflowId(workflowId)
+                .orElseThrow(() -> new CustomException("KYC application not found for this property unit", HttpStatus.NOT_FOUND));
+        return buildReviewSummary(kyc);
     }
 
-    private KycApplication resolveKycForBuyer(User user, Buyer buyer) {
-        // Check association table first
-        Optional<BuyerKycAssociation> assoc = associationRepository.findFirstByBuyerIdAndStatusOrderByAssociatedAtDesc(buyer.getId(), "ACTIVE");
-        if (assoc.isPresent()) {
-            return assoc.get().getKycApplication();
+    @Override
+    @Transactional(readOnly = true)
+    public KycReviewSummaryDto getKycById(UUID userId, UUID kycId) {
+        KycApplication kyc = kycRepository.findById(kycId)
+                .orElseThrow(() -> new CustomException("KYC application not found", HttpStatus.NOT_FOUND));
+        return buildReviewSummary(kyc);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public KycStatusResponseDto getKycStatus(UUID workflowId) {
+        Workflow workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new CustomException("Workflow not found", HttpStatus.NOT_FOUND));
+
+        KycStatusResponseDto statusDto = new KycStatusResponseDto();
+        statusDto.setWorkflowId(workflowId);
+        if (workflow.getBuyer() != null) {
+            statusDto.setUnitName(workflow.getBuyer().getUnitName());
         }
 
-        if (buyer.getKycApplicationId() != null) {
-            Optional<KycApplication> linkedKyc = kycApplicationRepository.findById(buyer.getKycApplicationId());
-            if (linkedKyc.isPresent()) {
-                return linkedKyc.get();
+        Optional<KycApplication> kycOpt = kycRepository.findByWorkflowId(workflowId);
+        if (kycOpt.isPresent()) {
+            KycApplication kyc = kycOpt.get();
+            statusDto.setKycApplicationId(kyc.getId());
+            statusDto.setStatus(kyc.getStatus());
+            statusDto.setLocked(kyc.isLocked());
+            statusDto.setVerified(kyc.isVerified());
+            statusDto.setSubmittedAt(kyc.getSubmittedAt());
+        } else {
+            statusDto.setStatus("NOT_STARTED");
+            statusDto.setLocked(false);
+            statusDto.setVerified(false);
+        }
+
+        return statusDto;
+    }
+
+    @Override
+    @Transactional
+    public KycReviewSummaryDto adminReview(UUID adminUserId, UUID kycId, AdminReviewRequestDto reviewDto) {
+        User adminUser = userRepository.findById(adminUserId)
+                .orElseThrow(() -> new CustomException("Admin user not found", HttpStatus.NOT_FOUND));
+
+        KycApplication kyc = kycRepository.findById(kycId)
+                .orElseThrow(() -> new CustomException("KYC application not found", HttpStatus.NOT_FOUND));
+
+        String previousStatus = kyc.getStatus();
+        String action = reviewDto.getAction().toUpperCase();
+
+        switch (action) {
+            case "APPROVED":
+                kyc.setStatus("APPROVED");
+                kyc.setVerified(true);
+                kyc.setLocked(true);
+                break;
+            case "REJECTED":
+                kyc.setStatus("REJECTED");
+                kyc.setVerified(false);
+                kyc.setLocked(false);
+                break;
+            case "MODIFICATION_REQUESTED":
+                kyc.setStatus("MODIFICATION_REQUESTED");
+                kyc.setVerified(false);
+                kyc.setLocked(false);
+                break;
+            default:
+                throw new CustomException("Invalid review action. Must be APPROVED, REJECTED, or MODIFICATION_REQUESTED", HttpStatus.BAD_REQUEST);
+        }
+
+        kyc.setReviewedAt(LocalDateTime.now());
+        KycApplication saved = kycRepository.save(kyc);
+
+        recordAudit(saved, adminUser, "ADMIN_REVIEW_" + action, previousStatus, kyc.getStatus(), reviewDto.getComments());
+
+        return buildReviewSummary(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<KycAuditLogDto> getAuditLogs(UUID kycId) {
+        List<KycAuditLog> logs = auditLogRepository.findByKycApplicationIdOrderByCreatedAtDesc(kycId);
+        return logs.stream().map(logItem -> {
+            KycAuditLogDto dto = new KycAuditLogDto();
+            dto.setId(logItem.getId());
+            dto.setKycApplicationId(logItem.getKycApplication().getId());
+            dto.setAction(logItem.getAction());
+            dto.setPreviousStatus(logItem.getPreviousStatus());
+            dto.setNewStatus(logItem.getNewStatus());
+            if (logItem.getPerformedByUser() != null) {
+                dto.setPerformedByUserEmail(logItem.getPerformedByUser().getEmail());
             }
-        }
+            dto.setCreatedAt(logItem.getCreatedAt());
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
-        Optional<KycApplication> buyerKyc = kycApplicationRepository.findByBuyerId(buyer.getId());
-        if (buyerKyc.isPresent()) {
-            return buyerKyc.get();
-        }
+    // ==========================================
+    // CLIENT PORTAL ADAPTER METHODS
+    // ==========================================
 
-        Optional<KycApplication> userKyc = kycApplicationRepository.findFirstByUserIdOrderByCreatedAtDesc(user.getId());
-        if (userKyc.isPresent()) {
-            return userKyc.get();
+    @Override
+    @Transactional(readOnly = true)
+    public KycApplicationDto getKycApplication(String username, UUID workflowId) {
+        User user = userRepository.findByEmailIgnoreCase(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Optional<KycApplication> kycOpt = workflowId != null
+                ? kycRepository.findByWorkflowId(workflowId)
+                : kycRepository.findFirstByUserIdOrderByCreatedAtDesc(user.getId());
+
+        KycApplicationDto dto = new KycApplicationDto();
+        if (kycOpt.isPresent()) {
+            KycApplication kyc = kycOpt.get();
+            dto.setId(kyc.getId());
+            if (kyc.getBuyer() != null) {
+                dto.setBuyerId(kyc.getBuyer().getId());
+                dto.setUnitName(kyc.getBuyer().getUnitName());
+            } else if (kyc.getWorkflow() != null && kyc.getWorkflow().getBuyer() != null) {
+                dto.setUnitName(kyc.getWorkflow().getBuyer().getUnitName());
+            }
+            dto.setStatus(kyc.getStatus());
+            dto.setDraftData(kyc.getDraftData());
+            dto.setLocked(kyc.isLocked());
+            dto.setVerified(kyc.isVerified());
+            dto.setSubmittedAt(kyc.getSubmittedAt());
+            dto.setReviewedAt(kyc.getReviewedAt());
+        } else {
+            dto.setStatus("NOT_STARTED");
         }
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationDto saveKycDraft(String username, UUID workflowId, String draftDataJson) {
+        User user = userRepository.findByEmailIgnoreCase(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Workflow workflow = workflowId != null ? workflowRepository.findById(workflowId).orElse(null) : null;
+
+        KycApplication kyc = (workflow != null ? kycRepository.findByWorkflowId(workflow.getId()) : Optional.<KycApplication>empty())
+                .orElseGet(() -> {
+                    KycApplication newKyc = new KycApplication();
+                    newKyc.setUser(user);
+                    if (workflow != null) {
+                        newKyc.setWorkflow(workflow);
+                        if (workflow.getBuyer() != null) {
+                            newKyc.setBuyer(workflow.getBuyer());
+                        }
+                    }
+                    newKyc.setStatus("DRAFT");
+                    return newKyc;
+                });
+
+        kyc.setDraftData(draftDataJson);
+        KycApplication saved = kycRepository.save(kyc);
+
+        KycApplicationDto dto = new KycApplicationDto();
+        dto.setId(saved.getId());
+        dto.setStatus(saved.getStatus());
+        dto.setDraftData(saved.getDraftData());
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationDto submitKycApplication(String username, UUID workflowId, String formPayloadJson) {
+        User user = userRepository.findByEmailIgnoreCase(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Workflow workflow = workflowId != null ? workflowRepository.findById(workflowId).orElse(null) : null;
+
+        KycApplication kyc = (workflow != null ? kycRepository.findByWorkflowId(workflow.getId()) : Optional.<KycApplication>empty())
+                .orElseGet(() -> {
+                    KycApplication newKyc = new KycApplication();
+                    newKyc.setUser(user);
+                    if (workflow != null) {
+                        newKyc.setWorkflow(workflow);
+                        if (workflow.getBuyer() != null) {
+                            newKyc.setBuyer(workflow.getBuyer());
+                        }
+                    }
+                    return newKyc;
+                });
+
+        kyc.setStatus("SUBMITTED");
+        kyc.setLocked(true);
+        kyc.setSubmittedAt(LocalDateTime.now());
+        kyc.setDraftData(formPayloadJson);
+
+        KycApplication saved = kycRepository.save(kyc);
+
+        KycApplicationDto dto = new KycApplicationDto();
+        dto.setId(saved.getId());
+        dto.setStatus(saved.getStatus());
+        dto.setLocked(true);
+        dto.setSubmittedAt(saved.getSubmittedAt());
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationDto reuseKycApplication(String username, UUID targetWorkflowId, UUID sourceKycId) {
+        User user = userRepository.findByEmailIgnoreCase(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        Workflow targetWorkflow = workflowRepository.findById(targetWorkflowId)
+                .orElseThrow(() -> new CustomException("Target workflow not found", HttpStatus.NOT_FOUND));
+
+        KycApplication sourceKyc = kycRepository.findById(sourceKycId)
+                .orElseThrow(() -> new CustomException("Source KYC application not found", HttpStatus.NOT_FOUND));
 
         KycApplication newKyc = new KycApplication();
         newKyc.setUser(user);
-        newKyc.setBuyer(buyer);
-        newKyc.setStatus("DRAFT");
-        newKyc.setLocked(false);
-        newKyc.setVerified(false);
-        newKyc.setVersion(1);
-        newKyc.setCurrentVersion(true);
-        return newKyc;
+        newKyc.setWorkflow(targetWorkflow);
+        if (targetWorkflow.getBuyer() != null) {
+            newKyc.setBuyer(targetWorkflow.getBuyer());
+        }
+        newKyc.setStatus(sourceKyc.getStatus());
+        newKyc.setDraftData(sourceKyc.getDraftData());
+        newKyc.setVerified(sourceKyc.isVerified());
+        newKyc.setLocked(sourceKyc.isLocked());
+        newKyc.setSubmittedAt(LocalDateTime.now());
+
+        KycApplication saved = kycRepository.save(newKyc);
+
+        KycApplicationDto dto = new KycApplicationDto();
+        dto.setId(saved.getId());
+        dto.setStatus(saved.getStatus());
+        dto.setVerified(saved.isVerified());
+        return dto;
     }
 
     @Override
     @Transactional
-    public KycApplicationDto saveKycDraft(String email, UUID workflowId, String draftData) {
-        User user = userRepository.findByEmailIgnoreCase(email)
+    public KycModificationRequestDto requestKycModification(String username, UUID workflowId, String reason) {
+        User user = userRepository.findByEmailIgnoreCase(username)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
-        Buyer buyer = resolveBuyer(user, workflowId);
-        KycApplication kyc = resolveKycForBuyer(user, buyer);
+        Workflow workflow = workflowRepository.findById(workflowId)
+                .orElseThrow(() -> new CustomException("Workflow not found", HttpStatus.NOT_FOUND));
 
-        if (kyc.isLocked() && "SUBMITTED".equals(kyc.getStatus())) {
-            throw new CustomException("Cannot edit a locked or submitted KYC. Please request a modification first.", HttpStatus.BAD_REQUEST);
-        }
+        KycApplication kyc = kycRepository.findByWorkflowId(workflow.getId())
+                .orElseThrow(() -> new CustomException("KYC application not found", HttpStatus.NOT_FOUND));
 
-        kyc.setDraftData(draftData);
-        kyc.setStatus("DRAFT");
-        kyc.setUser(user);
-        kyc.setBuyer(buyer);
-        KycApplication saved = kycApplicationRepository.save(kyc);
-
-        if (buyer.getKycApplicationId() == null) {
-            buyer.setKycApplicationId(saved.getId());
-            buyerRepository.save(buyer);
-        }
-
-        return mapToDto(user, buyer, saved);
-    }
-
-    @Override
-    @Transactional
-    public KycApplicationDto submitKycApplication(String email, UUID workflowId, String finalData) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-
-        Buyer buyer = resolveBuyer(user, workflowId);
-        KycApplication kyc = resolveKycForBuyer(user, buyer);
-
-        // Immutable Versioning: If current KYC was already submitted/verified, create a NEW version
-        if (kyc.isVerified() || kyc.getSubmittedAt() != null) {
-            kyc.setCurrentVersion(false);
-            kycApplicationRepository.save(kyc);
-
-            KycApplication newVersion = new KycApplication();
-            newVersion.setUser(user);
-            newVersion.setBuyer(buyer);
-            newVersion.setDraftData(finalData);
-            newVersion.setStatus("SUBMITTED");
-            newVersion.setVerified(true);
-            newVersion.setLocked(true);
-            newVersion.setSubmittedAt(LocalDateTime.now());
-            newVersion.setVersion(kyc.getVersion() + 1);
-            newVersion.setParentKycId(kyc.getId());
-            newVersion.setCurrentVersion(true);
-            KycApplication savedVersion = kycApplicationRepository.save(newVersion);
-
-            // Association
-            BuyerKycAssociation assoc = new BuyerKycAssociation();
-            assoc.setBuyer(buyer);
-            assoc.setKycApplication(savedVersion);
-            assoc.setVersion(savedVersion.getVersion());
-            assoc.setStatus("ACTIVE");
-            assoc.setAssociatedAt(LocalDateTime.now());
-            assoc.setAssociatedBy(user.getEmail());
-            associationRepository.save(assoc);
-
-            buyer.setKycApplicationId(savedVersion.getId());
-            buyer.setStatus("KYC_COMPLETED");
-            buyerRepository.save(buyer);
-
-            if (user.getOnboardingStage() == OnboardingStage.PROFILE_PENDING || user.getOnboardingStage() == OnboardingStage.KYC_PENDING) {
-                user.setOnboardingStage(OnboardingStage.COMPLETED);
-                userRepository.save(user);
-            }
-
-            return mapToDto(user, buyer, savedVersion);
-        }
-
-        // Standard First Submission
-        kyc.setDraftData(finalData);
-        kyc.setStatus("SUBMITTED");
-        kyc.setVerified(true);
-        kyc.setLocked(true);
-        kyc.setSubmittedAt(LocalDateTime.now());
-        kyc.setUser(user);
-        kyc.setBuyer(buyer);
-        kyc.setVersion(1);
-        kyc.setCurrentVersion(true);
-        KycApplication saved = kycApplicationRepository.save(kyc);
-
-        BuyerKycAssociation assoc = new BuyerKycAssociation();
-        assoc.setBuyer(buyer);
-        assoc.setKycApplication(saved);
-        assoc.setVersion(1);
-        assoc.setStatus("ACTIVE");
-        assoc.setAssociatedAt(LocalDateTime.now());
-        assoc.setAssociatedBy(user.getEmail());
-        associationRepository.save(assoc);
-
-        buyer.setKycApplicationId(saved.getId());
-        buyer.setStatus("KYC_COMPLETED");
-        buyerRepository.save(buyer);
-
-        if (user.getOnboardingStage() == OnboardingStage.PROFILE_PENDING || user.getOnboardingStage() == OnboardingStage.KYC_PENDING) {
-            user.setOnboardingStage(OnboardingStage.COMPLETED);
-            userRepository.save(user);
-        }
-
-        return mapToDto(user, buyer, saved);
-    }
-
-    @Override
-    @Transactional
-    public KycApplicationDto reuseKycApplication(String email, UUID workflowId, UUID sourceKycId) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-
-        Buyer buyer = resolveBuyer(user, workflowId);
-        KycApplication sourceKyc = kycApplicationRepository.findById(sourceKycId)
-                .orElseThrow(() -> new CustomException("Source KYC application not found", HttpStatus.NOT_FOUND));
-
-        if (!sourceKyc.getUser().getId().equals(user.getId())) {
-            throw new CustomException("Target source KYC belongs to a different customer", HttpStatus.FORBIDDEN);
-        }
-
-        BuyerKycAssociation assoc = new BuyerKycAssociation();
-        assoc.setBuyer(buyer);
-        assoc.setKycApplication(sourceKyc);
-        assoc.setVersion(sourceKyc.getVersion());
-        assoc.setStatus("ACTIVE");
-        assoc.setAssociatedAt(LocalDateTime.now());
-        assoc.setAssociatedBy(user.getEmail());
-        associationRepository.save(assoc);
-
-        buyer.setKycApplicationId(sourceKyc.getId());
-        buyer.setStatus("KYC_COMPLETED");
-        buyerRepository.save(buyer);
-
-        return mapToDto(user, buyer, sourceKyc);
-    }
-
-    @Override
-    @Transactional
-    public KycModificationRequestDto requestKycModification(String email, UUID workflowId, String reason) {
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-
-        Buyer buyer = resolveBuyer(user, workflowId);
-        KycApplication kyc = resolveKycForBuyer(user, buyer);
-
-        Optional<KycModificationRequest> existing = modificationRequestRepository
-                .findFirstByBuyerIdAndStatusOrderByRequestedAtDesc(buyer.getId(), "PENDING");
-        if (existing.isPresent()) {
-            throw new CustomException("A KYC modification request is already pending approval for this unit.", HttpStatus.BAD_REQUEST);
-        }
+        kyc.setStatus("MODIFICATION_REQUESTED");
+        kyc.setLocked(false);
+        kycRepository.save(kyc);
 
         KycModificationRequest req = new KycModificationRequest();
-        req.setBuyer(buyer);
         req.setUser(user);
-        req.setKycApplication(kyc);
+        if (workflow.getBuyer() != null) {
+            req.setBuyer(workflow.getBuyer());
+        }
         req.setReason(reason);
         req.setStatus("PENDING");
-        req.setRequestedAt(LocalDateTime.now());
-        KycModificationRequest saved = modificationRequestRepository.save(req);
 
-        return new KycModificationRequestDto(
-                saved.getId(),
-                buyer.getId(),
-                buyer.getUnitName(),
-                buyer.getZohoDealId(),
-                user.getFullName(),
-                user.getEmail(),
-                saved.getReason(),
-                saved.getStatus(),
-                saved.getRequestedAt(),
-                saved.getReviewedAt(),
-                saved.getReviewedBy()
-        );
+        KycModificationRequest savedReq = modificationRequestRepository.save(req);
+
+        KycModificationRequestDto dto = new KycModificationRequestDto();
+        dto.setId(savedReq.getId());
+        dto.setReason(savedReq.getReason());
+        dto.setStatus(savedReq.getStatus());
+        return dto;
     }
 
-    private KycApplicationDto mapToDto(User user, Buyer buyer, KycApplication kyc) {
-        KycApplicationDto dto = new KycApplicationDto();
-        dto.setId(kyc.getId());
-        dto.setBuyerId(buyer.getId());
-        dto.setUnitName(buyer.getUnitName());
-        dto.setStatus(kyc.getStatus());
-        dto.setDraftData(kyc.getDraftData());
-        dto.setLocked(kyc.isLocked());
-        dto.setVerified(kyc.isVerified() || "SUBMITTED".equals(kyc.getStatus()));
-        dto.setSubmittedAt(kyc.getSubmittedAt());
-        dto.setReviewedAt(kyc.getReviewedAt());
+    private void recordAudit(KycApplication kyc, User user, String action, String prevStatus, String newStatus, String snapshot) {
+        KycAuditLog audit = new KycAuditLog();
+        audit.setKycApplication(kyc);
+        audit.setPerformedByUser(user);
+        audit.setAction(action);
+        audit.setPreviousStatus(prevStatus);
+        audit.setNewStatus(newStatus);
+        audit.setSnapshotData(snapshot);
+        auditLogRepository.save(audit);
+    }
 
-        Optional<KycModificationRequest> pendingReq = modificationRequestRepository
-                .findFirstByBuyerIdAndStatusOrderByRequestedAtDesc(buyer.getId(), "PENDING");
-        if (pendingReq.isPresent()) {
-            dto.setHasPendingModificationRequest(true);
-            dto.setModificationRequestReason(pendingReq.get().getReason());
-        } else {
-            dto.setHasPendingModificationRequest(false);
+    private KycReviewSummaryDto buildReviewSummary(KycApplication kyc) {
+        KycReviewSummaryDto summary = new KycReviewSummaryDto();
+        summary.setId(kyc.getId());
+        if (kyc.getWorkflow() != null && kyc.getWorkflow().getBuyer() != null) {
+            summary.setUnitName(kyc.getWorkflow().getBuyer().getUnitName());
+        } else if (kyc.getBuyer() != null) {
+            summary.setUnitName(kyc.getBuyer().getUnitName());
         }
+        summary.setStatus(kyc.getStatus());
+        summary.setLocked(kyc.isLocked());
+        summary.setVerified(kyc.isVerified());
+        summary.setVersion(kyc.getVersion());
+        summary.setSubmittedAt(kyc.getSubmittedAt());
+        summary.setReviewedAt(kyc.getReviewedAt());
 
-        List<Buyer> allCustomerBuyers = buyerRepository.findAllByEmailIgnoreCase(user.getEmail());
-        List<ClientUnitDto> availableVerifiedKycs = new ArrayList<>();
-
-        for (Buyer b : allCustomerBuyers) {
-            if (!b.getId().equals(buyer.getId()) && b.getKycApplicationId() != null) {
-                Optional<KycApplication> bKyc = kycApplicationRepository.findById(b.getKycApplicationId());
-                if (bKyc.isPresent() && (bKyc.get().isVerified() || "SUBMITTED".equals(bKyc.get().getStatus()))) {
-                    ClientUnitDto unitDto = new ClientUnitDto();
-                    unitDto.setId(b.getId());
-                    unitDto.setUnitName(b.getUnitName());
-                    unitDto.setKycApplicationId(b.getKycApplicationId());
-                    unitDto.setKycStatus("VERIFIED");
-                    unitDto.setKycVerified(true);
-                    availableVerifiedKycs.add(unitDto);
-                }
+        if (kyc.getDraftData() != null && !kyc.getDraftData().trim().isEmpty()) {
+            try {
+                KycDraftDto formData = objectMapper.readValue(kyc.getDraftData(), KycDraftDto.class);
+                summary.setFormData(formData);
+            } catch (JsonProcessingException e) {
+                log.error("Failed to parse KYC draft data JSON", e);
             }
         }
-        dto.setAvailableVerifiedKycs(availableVerifiedKycs);
 
-        return dto;
+        summary.setDocuments(new ArrayList<>());
+        return summary;
     }
 }

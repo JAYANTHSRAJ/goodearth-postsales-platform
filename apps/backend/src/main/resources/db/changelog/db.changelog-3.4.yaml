@@ -1,0 +1,192 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.4-create-kyc-tables-and-audit-logs
+      author: antigravity
+      changes:
+        - createTable:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: buyer_id
+                  type: UUID
+              - column:
+                  name: workflow_id
+                  type: UUID
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: DRAFT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft_data
+                  type: TEXT
+              - column:
+                  name: is_verified
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: is_locked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  name: parent_kyc_id
+                  type: UUID
+              - column:
+                  name: is_current_version
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+              - column:
+                  name: submitted_at
+                  type: TIMESTAMP
+              - column:
+                  name: reviewed_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+        - createTable:
+            tableName: kyc_audit_logs
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: performed_by_user_id
+                  type: UUID
+              - column:
+                  name: action
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: previous_status
+                  type: VARCHAR(50)
+              - column:
+                  name: new_status
+                  type: VARCHAR(50)
+              - column:
+                  name: snapshot_data
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+        - createTable:
+            tableName: zoho_sync_logs
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+              - column:
+                  name: zoho_deal_id
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sync_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sync_status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempt_count
+                  type: INT
+                  defaultValueNumeric: 0
+              - column:
+                  name: max_attempts
+                  type: INT
+                  defaultValueNumeric: 5
+              - column:
+                  name: last_error_message
+                  type: TEXT
+              - column:
+                  name: payload
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+        - createTable:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: document_id
+                  type: UUID
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+              - column:
+                  name: applicant_type
+                  type: VARCHAR(50)
+              - column:
+                  name: document_type
+                  type: VARCHAR(50)
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+              - column:
+                  name: file_path
+                  type: VARCHAR(500)
+              - column:
+                  name: workdrive_file_id
+                  type: VARCHAR(100)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP

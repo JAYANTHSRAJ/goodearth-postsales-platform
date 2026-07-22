@@ -3,6 +3,7 @@ package com.goodearth.postsales.client.entity;
 import com.goodearth.postsales.audit.BaseEntity;
 import com.goodearth.postsales.auth.entity.User;
 import com.goodearth.postsales.buyer.entity.Buyer;
+import com.goodearth.postsales.workflow.entity.Workflow;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,10 @@ public class KycApplication extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "buyer_id", referencedColumnName = "id")
     private Buyer buyer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workflow_id", referencedColumnName = "id")
+    private Workflow workflow;
 
     @Column(name = "status", nullable = false, length = 50)
     private String status = "DRAFT";
