@@ -37,6 +37,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping({"/api/v1/client", "/client"})
 @PreAuthorize("hasAnyRole('CLIENT', 'SUPER_ADMIN', 'CRM', 'DESIGN_STUDIO', 'FINANCE', 'PROJECT_MANAGER')")
@@ -91,6 +93,7 @@ public class ClientPortalController {
     }
 
     @GetMapping("/units")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<ClientUnitDto>>> getOwnedUnits(
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("Endpoint: GET /api/v1/client/units, User: {}", userDetails.getUsername());
