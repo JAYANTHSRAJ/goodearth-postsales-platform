@@ -251,11 +251,7 @@ export const ClientProfilePage: React.FC = () => {
                     Active Ownership
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-t border-white/10 pt-3 text-brand-200">
-                  <div>
-                    <span className="block text-[10px] uppercase text-brand-400">KYC Status</span>
-                    <span className="font-medium text-emerald-300">{activeUnit?.kycStatus || 'VERIFIED'}</span>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs border-t border-white/10 pt-3 text-brand-200">
                   <div>
                     <span className="block text-[10px] uppercase text-brand-400">Handover Target</span>
                     <span className="font-medium text-white">Q4 2026</span>

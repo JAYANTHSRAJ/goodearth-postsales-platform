@@ -19,7 +19,6 @@ import {
   Settings,
   Shield,
   X,
-  Lock,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -34,7 +33,7 @@ interface NavItem {
 }
 
 const clientNavItems: NavItem[] = [
-  { name: 'Profile', path: '/onboarding?stage=PROFILE_PENDING', icon: User, requiresUnit: false },
+  { name: 'Profile', path: '/profile', icon: User, requiresUnit: false },
   { name: 'My Home', path: '/my-home', icon: Home, requiresUnit: false },
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiresUnit: true },
   { name: 'Design Studio', path: '/design-studio', icon: Highlighter, requiresUnit: true },
@@ -64,7 +63,7 @@ const crmNavItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useUIStore();
   const { user } = useAuthStore();
-  const { activeUnit, setUnits } = useUnitStore();
+  const { setUnits } = useUnitStore();
   const location = useLocation();
 
   const isClient = user?.role === 'buyer';
@@ -84,8 +83,6 @@ export const Sidebar: React.FC = () => {
   }, [isClient, user]);
 
   const visibleNavItems = isClient ? clientNavItems : crmNavItems;
-
-  const isUnitUnlocked = activeUnit && (activeUnit.isKycVerified || activeUnit.kycStatus === 'SUBMITTED' || activeUnit.kycStatus === 'VERIFIED');
 
   const sidebarClass = `
     fixed inset-y-0 left-0 z-50 flex flex-col border-r border-brand-200 bg-white transition-all duration-300 dark:border-brand-800 dark:bg-brand-900
@@ -132,65 +129,27 @@ export const Sidebar: React.FC = () => {
         <nav className="flex-1 space-y-1.5 px-3 py-4 overflow-y-auto">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
-            const isDisabled = isClient && item.requiresUnit && !isUnitUnlocked;
             const isItemActive = location.pathname === item.path || (location.pathname + location.search) === item.path;
-
-            if (isDisabled) {
-              return (
-                <div
-                  key={item.name}
-                  className="relative flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-medium opacity-45 cursor-not-allowed bg-brand-50/40 dark:bg-brand-950/20 text-brand-400 dark:text-brand-600"
-                  title="Select an active property unit and complete KYC to unlock"
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <Icon className="h-5 w-5 shrink-0" />
-                    {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
-                  </div>
-                  {!sidebarCollapsed && <Lock className="h-3.5 w-3.5 shrink-0 text-brand-400" />}
-                </div>
-              );
-            }
 
             return (
               <NavLink
                 key={item.name}
                 to={item.path}
-                className={`
-                  relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 group
+                className={({ isActive }) => `
+                  flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200
                   ${
-                    isItemActive
-                      ? 'bg-brand-100 text-brand-900 dark:bg-brand-800 dark:text-white font-semibold'
-                      : 'text-brand-600 hover:bg-brand-50 hover:text-brand-900 dark:text-brand-400 dark:hover:bg-brand-800/40 dark:hover:text-white'
+                    isActive || isItemActive
+                      ? 'bg-brand-700 text-white shadow-md dark:bg-brand-600'
+                      : 'text-brand-600 hover:bg-brand-50 hover:text-brand-900 dark:text-brand-300 dark:hover:bg-brand-800 dark:hover:text-white'
                   }
                 `}
-                onClick={() => {
-                  if (mobileSidebarOpen) toggleMobileSidebar();
-                }}
               >
-                {/* Active Accent Left Border */}
-                {isItemActive && (
-                  <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded bg-accent-600 dark:bg-accent-400" />
-                )}
-                <Icon className="h-5 w-5 shrink-0 transition-transform group-hover:scale-105" />
+                <Icon className="h-5 w-5 shrink-0" />
                 {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
               </NavLink>
             );
           })}
         </nav>
-
-        {/* Active Unit Footer Badge */}
-        {!sidebarCollapsed && isClient && (
-          <div className="border-t border-brand-100 p-4 dark:border-brand-800">
-            <div className="rounded-xl bg-brand-50 p-3 dark:bg-brand-950/40 border border-brand-200/50 dark:border-brand-850">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-400">
-                Active Property:
-              </p>
-              <p className="text-xs font-bold text-brand-800 dark:text-brand-200 truncate mt-0.5">
-                {activeUnit ? activeUnit.unitName : 'None Selected'}
-              </p>
-            </div>
-          </div>
-        )}
       </aside>
     </>
   );

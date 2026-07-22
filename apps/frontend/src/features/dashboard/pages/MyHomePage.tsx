@@ -38,12 +38,7 @@ export const MyHomePage: React.FC = () => {
 
   const handleSelectUnit = (unit: ClientUnit) => {
     setActiveUnit(unit);
-    const isCompleted = unit.isKycVerified || unit.kycStatus === 'SUBMITTED' || unit.kycStatus === 'VERIFIED';
-    if (isCompleted) {
-      navigate('/');
-    } else {
-      navigate('/onboarding?stage=KYC_PENDING');
-    }
+    navigate('/');
   };
 
   return (
@@ -87,7 +82,6 @@ export const MyHomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {units.map((unit) => {
               const isSelected = activeUnit?.id === unit.id;
-              const isCompleted = unit.isKycVerified || unit.kycStatus === 'SUBMITTED' || unit.kycStatus === 'VERIFIED';
 
               return (
                 <div
@@ -110,8 +104,8 @@ export const MyHomePage: React.FC = () => {
                     </div>
 
                     <StatusBadge
-                      label={isCompleted ? 'KYC Completed' : 'KYC Pending'}
-                      type={isCompleted ? 'success' : 'warning'}
+                      label="Active Unit"
+                      type="success"
                     />
                   </div>
 
@@ -126,9 +120,7 @@ export const MyHomePage: React.FC = () => {
 
                     <div>
                       <span className="block text-[10px] text-brand-400 font-bold uppercase">Document Vault</span>
-                      <span className={`font-semibold ${isCompleted ? 'text-green-600' : 'text-amber-600'}`}>
-                        {isCompleted ? 'Verified' : 'Verification Required'}
-                      </span>
+                      <span className="font-semibold text-green-600">Active</span>
                     </div>
                   </div>
 
@@ -141,13 +133,9 @@ export const MyHomePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleSelectUnit(unit)}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm ${
-                        isCompleted
-                          ? 'bg-brand-700 hover:bg-brand-800 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm bg-brand-700 hover:bg-brand-800 text-white"
                     >
-                      {isCompleted ? 'Open Portal' : 'Continue KYC'}
+                      Open Portal
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>

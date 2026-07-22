@@ -9,11 +9,6 @@ export interface ClientUnit {
   projectCode?: string;
   location?: string;
   status?: string;
-  kycStatus: string; // "NOT_STARTED", "DRAFT", "SUBMITTED", "VERIFIED"
-  kycLocked: boolean;
-  isKycVerified: boolean;
-  hasPendingModificationRequest: boolean;
-  kycApplicationId?: string;
 }
 
 interface UnitState {

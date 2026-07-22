@@ -137,17 +137,6 @@ export interface FamilyMember {
   phone?: string;
 }
 
-export interface DocumentMetadata {
-  id: string;
-  applicantType: string;
-  documentType: string;
-  fileName: string;
-  filePath?: string;
-  version: number;
-  mimeType: string;
-  sizeBytes: number;
-}
-
 export const clientService = {
   getOwnedUnits(): Promise<ClientUnit[]> {
     return api.get<ClientUnit[]>('/client/units');
@@ -205,92 +194,6 @@ export const clientService = {
 
   updateProfile(profile: any): Promise<any> {
     return api.put<any>('/client/profile', profile);
-  },
-
-  getKyc(workflowId?: string | null): Promise<any> {
-    if (!workflowId) {
-      return Promise.reject(new Error('workflowId parameter is required for getKyc'));
-    }
-    return api.get<any>(`/kyc?workflowId=${workflowId}`);
-  },
-
-  getKycById(kycId: string): Promise<any> {
-    return api.get<any>(`/kyc/${kycId}`);
-  },
-
-  saveKycDraft(data: any, workflowId?: string | null): Promise<any> {
-    const url = `/kyc/draft`;
-    return api.post<any>(url, { ...data, workflowId });
-  },
-
-  submitKyc(data: any, workflowId?: string | null): Promise<any> {
-    const url = workflowId ? `/kyc/${workflowId}/submit` : '/kyc/submit';
-    return api.post<any>(url, data);
-  },
-
-  reuseKyc(workflowId: string, sourceKycId: string): Promise<any> {
-    return api.post<any>(`/client/kyc/reuse?workflowId=${workflowId}&sourceKycId=${sourceKycId}`, {});
-  },
-
-  requestKycModification(workflowId: string, reason: string): Promise<any> {
-    return api.post<any>(`/client/kyc/request-modification?workflowId=${workflowId}`, { reason });
-  },
-
-  // Document Vault APIs
-  uploadKycDocument(workflowId: string, applicantType: string, documentType: string, file: File): Promise<DocumentMetadata> {
-    const formData = new FormData();
-    formData.append('workflowId', workflowId);
-    formData.append('applicantType', applicantType);
-    formData.append('documentType', documentType);
-    formData.append('file', file);
-    return api.post<DocumentMetadata>('/kyc/documents/upload', formData);
-  },
-
-  replaceKycDocument(documentId: string, file: File): Promise<DocumentMetadata> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.put<DocumentMetadata>(`/kyc/documents/${documentId}/replace`, formData);
-  },
-
-  listKycDocuments(workflowId: string): Promise<DocumentMetadata[]> {
-    return api.get<DocumentMetadata[]>(`/kyc/documents?workflowId=${workflowId}`);
-  },
-
-  deleteKycDocument(documentId: string): Promise<string> {
-    return api.delete<string>(`/kyc/documents/${documentId}`);
-  },
-
-  getDocumentVersionHistory(documentId: string): Promise<DocumentMetadata[]> {
-    return api.get<DocumentMetadata[]>(`/kyc/documents/${documentId}/versions`);
-  },
-
-  // Admin Review Portal APIs
-  getAdminAllKycApplications(): Promise<any[]> {
-    return api.get<any[]>('/kyc/admin/all');
-  },
-
-  adminReviewKyc(kycId: string, action: string, comments?: string): Promise<any> {
-    return api.post<any>(`/kyc/${kycId}/admin-review`, { action, comments });
-  },
-
-  getKycAuditLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/kyc/${kycId}/audit`);
-  },
-
-  getCrmSyncLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/admin/kyc/sync/logs?kycId=${kycId}`);
-  },
-
-  retryCrmSync(syncLogId: string): Promise<any> {
-    return api.post<any>(`/admin/kyc/sync/${syncLogId}/retry`, {});
-  },
-
-  getWorkDriveSyncLogs(kycId: string): Promise<any[]> {
-    return api.get<any[]>(`/admin/kyc/workdrive/logs?kycId=${kycId}`);
-  },
-
-  retryWorkDriveSync(syncLogId: string): Promise<any> {
-    return api.post<any>(`/admin/kyc/workdrive/${syncLogId}/retry`, {});
   },
 };
 

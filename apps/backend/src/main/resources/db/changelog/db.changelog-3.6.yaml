@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.6-drop-kyc-tables-and-associations
+      author: antigravity
+      changes:
+        - dropTable:
+            tableName: buyer_kyc_associations
+            cascadeConstraints: true
+        - dropTable:
+            tableName: kyc_modification_requests
+            cascadeConstraints: true
+        - dropTable:
+            tableName: document_versions
+            cascadeConstraints: true
+        - dropTable:
+            tableName: zoho_sync_logs
+            cascadeConstraints: true
+        - dropTable:
+            tableName: kyc_audit_logs
+            cascadeConstraints: true
+        - dropTable:
+            tableName: kyc_applications
+            cascadeConstraints: true
+
+  - changeSet:
+      id: 3.6-drop-kyc-application-id-from-buyers
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        columnExists:
+          tableName: buyers
+          columnName: kyc_application_id
+      changes:
+        - dropColumn:
+            tableName: buyers
+            columnName: kyc_application_id

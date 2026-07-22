@@ -19,9 +19,4 @@ public class ClientUnitDto {
     private String projectCode;
     private String location;
     private String status;
-    private String kycStatus; // "NOT_STARTED", "DRAFT", "SUBMITTED", "VERIFIED"
-    private boolean kycLocked;
-    private boolean isKycVerified;
-    private boolean hasPendingModificationRequest;
-    private UUID kycApplicationId;
 }

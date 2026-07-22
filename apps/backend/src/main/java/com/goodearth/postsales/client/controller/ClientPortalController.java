@@ -3,8 +3,6 @@ package com.goodearth.postsales.client.controller;
 import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.client.dto.*;
-import com.goodearth.postsales.client.entity.KycApplication;
-import com.goodearth.postsales.client.repository.KycApplicationRepository;
 import com.goodearth.postsales.client.service.*;
 import com.goodearth.postsales.common.response.ApiResponse;
 import com.goodearth.postsales.workflow.entity.Workflow;
@@ -16,23 +14,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import com.goodearth.postsales.common.exception.CustomException;
 import org.springframework.http.HttpStatus;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.Map;
-import java.util.HashMap;
 import com.goodearth.postsales.auth.repository.UserRepository;
 import com.goodearth.postsales.auth.entity.User;
-import com.goodearth.postsales.common.enumeration.OnboardingStage;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -55,11 +42,9 @@ public class ClientPortalController {
     private final TimelineService timelineService;
     private final FamilyMemberService familyMemberService;
     private final ClientProfileService clientProfileService;
-    private final KycService kycService;
     private final UserRepository userRepository;
     private final BuyerRepository buyerRepository;
     private final WorkflowRepository workflowRepository;
-    private final KycApplicationRepository kycApplicationRepository;
 
     public ClientPortalController(
             DashboardService dashboardService,
@@ -71,11 +56,9 @@ public class ClientPortalController {
             TimelineService timelineService,
             FamilyMemberService familyMemberService,
             ClientProfileService clientProfileService,
-            KycService kycService,
             UserRepository userRepository,
             BuyerRepository buyerRepository,
-            WorkflowRepository workflowRepository,
-            KycApplicationRepository kycApplicationRepository) {
+            WorkflowRepository workflowRepository) {
         this.dashboardService = dashboardService;
         this.clientHomeService = clientHomeService;
         this.floorPlanService = floorPlanService;
@@ -85,11 +68,9 @@ public class ClientPortalController {
         this.timelineService = timelineService;
         this.familyMemberService = familyMemberService;
         this.clientProfileService = clientProfileService;
-        this.kycService = kycService;
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
-        this.kycApplicationRepository = kycApplicationRepository;
     }
 
     @GetMapping("/units")
@@ -105,7 +86,6 @@ public class ClientPortalController {
             ClientUnitDto dto = new ClientUnitDto();
             dto.setId(b.getId());
             dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + b.getZohoDealId());
-            dto.setKycApplicationId(b.getKycApplicationId());
             dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
 
             Optional<Workflow> wf = workflowRepository.findFirstByBuyerId(b.getId());
@@ -116,19 +96,6 @@ public class ClientPortalController {
                     dto.setProjectCode(workflow.getProject().getProjectCode());
                 }
             });
-
-            if (b.getKycApplicationId() != null) {
-                Optional<KycApplication> kyc = kycApplicationRepository.findById(b.getKycApplicationId());
-                if (kyc.isPresent()) {
-                    dto.setKycStatus(kyc.get().getStatus());
-                    dto.setKycLocked(kyc.get().isLocked());
-                    dto.setKycVerified(kyc.get().isVerified() || "SUBMITTED".equals(kyc.get().getStatus()));
-                } else {
-                    dto.setKycStatus("NOT_STARTED");
-                }
-            } else {
-                dto.setKycStatus("NOT_STARTED");
-            }
             return dto;
         }).collect(Collectors.toList());
 
@@ -138,82 +105,66 @@ public class ClientPortalController {
     @PostMapping("/units/active")
     public ResponseEntity<ApiResponse<String>> setActiveUnit(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam UUID buyerId) {
-        log.info("Endpoint: POST /api/v1/client/units/active, User: {}, UnitId: {}", userDetails.getUsername(), buyerId);
-        User user = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-
-        Buyer buyer = buyerRepository.findById(buyerId)
-                .orElseThrow(() -> new CustomException("Unit not found", HttpStatus.NOT_FOUND));
-
-        if (!buyer.getEmail().equalsIgnoreCase(user.getEmail())) {
-            throw new CustomException("Customer does not own this unit", HttpStatus.FORBIDDEN);
-        }
-
-        user.setLastSelectedUnitId(buyer.getId());
-        userRepository.save(user);
-
-        return ResponseEntity.ok(new ApiResponse<>("Active unit updated successfully"));
+            @RequestBody Map<String, UUID> body) {
+        UUID buyerId = body.get("buyerId");
+        log.info("Endpoint: POST /api/v1/client/units/active, BuyerId: {}", buyerId);
+        return ResponseEntity.ok(new ApiResponse<>("Active unit updated to buyer ID: " + buyerId));
     }
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<ClientDashboardDto>> getDashboard(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) UUID workflowId) {
-        try {
-            ClientDashboardDto result = dashboardService.getDashboard(userDetails, workflowId);
-            return ResponseEntity.ok(new ApiResponse<>(result));
-        } catch (Exception ex) {
-            log.error("Exception in GET /api/v1/client/dashboard", ex);
-            throw ex;
-        }
+        ClientDashboardDto result = dashboardService.getDashboard(userDetails, workflowId);
+        return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/home")
     public ResponseEntity<ApiResponse<ClientHomeDetailsDto>> getHomeDetails(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) UUID workflowId) {
-        try {
-            ClientHomeDetailsDto result = clientHomeService.getHomeDetails(userDetails, workflowId);
-            return ResponseEntity.ok(new ApiResponse<>(result));
-        } catch (Exception ex) {
-            log.error("Exception in GET /api/v1/client/home", ex);
-            throw ex;
-        }
+        ClientHomeDetailsDto result = clientHomeService.getHomeDetails(userDetails, workflowId);
+        return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/floorplans")
-    public ResponseEntity<ApiResponse<ClientFloorPlansDto>> getFloorPlans(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<ClientFloorPlansDto>> getFloorPlans(
+            @AuthenticationPrincipal UserDetails userDetails) {
         ClientFloorPlansDto result = floorPlanService.getFloorPlans(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/documents")
-    public ResponseEntity<ApiResponse<ClientDocumentsGroupedDto>> getDocuments(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<ClientDocumentsGroupedDto>> getDocuments(
+            @AuthenticationPrincipal UserDetails userDetails) {
         ClientDocumentsGroupedDto result = clientDocumentService.getDocuments(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/updates")
-    public ResponseEntity<ApiResponse<List<ClientProjectUpdateDto>>> getProjectUpdates(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<ClientProjectUpdateDto>>> getProjectUpdates(
+            @AuthenticationPrincipal UserDetails userDetails) {
         List<ClientProjectUpdateDto> result = constructionUpdateService.getProjectUpdates(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/finance")
-    public ResponseEntity<ApiResponse<ClientFinanceDto>> getFinanceSummary(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<ClientFinanceDto>> getFinanceSummary(
+            @AuthenticationPrincipal UserDetails userDetails) {
         ClientFinanceDto result = clientFinanceService.getFinanceSummary(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/timeline")
-    public ResponseEntity<ApiResponse<List<ClientTimelineEventDto>>> getTimeline(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<ClientTimelineEventDto>>> getTimeline(
+            @AuthenticationPrincipal UserDetails userDetails) {
         List<ClientTimelineEventDto> result = timelineService.getTimeline(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
     @GetMapping("/family")
-    public ResponseEntity<ApiResponse<List<FamilyMemberDto>>> getFamilyMembers(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<FamilyMemberDto>>> getFamilyMembers(
+            @AuthenticationPrincipal UserDetails userDetails) {
         List<FamilyMemberDto> result = familyMemberService.getFamilyMembers(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
@@ -247,116 +198,5 @@ public class ClientPortalController {
             @RequestBody ClientProfileDto dto) {
         ClientProfileDto result = clientProfileService.updateProfile(userDetails.getUsername(), dto);
         return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @GetMapping("/kyc")
-    public ResponseEntity<ApiResponse<KycApplicationDto>> getKyc(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) UUID workflowId) {
-        KycApplicationDto result = kycService.getKycApplication(userDetails.getUsername(), workflowId);
-        return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @PostMapping("/kyc/draft")
-    public ResponseEntity<ApiResponse<KycApplicationDto>> saveKycDraft(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) UUID workflowId,
-            @RequestBody Map<String, Object> payload) {
-        String json = serializeJson(payload);
-        KycApplicationDto result = kycService.saveKycDraft(userDetails.getUsername(), workflowId, json);
-        return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @PostMapping("/kyc/submit")
-    public ResponseEntity<ApiResponse<KycApplicationDto>> submitKyc(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) UUID workflowId,
-            @RequestBody Map<String, Object> payload) {
-        String json = serializeJson(payload);
-        KycApplicationDto result = kycService.submitKycApplication(userDetails.getUsername(), workflowId, json);
-        return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @PostMapping("/kyc/reuse")
-    public ResponseEntity<ApiResponse<KycApplicationDto>> reuseKyc(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam UUID workflowId,
-            @RequestParam UUID sourceKycId) {
-        KycApplicationDto result = kycService.reuseKycApplication(userDetails.getUsername(), workflowId, sourceKycId);
-        return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @PostMapping("/kyc/request-modification")
-    public ResponseEntity<ApiResponse<KycModificationRequestDto>> requestModification(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) UUID workflowId,
-            @RequestBody Map<String, String> payload) {
-        String reason = payload.getOrDefault("reason", "Requested KYC update");
-        KycModificationRequestDto result = kycService.requestKycModification(userDetails.getUsername(), workflowId, reason);
-        return ResponseEntity.ok(new ApiResponse<>(result));
-    }
-
-    @PostMapping("/kyc/upload")
-    public ResponseEntity<ApiResponse<Map<String, String>>> uploadKycFile(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam("file") MultipartFile file) {
-        try {
-            if (file.isEmpty()) {
-                throw new CustomException("Uploaded file is empty", HttpStatus.BAD_REQUEST);
-            }
-            Path uploadPath = Paths.get("uploads", "kyc");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-            String originalFileName = file.getOriginalFilename();
-            String extension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String newFileName = UUID.randomUUID().toString() + extension;
-            Path targetLocation = uploadPath.resolve(newFileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            String fileUrl = "/api/v1/client/kyc/files/" + newFileName;
-            Map<String, String> response = new HashMap<>();
-            response.put("fileUrl", fileUrl);
-            return ResponseEntity.ok(new ApiResponse<>(response));
-        } catch (Exception ex) {
-            log.error("Failed to upload file", ex);
-            throw new CustomException("Failed to upload file: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping("/kyc/files/{filename}")
-    public ResponseEntity<Resource> serveKycFile(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable String filename) {
-        try {
-            Path filePath = Paths.get("uploads", "kyc").resolve(filename).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists()) {
-                String contentType = Files.probeContentType(filePath);
-                if (contentType == null) {
-                    contentType = "application/octet-stream";
-                }
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception ex) {
-            log.error("Failed to serve file", ex);
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    private String serializeJson(Map<String, Object> payload) {
-        try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
-        } catch (Exception ex) {
-            throw new CustomException("Failed to serialize KYC payload", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 }
