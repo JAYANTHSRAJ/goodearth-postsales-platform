@@ -208,8 +208,10 @@ export const clientService = {
   },
 
   getKyc(workflowId?: string | null): Promise<any> {
-    const url = workflowId ? `/kyc?workflowId=${workflowId}` : '/kyc';
-    return api.get<any>(url);
+    if (!workflowId) {
+      return Promise.reject(new Error('workflowId parameter is required for getKyc'));
+    }
+    return api.get<any>(`/kyc?workflowId=${workflowId}`);
   },
 
   getKycById(kycId: string): Promise<any> {

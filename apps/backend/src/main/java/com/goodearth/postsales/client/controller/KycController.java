@@ -1,12 +1,14 @@
 package com.goodearth.postsales.client.controller;
 
-import com.goodearth.postsales.auth.entity.User;
 import com.goodearth.postsales.client.dto.*;
 import com.goodearth.postsales.client.entity.KycApplication;
 import com.goodearth.postsales.client.repository.KycApplicationRepository;
 import com.goodearth.postsales.client.service.KycService;
+import com.goodearth.postsales.common.exception.CustomException;
 import com.goodearth.postsales.common.response.ApiResponse;
+import com.goodearth.postsales.security.user.CustomUserDetails;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,33 +32,45 @@ public class KycController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<KycReviewSummaryDto>> getKycByWorkflow(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam UUID workflowId) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycReviewSummaryDto summary = kycService.getKycByWorkflowId(user.getId(), workflowId);
         return ResponseEntity.ok(new ApiResponse<>(summary));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<KycReviewSummaryDto>> getKycById(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID id) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycReviewSummaryDto summary = kycService.getKycById(user.getId(), id);
         return ResponseEntity.ok(new ApiResponse<>(summary));
     }
 
     @PostMapping("/draft")
     public ResponseEntity<ApiResponse<KycDraftDto>> saveDraft(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @Valid @RequestBody KycDraftDto draftDto) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycDraftDto saved = kycService.saveDraft(user.getId(), draftDto);
         return ResponseEntity.ok(new ApiResponse<>(saved));
     }
 
     @PutMapping("/draft/{id}")
     public ResponseEntity<ApiResponse<KycDraftDto>> updateDraft(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID id,
             @Valid @RequestBody KycDraftDto draftDto) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         draftDto.setId(id);
         KycDraftDto saved = kycService.saveDraft(user.getId(), draftDto);
         return ResponseEntity.ok(new ApiResponse<>(saved));
@@ -64,17 +78,23 @@ public class KycController {
 
     @PostMapping("/{id}/submit")
     public ResponseEntity<ApiResponse<KycReviewSummaryDto>> submitKyc(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID id,
             @Valid @RequestBody SubmitKycRequestDto submitDto) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycReviewSummaryDto submitted = kycService.submitKyc(user.getId(), submitDto);
         return ResponseEntity.ok(new ApiResponse<>(submitted));
     }
 
     @GetMapping("/{id}/review")
     public ResponseEntity<ApiResponse<KycReviewSummaryDto>> getReviewSummary(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID id) {
+        if (user == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycReviewSummaryDto summary = kycService.getKycById(user.getId(), id);
         return ResponseEntity.ok(new ApiResponse<>(summary));
     }
@@ -96,9 +116,12 @@ public class KycController {
     @PostMapping("/{id}/admin-review")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<KycReviewSummaryDto>> adminReview(
-            @AuthenticationPrincipal User adminUser,
+            @AuthenticationPrincipal CustomUserDetails adminUser,
             @PathVariable UUID id,
             @Valid @RequestBody AdminReviewRequestDto reviewDto) {
+        if (adminUser == null) {
+            throw new CustomException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
         KycReviewSummaryDto summary = kycService.adminReview(adminUser.getId(), id, reviewDto);
         return ResponseEntity.ok(new ApiResponse<>(summary));
     }

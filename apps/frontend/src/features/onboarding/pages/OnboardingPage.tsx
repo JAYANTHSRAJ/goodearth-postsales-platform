@@ -92,8 +92,8 @@ export const OnboardingPage: React.FC = () => {
   const currentWorkflowId = activeUnit?.workflowId;
   const { data: kycData, refetch: refetchKyc } = useQuery({
     queryKey: ['clientKyc', currentWorkflowId],
-    queryFn: () => clientService.getKyc(currentWorkflowId),
-    enabled: !!user,
+    queryFn: () => clientService.getKyc(currentWorkflowId!),
+    enabled: !!user && !!currentWorkflowId,
   });
 
   // Save KYC draft mutation
