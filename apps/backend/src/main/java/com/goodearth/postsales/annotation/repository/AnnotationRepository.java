@@ -10,6 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface AnnotationRepository extends JpaRepository<Annotation, UUID> {
+    java.util.Optional<Annotation> findByWorkflowIdAndWorkdriveFileIdAndTitle(UUID workflowId, String workdriveFileId, String title);
     List<Annotation> findByDocumentId(UUID documentId);
     List<Annotation> findByWorkflowId(UUID workflowId);
     List<Annotation> findByDocumentIdAndStatus(UUID documentId, AnnotationStatus status);

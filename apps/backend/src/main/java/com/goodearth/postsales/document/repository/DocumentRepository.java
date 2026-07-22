@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, UUID> {
+    Optional<Document> findByWorkDriveFileId(String workDriveFileId);
     List<Document> findByWorkflowId(UUID workflowId);
     List<Document> findByWorkflowIdAndStatus(UUID workflowId, DocumentStatus status);
     Optional<Document> findFirstByWorkflowIdAndDocumentTypeOrderByVersionDesc(UUID workflowId, DocumentType documentType);

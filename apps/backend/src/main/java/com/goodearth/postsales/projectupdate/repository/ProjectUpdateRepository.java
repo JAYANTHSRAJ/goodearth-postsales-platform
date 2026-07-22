@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface ProjectUpdateRepository extends JpaRepository<ProjectUpdate, UUID> {
+    java.util.Optional<ProjectUpdate> findByWorkflowIdAndTitle(UUID workflowId, String title);
     List<ProjectUpdate> findByWorkflowId(UUID workflowId);
     List<ProjectUpdate> findByWorkflowIdAndIsVisibleToClient(UUID workflowId, boolean isVisibleToClient);
     List<ProjectUpdate> findByWorkflowIdOrderByPublishedAtDesc(UUID workflowId);

@@ -15,6 +15,8 @@ import java.util.UUID;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
+    java.util.Optional<Notification> findFirstByTitle(String title);
+
     @Query("SELECT n FROM Notification n WHERE " +
            "(n.user.id = :userId OR n.targetRole = :role OR n.isBroadcast = true) AND " +
            "(n.expiresAt IS NULL OR n.expiresAt > :now) AND " +

@@ -9,5 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface ChangeRequestRepository extends JpaRepository<ChangeRequest, UUID> {
+    java.util.Optional<ChangeRequest> findByWorkflowIdAndWorkDriveFileId(UUID workflowId, String workDriveFileId);
     List<ChangeRequest> findByWorkflowId(UUID workflowId);
 }

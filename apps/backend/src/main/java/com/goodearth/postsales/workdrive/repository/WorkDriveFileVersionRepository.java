@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface WorkDriveFileVersionRepository extends JpaRepository<WorkDriveFileVersion, UUID> {
     List<WorkDriveFileVersion> findByWorkDriveFileIdOrderByVersionAsc(UUID workDriveFileId);
     Optional<WorkDriveFileVersion> findFirstByWorkDriveFileIdOrderByVersionDesc(UUID workDriveFileId);
+    Optional<WorkDriveFileVersion> findByWorkDriveFileIdAndVersion(UUID workDriveFileId, Integer version);
 }
