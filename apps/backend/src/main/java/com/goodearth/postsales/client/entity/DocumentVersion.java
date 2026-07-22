@@ -37,6 +37,15 @@ public class DocumentVersion extends BaseEntity {
     @Column(name = "file_path", length = 500)
     private String filePath;
 
+    @Column(name = "mime_type", length = 100)
+    private String mimeType;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
     @Column(name = "workdrive_file_id", length = 100)
     private String workDriveFileId;
 }
