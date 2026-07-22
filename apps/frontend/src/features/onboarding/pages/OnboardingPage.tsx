@@ -143,16 +143,12 @@ export const OnboardingPage: React.FC = () => {
   useEffect(() => {
     if (kycData) {
       const data = kycData.data || kycData;
-      if (data.draftData) {
-        try {
-          const parsed = JSON.parse(data.draftData);
-          setKycForm((prev) => ({ ...prev, ...parsed }));
-          if (data.isLocked || data.status === 'SUBMITTED' || data.status === 'APPROVED') {
-            setHasStartedKyc(true);
-            setKycSubStep(9); // View review summary
-          }
-        } catch (e) {
-          console.error('Failed to parse KYC draft data JSON', e);
+      if (data.formData) {
+        setKycForm((prev) => ({ ...prev, ...data.formData }));
+        setHasStartedKyc(true);
+        const isLockedState = data.locked || data.isLocked;
+        if (isLockedState || data.status === 'SUBMITTED' || data.status === 'APPROVED') {
+          setKycSubStep(9); // View review summary
         }
       }
     }
