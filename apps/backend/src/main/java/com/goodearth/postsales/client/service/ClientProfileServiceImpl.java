@@ -68,7 +68,7 @@ public class ClientProfileServiceImpl implements ClientProfileService {
 
         int completion = calculateCompletion(user, profile);
         if (completion == 100 && user.getOnboardingStage() == OnboardingStage.PROFILE_PENDING) {
-            user.setOnboardingStage(OnboardingStage.KYC_PENDING);
+            user.setOnboardingStage(OnboardingStage.COMPLETED);
             userRepository.save(user);
         }
 
