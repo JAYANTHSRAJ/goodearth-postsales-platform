@@ -1,50 +1,71 @@
 databaseChangeLog:
   - changeSet:
-      id: 3.4-add-missing-columns-to-kyc-applications
+      id: 3.4-create-kyc-tables-and-audit-logs
       author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: kyc_applications
-            columnName: workflow_id
       changes:
-        - addColumn:
+        - createTable:
             tableName: kyc_applications
             columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: buyer_id
+                  type: UUID
               - column:
                   name: workflow_id
                   type: UUID
-
-  - changeSet:
-      id: 3.4-add-audit-columns-to-kyc-applications
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: kyc_applications
-            columnName: created_by
-      changes:
-        - addColumn:
-            tableName: kyc_applications
-            columns:
               - column:
-                  name: created_by
-                  type: VARCHAR(255)
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: DRAFT
+                  constraints:
+                    nullable: false
               - column:
-                  name: updated_by
-                  type: VARCHAR(255)
+                  name: draft_data
+                  type: TEXT
+              - column:
+                  name: is_verified
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: is_locked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  name: parent_kyc_id
+                  type: UUID
+              - column:
+                  name: is_current_version
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+              - column:
+                  name: submitted_at
+                  type: TIMESTAMP
+              - column:
+                  name: reviewed_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
-  - changeSet:
-      id: 3.4-create-kyc-audit-logs-table
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          tableExists:
-            tableName: kyc_audit_logs
-      changes:
         - createTable:
             tableName: kyc_audit_logs
             columns:
@@ -80,50 +101,7 @@ databaseChangeLog:
                   name: created_at
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: updated_at
-                  type: TIMESTAMP
-                  defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
 
-  - changeSet:
-      id: 3.4-add-audit-columns-to-kyc-audit-logs
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: kyc_audit_logs
-            columnName: created_by
-      changes:
-        - addColumn:
-            tableName: kyc_audit_logs
-            columns:
-              - column:
-                  name: updated_at
-                  type: TIMESTAMP
-                  defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
-
-  - changeSet:
-      id: 3.4-create-zoho-sync-logs-table
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          tableExists:
-            tableName: zoho_sync_logs
-      changes:
         - createTable:
             tableName: zoho_sync_logs
             columns:
@@ -177,42 +155,7 @@ databaseChangeLog:
                   name: updated_at
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
 
-  - changeSet:
-      id: 3.4-add-audit-columns-to-zoho-sync-logs
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: zoho_sync_logs
-            columnName: created_by
-      changes:
-        - addColumn:
-            tableName: zoho_sync_logs
-            columns:
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
-
-  - changeSet:
-      id: 3.4-create-document-versions-table
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          tableExists:
-            tableName: document_versions
-      changes:
         - createTable:
             tableName: document_versions
             columns:
@@ -274,49 +217,10 @@ databaseChangeLog:
                   name: created_at
                   type: TIMESTAMP
                   defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: updated_at
-                  type: TIMESTAMP
-                  defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
-
-  - changeSet:
-      id: 3.4-add-audit-columns-to-document-versions
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          columnExists:
-            tableName: document_versions
-            columnName: created_by
-      changes:
-        - addColumn:
-            tableName: document_versions
-            columns:
-              - column:
-                  name: updated_at
-                  type: TIMESTAMP
-                  defaultValueComputed: CURRENT_TIMESTAMP
-              - column:
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: updated_by
-                  type: VARCHAR(255)
 
   - changeSet:
       id: 3.4-add-production-kyc-indexes
       author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_kyc_workflow_id
       changes:
         - createIndex:
             indexName: idx_kyc_workflow_id
@@ -324,48 +228,18 @@ databaseChangeLog:
             columns:
               - column:
                   name: workflow_id
-
-  - changeSet:
-      id: 3.4-add-kyc-user-id-index
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_kyc_user_id
-      changes:
         - createIndex:
             indexName: idx_kyc_user_id
             tableName: kyc_applications
             columns:
               - column:
                   name: user_id
-
-  - changeSet:
-      id: 3.4-add-kyc-status-index
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_kyc_status
-      changes:
         - createIndex:
             indexName: idx_kyc_status
             tableName: kyc_applications
             columns:
               - column:
                   name: status
-
-  - changeSet:
-      id: 3.4-add-sync-log-indexes
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_sync_log_status_type
-      changes:
         - createIndex:
             indexName: idx_sync_log_status_type
             tableName: zoho_sync_logs
@@ -374,32 +248,12 @@ databaseChangeLog:
                   name: sync_status
               - column:
                   name: sync_type
-
-  - changeSet:
-      id: 3.4-add-sync-log-kyc-id-index
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_sync_log_kyc_id
-      changes:
         - createIndex:
             indexName: idx_sync_log_kyc_id
             tableName: zoho_sync_logs
             columns:
               - column:
                   name: kyc_application_id
-
-  - changeSet:
-      id: 3.4-add-doc-ver-kyc-id-index
-      author: antigravity
-      preConditions:
-        onFail: MARK_RAN
-        not:
-          indexExists:
-            indexName: idx_doc_ver_kyc_id
-      changes:
         - createIndex:
             indexName: idx_doc_ver_kyc_id
             tableName: document_versions

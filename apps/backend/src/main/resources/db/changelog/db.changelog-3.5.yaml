@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.5-add-audit-columns-to-kyc-applications
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: kyc_applications
+            columnName: created_by
+      changes:
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.5-add-audit-columns-to-kyc-audit-logs
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: kyc_audit_logs
+            columnName: created_by
+      changes:
+        - addColumn:
+            tableName: kyc_audit_logs
+            columns:
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.5-add-audit-columns-to-zoho-sync-logs
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: zoho_sync_logs
+            columnName: created_by
+      changes:
+        - addColumn:
+            tableName: zoho_sync_logs
+            columns:
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.5-add-audit-columns-to-document-versions
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: document_versions
+            columnName: created_by
+      changes:
+        - addColumn:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
