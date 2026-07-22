@@ -17,6 +17,7 @@ import { Step7LoanAndTax } from '../components/wizard-steps/Step7LoanAndTax';
 import { Step8DocumentUploadPlaceholder } from '../components/wizard-steps/Step8DocumentUploadPlaceholder';
 import { Step9ReviewSummary } from '../components/wizard-steps/Step9ReviewSummary';
 import { Step10Confirmation } from '../components/wizard-steps/Step10Confirmation';
+import { validateKycStep, scrollToFirstError } from '../utils/kycValidation';
 
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -203,8 +204,34 @@ export const OnboardingPage: React.FC = () => {
     saveKycDraftMutation.mutate(kycForm);
   };
 
+  const handleHeaderStepClick = (targetStep: number) => {
+    if (isLocked) {
+      setKycSubStep(targetStep);
+      return;
+    }
+    if (targetStep > kycSubStep) {
+      const docs = kycData?.data?.documents || kycData?.documents || [];
+      const stepErrors = validateKycStep(kycSubStep, kycForm, docs);
+      if (Object.keys(stepErrors).length > 0) {
+        setKycErrors(stepErrors);
+        setTimeout(() => scrollToFirstError(stepErrors), 100);
+        return;
+      }
+    }
+    setKycErrors({});
+    setKycSubStep(targetStep);
+  };
+
   const handleNextStep = () => {
     if (!isLocked) {
+      const docs = kycData?.data?.documents || kycData?.documents || [];
+      const stepErrors = validateKycStep(kycSubStep, kycForm, docs);
+      if (Object.keys(stepErrors).length > 0) {
+        setKycErrors(stepErrors);
+        setTimeout(() => scrollToFirstError(stepErrors), 100);
+        return;
+      }
+      setKycErrors({});
       saveKycDraftMutation.mutate(kycForm);
     }
     if (kycSubStep < 10) {
@@ -216,6 +243,7 @@ export const OnboardingPage: React.FC = () => {
     if (!isLocked) {
       saveKycDraftMutation.mutate(kycForm);
     }
+    setKycErrors({});
     if (kycSubStep > 1) {
       setKycSubStep((prev) => prev - 1);
     }
@@ -223,6 +251,16 @@ export const OnboardingPage: React.FC = () => {
 
   const handleKycSubmit = (agreeAccuracy: boolean, agreeTerms: boolean) => {
     if (isLocked) return;
+    const docs = kycData?.data?.documents || kycData?.documents || [];
+    for (let s = 1; s <= 8; s++) {
+      const errors = validateKycStep(s, kycForm, docs);
+      if (Object.keys(errors).length > 0) {
+        setKycSubStep(s);
+        setKycErrors(errors);
+        setTimeout(() => scrollToFirstError(errors), 100);
+        return;
+      }
+    }
     submitKycMutation.mutate({
       form: kycForm,
       agreeAccuracy,
@@ -276,7 +314,7 @@ export const OnboardingPage: React.FC = () => {
         <div className="space-y-6">
           <KycWizardHeader
             currentStep={kycSubStep}
-            onStepClick={(step) => setKycSubStep(step)}
+            onStepClick={handleHeaderStepClick}
           />
 
           <fieldset disabled={isLocked} className={isLocked ? "pointer-events-none opacity-90" : ""}>

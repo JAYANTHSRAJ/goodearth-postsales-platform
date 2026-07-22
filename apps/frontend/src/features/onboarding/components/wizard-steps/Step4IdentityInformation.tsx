@@ -21,6 +21,8 @@ export const Step4IdentityInformation: React.FC<Step4IdentityInformationProps> =
     });
   };
 
+  const getError = (key: string) => errors[key] || errors[key.split('.').pop() || ''];
+
   return (
     <div className="space-y-6 text-left">
       <Card
@@ -34,19 +36,23 @@ export const Step4IdentityInformation: React.FC<Step4IdentityInformationProps> =
                 Aadhaar Number (12 Digits - India) <span className="text-red-500">*</span>
               </label>
               <input
+                id="primaryApplicant.aadhaarNo"
+                name="primaryApplicant.aadhaarNo"
                 type="text"
                 maxLength={12}
                 value={primary.aadhaarNo || ''}
                 onChange={(e) => handlePrimaryChange('aadhaarNo', e.target.value.replace(/\D/g, ''))}
                 placeholder="123456789012"
                 className={`w-full rounded-xl border px-4 py-2.5 text-sm font-mono tracking-wider outline-none transition-all ${
-                  errors.aadhaarNo
+                  getError('primaryApplicant.aadhaarNo')
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
                     : 'border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 focus:ring-2 focus:ring-brand-500/20 dark:text-white'
                 }`}
               />
               <p className="text-[11px] text-brand-400 mt-1">Format: 12 numeric digits without spaces.</p>
-              {errors.aadhaarNo && <span className="text-[11px] text-red-500 mt-1 block">{errors.aadhaarNo}</span>}
+              {getError('primaryApplicant.aadhaarNo') && (
+                <span className="text-[11px] text-red-500 mt-1 block font-medium">{getError('primaryApplicant.aadhaarNo')}</span>
+              )}
             </div>
 
             <div>
@@ -54,19 +60,23 @@ export const Step4IdentityInformation: React.FC<Step4IdentityInformationProps> =
                 PAN Number (10 Characters - India) <span className="text-red-500">*</span>
               </label>
               <input
+                id="primaryApplicant.panNo"
+                name="primaryApplicant.panNo"
                 type="text"
                 maxLength={10}
                 value={primary.panNo || ''}
                 onChange={(e) => handlePrimaryChange('panNo', e.target.value.toUpperCase())}
                 placeholder="ABCDE1234F"
                 className={`w-full rounded-xl border px-4 py-2.5 text-sm font-mono uppercase tracking-wider outline-none transition-all ${
-                  errors.panNo
+                  getError('primaryApplicant.panNo')
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
                     : 'border-brand-200 dark:border-brand-850 bg-brand-50/30 dark:bg-brand-950/20 focus:ring-2 focus:ring-brand-500/20 dark:text-white'
                 }`}
               />
               <p className="text-[11px] text-brand-400 mt-1">Format: 5 letters, 4 numbers, 1 letter.</p>
-              {errors.panNo && <span className="text-[11px] text-red-500 mt-1 block">{errors.panNo}</span>}
+              {getError('primaryApplicant.panNo') && (
+                <span className="text-[11px] text-red-500 mt-1 block font-medium">{getError('primaryApplicant.panNo')}</span>
+              )}
             </div>
 
             <div>
