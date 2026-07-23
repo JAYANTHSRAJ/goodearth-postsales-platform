@@ -8,7 +8,7 @@ import KycValidationChecklist from '../components/review/KycValidationChecklist'
 import KycTimelineList from '../components/review/KycTimelineList';
 import KycSubmitConfirmationModal from '../components/review/KycSubmitConfirmationModal';
 import kycService from '../services/kyc.service';
-import { KycApplicationResponseDto, KycTimelineResponseDto } from '../types/kyc';
+import { KycApplicationResponseDto, KycTimelineResponseDto, KycValidationSummaryResponseDto } from '../types/kyc';
 import { useUnitStore } from '../../../store/unitStore';
 
 export const KycReviewPage: React.FC = () => {
@@ -17,8 +17,13 @@ export const KycReviewPage: React.FC = () => {
   const { activeUnit } = useUnitStore();
   const [loading, setLoading] = useState<boolean>(true);
   const [kycData, setKycData] = useState<KycApplicationResponseDto | null>(null);
+  const [validationSummary, setValidationSummary] = useState<KycValidationSummaryResponseDto | null>(null);
   const [timeline, setTimeline] = useState<KycTimelineResponseDto | null>(null);
-  const [declaration, setDeclaration] = useState<boolean>(false);
+  
+  // Phase 5A Declarations
+  const [declarationAccepted, setDeclarationAccepted] = useState<boolean>(false);
+  const [consentAccepted, setConsentAccepted] = useState<boolean>(false);
+
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -28,6 +33,9 @@ export const KycReviewPage: React.FC = () => {
     try {
       const data = await kycService.getKycByBooking(bookingId);
       setKycData(data);
+      const valSummary = await kycService.validateKyc(bookingId).catch(() => null);
+      if (valSummary) setValidationSummary(valSummary);
+
       const timelineData = await kycService.getKycTimeline(bookingId).catch(() => null);
       if (timelineData) setTimeline(timelineData);
     } catch (err) {
@@ -72,14 +80,15 @@ export const KycReviewPage: React.FC = () => {
   const uploadedRequiredSlots = requiredSlots.filter((s) => !!s.currentVersion);
   const missingSlots = requiredSlots.filter((s) => !s.currentVersion);
 
-  const applicantCount = 1 + (kycData?.jointApplicants?.length || 0);
+  const isValidationPassing = validationSummary?.overallValid ?? false;
+  const canProceedToSubmit = isValidationPassing && declarationAccepted && consentAccepted && kycData?.status !== 'SUBMITTED' && kycData?.status !== 'APPROVED';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Step 4: Review & Final Submission</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Step 4: Review & Declaration</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Review your submitted information, verify the checklist, and submit for post-sales verification.
+          Review your complete application summary, address missing requirements, and accept declarations.
         </p>
       </div>
 
@@ -92,12 +101,16 @@ export const KycReviewPage: React.FC = () => {
         verifiedBy={kycData?.verifiedBy}
       />
 
-      <KycValidationChecklist kycData={kycData} />
+      <KycValidationChecklist
+        kycData={kycData}
+        validationSummary={validationSummary}
+        bookingId={bookingId}
+      />
 
       {/* Primary & Joint Applicant Summaries */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
         <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-          Applicant Profile Summary
+          Applicant Profiles Summary
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -108,15 +121,28 @@ export const KycReviewPage: React.FC = () => {
             <p className="text-xs text-slate-500">Phone: {kycData?.primaryApplicant?.phone || 'N/A'}</p>
             <p className="text-xs text-slate-500">PAN: {kycData?.primaryApplicant?.panNumber || 'N/A'}</p>
             <p className="text-xs text-slate-500">Aadhaar: {kycData?.primaryApplicant?.maskedAadhaarNumber || 'N/A'}</p>
+            {kycData?.primaryApplicant?.address?.city && (
+              <p className="text-xs text-slate-500 font-medium pt-1 border-t border-slate-200 dark:border-slate-700">
+                Address: {kycData.primaryApplicant.address.street}, {kycData.primaryApplicant.address.city}, {kycData.primaryApplicant.address.state} - {kycData.primaryApplicant.address.pincode}
+              </p>
+            )}
           </div>
 
           {kycData?.jointApplicants?.map((joint, idx) => (
             <div key={joint.id || idx} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Co-Applicant ({joint.applicantType})</span>
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                {joint.applicantType === 'JOINT_1' ? 'Co-Applicant' : 'Third Applicant'} ({joint.applicantType})
+              </span>
               <p className="text-sm font-bold text-slate-900 dark:text-white">{joint.fullName || 'N/A'}</p>
-              <p className="text-xs text-slate-500">Relation: {joint.relation || 'N/A'}</p>
+              <p className="text-xs text-slate-500">Email: {joint.email || 'N/A'}</p>
+              <p className="text-xs text-slate-500">Phone: {joint.phone || 'N/A'}</p>
               <p className="text-xs text-slate-500">PAN: {joint.panNumber || 'N/A'}</p>
               <p className="text-xs text-slate-500">Aadhaar: {joint.maskedAadhaarNumber || 'N/A'}</p>
+              {joint.address?.city && (
+                <p className="text-xs text-slate-500 font-medium pt-1 border-t border-slate-200 dark:border-slate-700">
+                  Address: {joint.address.street}, {joint.address.city}, {joint.address.state} - {joint.address.pincode}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -125,7 +151,7 @@ export const KycReviewPage: React.FC = () => {
       {/* Document Slots Summary */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
         <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-          Document Slot Summary ({uploadedRequiredSlots.length}/{requiredSlots.length} Uploaded)
+          Document Verification Summary ({uploadedRequiredSlots.length}/{requiredSlots.length} Uploaded)
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -143,43 +169,67 @@ export const KycReviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Legal Declaration */}
+      {/* Legal Declarations & Consent */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
         <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-          Legal Declaration
+          Legal Declarations & Consent
         </h3>
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={declaration}
-            onChange={(e) => setDeclaration(e.target.checked)}
-            disabled={kycData?.status === 'APPROVED'}
-            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-          />
-          <span className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            I hereby confirm and declare that the identity, contact details, address proof, and legal documents submitted for this booking allocation are true, correct, and legally authentic. I understand that misrepresentation may lead to cancellation of unit allocation under RERA and GoodEarth policies.
-          </span>
-        </label>
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={declarationAccepted}
+              onChange={(e) => setDeclarationAccepted(e.target.checked)}
+              disabled={kycData?.status === 'SUBMITTED' || kycData?.status === 'APPROVED'}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              I/We hereby confirm and declare that all identity details, contact information, address proofs, and documents submitted in this application are true, accurate, and legally authentic.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={(e) => setConsentAccepted(e.target.checked)}
+              disabled={kycData?.status === 'SUBMITTED' || kycData?.status === 'APPROVED'}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              I/We authorize GoodEarth Post-Sales Team to verify the submitted particulars and store verification copies securely in Zoho WorkDrive for unit allocation and agreement processing.
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* Audit Timeline */}
       <KycTimelineList events={timeline?.events || []} />
 
-      <KycNavigation
-        onBack={() => navigate('/client/kyc/documents')}
-        onNext={() => setIsConfirmModalOpen(true)}
-        canNext={declaration && missingSlots.length === 0 && kycData?.status !== 'APPROVED'}
-        isSubmitting={submitting}
-        nextLabel="Submit KYC Application"
-      />
+      <div className="flex flex-col items-end gap-2">
+        <KycNavigation
+          onBack={() => navigate('/client/kyc/documents')}
+          onNext={() => setIsConfirmModalOpen(true)}
+          canNext={canProceedToSubmit}
+          isSubmitting={submitting}
+          nextLabel="Submit Final KYC Application"
+        />
+        {!canProceedToSubmit && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+            {!isValidationPassing
+              ? '⚠️ Submission disabled: Resolve all missing fields and uploads listed in the checklist.'
+              : '⚠️ Submission disabled: Please accept both declaration and consent checkboxes above.'}
+          </p>
+        )}
+      </div>
 
       <KycSubmitConfirmationModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleConfirmSubmit}
         isSubmitting={submitting}
-        applicantCount={applicantCount}
+        applicantCount={1 + (kycData?.jointApplicants?.length || 0)}
         uploadedDocCount={uploadedRequiredSlots.length}
         missingDocCount={missingSlots.length}
       />
