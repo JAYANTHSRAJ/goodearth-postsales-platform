@@ -33,8 +33,18 @@ public class ApplicantInfoSubmitRequestDto {
     private String newApplicantAadhar;   // New_Applicant_Aadhar
 
     // Family
+    private String applicantFatherSalutation; // Applicant Guardian Salutation
     private String applicantFatherFirstName; // Applicant_Spouse_Father_First_Name
     private String applicantFatherLastName;  // Applicant_Spouse_Father_Last_Name
+
+    // Address
+    private String addressStreet;        // Street_Address
+    private String addressLine2;         // Address_Line_2
+    private String addressCity;          // City
+    private String addressState;         // State_Region_Province
+    private String addressPincode;       // Postal_Zip_Code_2
+    private String addressCountry;       // Country
+    private String applicantPhoneCountryCode; // Phone Country Code
 
     // Professional
     private String applicantOccupation;          // Applicant_Occupation

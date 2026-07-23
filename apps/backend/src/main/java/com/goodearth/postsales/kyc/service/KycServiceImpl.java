@@ -277,6 +277,13 @@ public class KycServiceImpl implements KycService {
             dealFields.put("Applicant_Citizenship_Status", dto.getApplicantCitizenshipStatus());
         }
 
+        // Address
+        if (dto.getAddressStreet() != null) dealFields.put("Street_Address", dto.getAddressStreet());
+        if (dto.getAddressCity() != null) dealFields.put("City", dto.getAddressCity());
+        if (dto.getAddressState() != null) dealFields.put("State_Region_Province", dto.getAddressState());
+        if (dto.getAddressPincode() != null) dealFields.put("Postal_Zip_Code_2", dto.getAddressPincode());
+        if (dto.getAddressCountry() != null) dealFields.put("Country", dto.getAddressCountry());
+
         // Application
         if (dto.getApplicationDate() != null) {
             String formattedAppDate = formatDateForZoho(dto.getApplicationDate());
@@ -292,6 +299,49 @@ public class KycServiceImpl implements KycService {
 
         // Sync directly to Zoho CRM Deal
         zohoKycSyncService.syncApplicantMapToCrm(effectiveTargetKey, dealFields);
+
+        // Update local KycApplicant primary entity in database
+        KycApplicant primaryApplicant = application.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .findFirst()
+                .orElseGet(() -> {
+                    KycApplicant newApp = new KycApplicant();
+                    newApp.setKycApplication(application);
+                    newApp.setApplicantType(ApplicantType.PRIMARY);
+                    application.getApplicants().add(newApp);
+                    return newApp;
+                });
+
+        if (dto.getApplicantTitle() != null) primaryApplicant.setSalutation(dto.getApplicantTitle());
+        if (dto.getApplicantFirstName() != null) primaryApplicant.setFirstName(dto.getApplicantFirstName());
+        if (dto.getApplicantLastName() != null) primaryApplicant.setLastName(dto.getApplicantLastName());
+        if (!fullName.isEmpty()) primaryApplicant.setFullName(fullName);
+        if (dto.getApplicantEmail() != null) primaryApplicant.setEmail(dto.getApplicantEmail());
+        if (dto.getApplicantPhone() != null) primaryApplicant.setPhone(dto.getApplicantPhone());
+        if (dto.getApplicantDob() != null) primaryApplicant.setDateOfBirth(dto.getApplicantDob());
+        if (dto.getApplicantOccupation() != null) primaryApplicant.setOccupation(dto.getApplicantOccupation());
+        if (dto.getApplicantPan() != null) primaryApplicant.setPanNumber(dto.getApplicantPan().toUpperCase());
+        if (dto.getApplicantAadhar() != null) primaryApplicant.setAadhaarNumber(dto.getApplicantAadhar());
+        if (dto.getNewApplicantAadhar() != null) primaryApplicant.setAadhaarNumber(dto.getNewApplicantAadhar());
+
+        if (dto.getSoDoWoA() != null) primaryApplicant.setGuardianRelation(dto.getSoDoWoA());
+        if (dto.getApplicantFatherSalutation() != null) primaryApplicant.setGuardianSalutation(dto.getApplicantFatherSalutation());
+        if (dto.getApplicantFatherFirstName() != null) primaryApplicant.setGuardianFirstName(dto.getApplicantFatherFirstName());
+        if (dto.getApplicantFatherLastName() != null) primaryApplicant.setGuardianLastName(dto.getApplicantFatherLastName());
+
+        String guardianFullName = ((dto.getApplicantFatherFirstName() != null ? dto.getApplicantFatherFirstName().trim() : "") + " " +
+                (dto.getApplicantFatherLastName() != null ? dto.getApplicantFatherLastName().trim() : "")).trim();
+        if (!guardianFullName.isEmpty()) primaryApplicant.setGuardianName(guardianFullName);
+
+        if (dto.getAddressStreet() != null) primaryApplicant.setAddressStreet(dto.getAddressStreet());
+        if (dto.getAddressLine2() != null) primaryApplicant.setAddressLine2(dto.getAddressLine2());
+        if (dto.getAddressCity() != null) primaryApplicant.setAddressCity(dto.getAddressCity());
+        if (dto.getAddressState() != null) primaryApplicant.setAddressState(dto.getAddressState());
+        if (dto.getAddressPincode() != null) primaryApplicant.setAddressPincode(dto.getAddressPincode());
+        if (dto.getAddressCountry() != null) primaryApplicant.setAddressCountry(dto.getAddressCountry());
+
+        if (dto.getApplicationDate() != null) application.setApplicationDate(dto.getApplicationDate());
+        if (dto.getConsideringHomeLoan() != null) application.setConsideringHomeLoan(dto.getConsideringHomeLoan());
 
         // Update local application state
         application.setUpdatedAt(LocalDateTime.now());

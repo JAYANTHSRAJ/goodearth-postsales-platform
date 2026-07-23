@@ -165,6 +165,7 @@ export const useKycAutosave = (
         return false;
       }
 
+      // 1. Save draft to local PostgreSQL database
       const response = await kycService.saveDraft({
         bookingId,
         applicationDate,
@@ -174,6 +175,35 @@ export const useKycAutosave = (
         primaryApplicant,
         jointApplicants,
       });
+
+      // 2. Submit applicant info to sync with Zoho CRM Deal & persist primary applicant address
+      if (primaryApplicant) {
+        await kycService.submitApplicantInfo({
+          bookingId,
+          applicationDate,
+          consideringHomeLoan,
+          applicantTitle: primaryApplicant.salutation,
+          applicantFirstName: primaryApplicant.firstName,
+          applicantLastName: primaryApplicant.lastName,
+          applicantEmail: primaryApplicant.email,
+          applicantPhone: primaryApplicant.phone,
+          applicantPhoneCountryCode: primaryApplicant.phoneCode,
+          applicantDob: primaryApplicant.dateOfBirth,
+          applicantOccupation: primaryApplicant.occupation,
+          applicantPan: primaryApplicant.panNumber,
+          applicantAadhar: primaryApplicant.aadhaarNumber,
+          soDoWoA: primaryApplicant.guardianRelation,
+          applicantFatherSalutation: primaryApplicant.guardianSalutation,
+          applicantFatherFirstName: primaryApplicant.guardianFirstName,
+          applicantFatherLastName: primaryApplicant.guardianLastName,
+          addressStreet: primaryApplicant.address?.street,
+          addressLine2: primaryApplicant.address?.addressLine2,
+          addressCity: primaryApplicant.address?.city,
+          addressState: primaryApplicant.address?.state,
+          addressPincode: primaryApplicant.address?.pincode,
+          addressCountry: primaryApplicant.address?.country,
+        });
+      }
 
       setStatus('saved');
       setLastSavedAt(response.lastSavedAt || new Date().toISOString());
