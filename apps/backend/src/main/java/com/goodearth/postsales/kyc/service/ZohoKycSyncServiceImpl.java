@@ -7,12 +7,14 @@ import com.goodearth.postsales.kyc.entity.KycAuditEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
@@ -22,6 +24,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
     private final ZohoApiClient apiClient;
     private final ZohoProperties properties;
     private final KycAuditService auditService;
+
+    // Request-scoped cache to avoid duplicate Search API calls within a single thread/request
+    private static final ThreadLocal<Map<String, String>> REQUEST_DEAL_CACHE =
+            ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     public ZohoKycSyncServiceImpl(
             ZohoApiClient apiClient,
@@ -38,61 +44,93 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
      */
     public String resolveDealRecordIdByDealName(String dealName) {
         if (dealName == null || dealName.trim().isEmpty()) {
-            log.error("Zoho Deal Record ID resolution failed: dealName parameter is null or empty.");
+            log.error("[KYC_SYNC] Search Status: FAILED | Reason: dealName parameter is null or empty.");
             return null;
         }
 
-        // If dealName is already numeric (15-22 digits, e.g. 6638590000146940001)
-        if (dealName.matches("^\\d{15,22}$")) {
-            log.info("Deal Name '{}' is directly a numeric Zoho Record ID.", dealName);
-            return dealName;
+        String cleanDealName = dealName.trim();
+
+        // 1. Check Request-scoped ThreadLocal cache
+        Map<String, String> cache = REQUEST_DEAL_CACHE.get();
+        if (cache.containsKey(cleanDealName)) {
+            log.info("[KYC_SYNC] Reusing cached Deal Record ID '{}' for Deal Name '{}'", cache.get(cleanDealName), cleanDealName);
+            return cache.get(cleanDealName);
         }
 
-        try {
-            String criteria = "(Deal_Name:equals:" + dealName.trim() + ")";
-            String encodedCriteria = URLEncoder.encode(criteria, StandardCharsets.UTF_8);
-            String url = properties.getCrmApiUrl() + "/Deals/search?criteria=" + encodedCriteria;
+        // 2. If dealName is already numeric (15-22 digits, e.g. 6638590000146940001)
+        if (cleanDealName.matches("^\\d{15,22}$")) {
+            log.info("[KYC_SYNC] Deal Name '{}' is directly a numeric Zoho Record ID.", cleanDealName);
+            cache.put(cleanDealName, cleanDealName);
+            return cleanDealName;
+        }
 
-            log.info("Executing Zoho CRM Search API for Deal_Name '{}': GET {}", dealName, url);
-            Map<?, ?> response = apiClient.get(url, Map.class);
+        String encodedCriteria = URLEncoder.encode("(Deal_Name:equals:" + cleanDealName + ")", StandardCharsets.UTF_8);
+        String searchUrl = properties.getCrmApiUrl() + "/Deals/search?criteria=" + encodedCriteria;
+
+        try {
+            log.info("[KYC_SYNC] Executing Zoho CRM Search API: GET {}", searchUrl);
+            Map<?, ?> response = apiClient.get(searchUrl, Map.class);
 
             if (response == null || !response.containsKey("data")) {
-                log.error("Zoho CRM Search API returned zero results for Deal_Name: '{}'. Aborting CRM sync.", dealName);
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch URL: {}\nSearch Status: FAILED\nReason: Zero records returned from Search API",
+                        cleanDealName, cleanDealName, searchUrl);
                 return null;
             }
 
             Object dataObj = response.get("data");
             if (!(dataObj instanceof List)) {
-                log.error("Zoho CRM Search API returned unexpected data format for Deal_Name: '{}'.", dealName);
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch URL: {}\nSearch Status: FAILED\nReason: Unexpected response data type",
+                        cleanDealName, cleanDealName, searchUrl);
                 return null;
             }
 
             List<?> dealList = (List<?>) dataObj;
             if (dealList.isEmpty()) {
-                log.error("Zoho CRM Search API returned 0 Deals matching Deal_Name: '{}'. Aborting CRM sync.", dealName);
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch URL: {}\nSearch Status: FAILED\nReason: 0 Deals matched criteria",
+                        cleanDealName, cleanDealName, searchUrl);
                 return null;
             }
 
             if (dealList.size() > 1) {
-                log.error("CRITICAL: Zoho CRM Search API returned MULTIPLE ({}) Deals matching Deal_Name: '{}'. Aborting CRM sync to prevent modifying the wrong record.", dealList.size(), dealName);
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch URL: {}\nSearch Status: CRITICAL_ERROR\nReason: Multiple ({}) Deals returned for unique Deal Name!",
+                        cleanDealName, cleanDealName, searchUrl, dealList.size());
                 return null;
             }
 
             Object firstItem = dealList.get(0);
             if (firstItem instanceof Map) {
                 Map<?, ?> dealMap = (Map<?, ?>) firstItem;
+                Object returnedDealName = dealMap.get("Deal_Name");
                 Object recordIdObj = dealMap.get("id");
+
+                // Task 2: Validate exact Deal_Name match
+                if (returnedDealName != null && !cleanDealName.equalsIgnoreCase(returnedDealName.toString().trim())) {
+                    log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nReturned Deal Name: {}\nSearch Status: FAILED\nReason: Deal Name mismatch validation failed",
+                            cleanDealName, cleanDealName, returnedDealName);
+                    return null;
+                }
+
                 if (recordIdObj != null) {
                     String recordId = recordIdObj.toString();
-                    log.info("Successfully resolved numeric Zoho Deal Record ID '{}' for Deal_Name '{}'.", recordId, dealName);
+                    cache.put(cleanDealName, recordId);
+                    log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nHTTP Status: 200",
+                            cleanDealName, cleanDealName, recordId);
                     return recordId;
                 }
             }
 
-            log.error("Failed to extract 'id' field from Zoho CRM search response for Deal_Name: '{}'.", dealName);
+            log.error("[KYC_SYNC] Search Status: FAILED | Reason: Missing 'id' field in search response for Deal Name: {}", cleanDealName);
             return null;
         } catch (Exception ex) {
-            log.error("Exception during Zoho CRM Search API call for Deal_Name '{}': {}", dealName, ex.getMessage());
+            String errorMsg = ex.getMessage();
+            int statusCode = 500;
+            if (ex.getCause() instanceof RestClientResponseException) {
+                RestClientResponseException rce = (RestClientResponseException) ex.getCause();
+                statusCode = rce.getStatusCode().value();
+                errorMsg = rce.getResponseBodyAsString();
+            }
+            log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch URL: {}\nSearch Status: ERROR\nHTTP Status: {}\nZoho Error Message: {}",
+                    cleanDealName, cleanDealName, searchUrl, statusCode, errorMsg);
             return null;
         }
     }
@@ -125,12 +163,11 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return false;
         }
 
-        log.info("Initiating Zoho CRM Note sync for Booking ID / Deal Name: {}, Event: {}", application.getBookingId(), milestoneNoteTitle);
-
+        String bookingId = application.getBookingId();
         try {
-            String targetRecordId = resolveDealRecordIdByDealName(application.getBookingId());
+            String targetRecordId = resolveDealRecordIdByDealName(bookingId);
             if (targetRecordId == null) {
-                log.error("Aborting CRM Note sync for Deal_Name '{}': Unable to resolve target Zoho Deal Record ID.", application.getBookingId());
+                log.error("[KYC_SYNC] Aborting CRM Note sync for Deal_Name '{}': Search resolution failed.", bookingId);
                 return false;
             }
 
@@ -140,7 +177,7 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                     "%s\n\nCurrent KYC Status: %s\nBooking Reference: %s\nCompletion: %d%%\nTimestamp: %s",
                     milestoneNoteContent != null ? milestoneNoteContent : "Milestone updated",
                     application.getStatus(),
-                    application.getBookingId(),
+                    bookingId,
                     application.getCompletionPercentage() != null ? application.getCompletionPercentage() : 0,
                     java.time.LocalDateTime.now()
             ));
@@ -153,11 +190,11 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             String url = properties.getCrmApiUrl() + "/Notes";
             
             try {
-                log.info("Sending POST request to Zoho CRM Notes URL: {} for Record ID: {}", url, targetRecordId);
                 apiClient.post(url, requestBody, Map.class);
-                log.info("Successfully posted CRM Note for Record ID: {}", targetRecordId);
+                log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nNote Sync: SUCCESS\nHTTP Status: 200",
+                        bookingId, bookingId, targetRecordId);
             } catch (Exception apiEx) {
-                log.warn("Zoho CRM API Notes exception for Record ID {}: {}", targetRecordId, apiEx.getMessage());
+                log.warn("[KYC_SYNC] CRM Note post exception for Record ID {}: {}", targetRecordId, apiEx.getMessage());
             }
 
             auditService.logEvent(application, KycAuditEventType.DRAFT_SAVED, "SYSTEM_SYNC", "ZOHO_CRM",
@@ -165,8 +202,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
             return true;
         } catch (Exception ex) {
-            log.error("Failed to sync KYC status to Zoho CRM for booking: {}", application.getBookingId(), ex);
+            log.error("Failed to sync KYC status to Zoho CRM for booking: {}", bookingId, ex);
             return false;
+        } finally {
+            clearRequestCache();
         }
     }
 
@@ -177,12 +216,12 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return false;
         }
 
-        log.info("Initiating Zoho CRM Deal fields update for Booking ID / Deal Name: {}", application.getBookingId());
-
+        String bookingId = application.getBookingId();
         try {
-            String targetRecordId = resolveDealRecordIdByDealName(application.getBookingId());
+            String targetRecordId = resolveDealRecordIdByDealName(bookingId);
             if (targetRecordId == null) {
-                log.error("Aborting CRM Deal fields sync for Deal_Name '{}': Unable to resolve target Zoho Deal Record ID.", application.getBookingId());
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch Status: FAILED\nUpdate Status: ABORTED\nReason: Record ID resolution failed.",
+                        bookingId, bookingId);
                 return false;
             }
 
@@ -290,17 +329,32 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
 
             try {
-                log.info("Sending PUT request to Zoho CRM URL: {} for Record ID: {} with payload: {}", url, targetRecordId, requestBody);
+                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {} URL: {}", targetRecordId, url);
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
-                log.info("Zoho CRM Deal update response for Record ID {}: {}", targetRecordId, response);
+                log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: SUCCESS\nHTTP Status: 200\nResponse Payload: {}",
+                        bookingId, bookingId, targetRecordId, response);
             } catch (Exception apiEx) {
-                log.warn("Zoho CRM API PUT /Deals exception for Record ID {}: {}", targetRecordId, apiEx.getMessage());
+                String errorMsg = apiEx.getMessage();
+                int statusCode = 500;
+                if (apiEx.getCause() instanceof RestClientResponseException) {
+                    RestClientResponseException rce = (RestClientResponseException) apiEx.getCause();
+                    statusCode = rce.getStatusCode().value();
+                    errorMsg = rce.getResponseBodyAsString();
+                }
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: FAILED\nHTTP Status: {}\nZoho Error Message: {}",
+                        bookingId, bookingId, targetRecordId, statusCode, errorMsg);
             }
 
             return true;
         } catch (Exception ex) {
-            log.error("Failed to sync KYC Deal fields to Zoho CRM for booking: {}", application.getBookingId(), ex);
+            log.error("Failed to sync KYC Deal fields to Zoho CRM for booking: {}", bookingId, ex);
             return false;
+        } finally {
+            clearRequestCache();
         }
+    }
+
+    private void clearRequestCache() {
+        REQUEST_DEAL_CACHE.get().clear();
     }
 }
