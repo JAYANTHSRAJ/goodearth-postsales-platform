@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface WorkDriveFolderRepository extends JpaRepository<WorkDriveFolder, UUID> {
     Optional<WorkDriveFolder> findByWorkflowId(UUID workflowId);
     Optional<WorkDriveFolder> findByFolderId(String folderId);
+    Optional<WorkDriveFolder> findByBookingId(String bookingId);
 }

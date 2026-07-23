@@ -19,13 +19,34 @@ import lombok.Setter;
 @NoArgsConstructor
 public class WorkDriveFolder extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "workflow_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workflow_id")
     private Workflow workflow;
 
-    @Column(name = "folder_id", unique = true, nullable = false)
+    @Column(name = "folder_id")
     private String folderId;
 
-    @Column(name = "folder_name", nullable = false)
+    @Column(name = "folder_name")
     private String folderName;
+
+    @Column(name = "booking_id")
+    private String bookingId;
+
+    @Column(name = "project_folder_id")
+    private String projectFolderId;
+
+    @Column(name = "booking_folder_id")
+    private String bookingFolderId;
+
+    @Column(name = "kyc_subfolder_id")
+    private String kycSubfolderId;
+
+    @Column(name = "agreements_subfolder_id")
+    private String agreementsSubfolderId;
+
+    @Column(name = "payments_subfolder_id")
+    private String paymentsSubfolderId;
+
+    @Column(name = "handover_subfolder_id")
+    private String handoverSubfolderId;
 }

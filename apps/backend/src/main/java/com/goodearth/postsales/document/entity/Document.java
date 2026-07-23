@@ -1,7 +1,11 @@
 package com.goodearth.postsales.document.entity;
 
 import com.goodearth.postsales.audit.BaseEntity;
+import com.goodearth.postsales.kyc.entity.ApplicantType;
+import com.goodearth.postsales.kyc.entity.KycApplicant;
+import com.goodearth.postsales.kyc.entity.KycApplication;
 import com.goodearth.postsales.workflow.entity.Workflow;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,12 +13,15 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "documents")
@@ -23,17 +30,36 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Document extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "workflow_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workflow_id")
     private Workflow workflow;
 
-    @Column(name = "workdrive_file_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kyc_application_id")
+    private KycApplication kycApplication;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kyc_applicant_id")
+    private KycApplicant kycApplicant;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 50)
+    private DocumentCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "applicant_type", length = 50)
+    private ApplicantType applicantType;
+
+    @Column(name = "is_required")
+    private Boolean isRequired = true;
+
+    @Column(name = "workdrive_file_id")
     private String workDriveFileId;
 
-    @Column(name = "version", nullable = false)
+    @Column(name = "version")
     private int version;
 
-    @Column(name = "file_name", nullable = false)
+    @Column(name = "file_name")
     private String fileName;
 
     @Enumerated(EnumType.STRING)
@@ -55,4 +81,7 @@ public class Document extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private DocumentStatus status;
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<DocumentVersion> versions = new ArrayList<>();
 }

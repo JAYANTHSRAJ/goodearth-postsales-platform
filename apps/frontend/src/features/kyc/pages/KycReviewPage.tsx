@@ -1,0 +1,187 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import KycStepper from '../components/KycStepper';
+import KycNavigation from '../components/KycNavigation';
+import KycLoadingSkeleton from '../components/KycLoadingSkeleton';
+import KycStatusBanner from '../components/review/KycStatusBanner';
+import KycValidationChecklist from '../components/review/KycValidationChecklist';
+import KycTimelineList from '../components/review/KycTimelineList';
+import KycSubmitConfirmationModal from '../components/review/KycSubmitConfirmationModal';
+import kycService from '../services/kyc.service';
+import { KycApplicationResponseDto, KycTimelineResponseDto } from '../types/kyc';
+
+export const KycReviewPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [kycData, setKycData] = useState<KycApplicationResponseDto | null>(null);
+  const [timeline, setTimeline] = useState<KycTimelineResponseDto | null>(null);
+  const [declaration, setDeclaration] = useState<boolean>(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const bookingId = 'BKG-2026-101';
+
+  const loadData = async () => {
+    try {
+      const data = await kycService.getKycByBooking(bookingId);
+      setKycData(data);
+      const timelineData = await kycService.getKycTimeline(bookingId).catch(() => null);
+      if (timelineData) setTimeline(timelineData);
+    } catch (err) {
+      // Handled in UI
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleConfirmSubmit = async () => {
+    if (!kycData?.kycApplicationId) return;
+    setSubmitting(true);
+    try {
+      const updated = await kycService.submitKyc({
+        kycApplicationId: kycData.kycApplicationId,
+        declarationAccepted: true,
+      });
+      setKycData(updated);
+      setIsConfirmModalOpen(false);
+      navigate('/client/kyc');
+    } catch (err: any) {
+      alert(err?.message || 'Failed to submit KYC application.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <KycLoadingSkeleton />
+      </div>
+    );
+  }
+
+  const documentSlots = kycData?.documentSlots || [];
+  const requiredSlots = documentSlots.filter((s) => s.isRequired);
+  const uploadedRequiredSlots = requiredSlots.filter((s) => !!s.currentVersion);
+  const missingSlots = requiredSlots.filter((s) => !s.currentVersion);
+
+  const applicantCount = 1 + (kycData?.jointApplicants?.length || 0);
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Step 4: Review & Final Submission</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Review your submitted information, verify the checklist, and submit for post-sales verification.
+        </p>
+      </div>
+
+      <KycStepper currentStepId="review" status={kycData?.status} />
+
+      <KycStatusBanner
+        status={kycData?.status}
+        submittedAt={kycData?.submittedAt}
+        verifiedAt={kycData?.verifiedAt}
+        verifiedBy={kycData?.verifiedBy}
+      />
+
+      <KycValidationChecklist kycData={kycData} />
+
+      {/* Primary & Joint Applicant Summaries */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+          Applicant Profile Summary
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+            <span className="text-xs font-bold text-brand-600 uppercase">Primary Applicant</span>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{kycData?.primaryApplicant?.fullName || 'N/A'}</p>
+            <p className="text-xs text-slate-500">Email: {kycData?.primaryApplicant?.email || 'N/A'}</p>
+            <p className="text-xs text-slate-500">Phone: {kycData?.primaryApplicant?.phone || 'N/A'}</p>
+            <p className="text-xs text-slate-500">PAN: {kycData?.primaryApplicant?.panNumber || 'N/A'}</p>
+            <p className="text-xs text-slate-500">Aadhaar: {kycData?.primaryApplicant?.maskedAadhaarNumber || 'N/A'}</p>
+          </div>
+
+          {kycData?.jointApplicants?.map((joint, idx) => (
+            <div key={joint.id || idx} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Co-Applicant ({joint.applicantType})</span>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">{joint.fullName || 'N/A'}</p>
+              <p className="text-xs text-slate-500">Relation: {joint.relation || 'N/A'}</p>
+              <p className="text-xs text-slate-500">PAN: {joint.panNumber || 'N/A'}</p>
+              <p className="text-xs text-slate-500">Aadhaar: {joint.maskedAadhaarNumber || 'N/A'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Document Slots Summary */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+          Document Slot Summary ({uploadedRequiredSlots.length}/{requiredSlots.length} Uploaded)
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {documentSlots.map((slot) => (
+            <div key={slot.documentId} className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{slot.documentType} ({slot.applicantType})</p>
+                <p className="text-[11px] text-slate-500">{slot.currentVersion?.fileName || 'No file uploaded'}</p>
+              </div>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${slot.currentVersion ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                {slot.currentVersion ? `v${slot.currentVersion.versionNumber}` : 'Pending'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legal Declaration */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+          Legal Declaration
+        </h3>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={declaration}
+            onChange={(e) => setDeclaration(e.target.checked)}
+            disabled={kycData?.status === 'APPROVED'}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            I hereby confirm and declare that the identity, contact details, address proof, and legal documents submitted for this booking allocation are true, correct, and legally authentic. I understand that misrepresentation may lead to cancellation of unit allocation under RERA and GoodEarth policies.
+          </span>
+        </label>
+      </div>
+
+      {/* Audit Timeline */}
+      <KycTimelineList events={timeline?.events || []} />
+
+      <KycNavigation
+        onBack={() => navigate('/client/kyc/documents')}
+        onNext={() => setIsConfirmModalOpen(true)}
+        canNext={declaration && missingSlots.length === 0 && kycData?.status !== 'APPROVED'}
+        isSubmitting={submitting}
+        nextLabel="Submit KYC Application"
+      />
+
+      <KycSubmitConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmSubmit}
+        isSubmitting={submitting}
+        applicantCount={applicantCount}
+        uploadedDocCount={uploadedRequiredSlots.length}
+        missingDocCount={missingSlots.length}
+      />
+    </div>
+  );
+};
+
+export default KycReviewPage;

@@ -1,0 +1,16 @@
+package com.goodearth.postsales.kyc.entity;
+
+public enum KycAuditEventType {
+    KYC_CREATED,
+    DRAFT_SAVED,
+    DOCUMENT_UPLOADED,
+    DOCUMENT_DELETED,
+    DOCUMENT_DOWNLOADED,
+    KYC_SUBMITTED,
+    REVIEW_STARTED,
+    DOCUMENT_APPROVED,
+    DOCUMENT_REJECTED,
+    CHANGES_REQUESTED,
+    KYC_APPROVED,
+    KYC_REJECTED
+}

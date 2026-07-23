@@ -7,5 +7,10 @@ public enum DocumentType {
     INVOICE,
     RECEIPT,
     HANDOVER_CERTIFICATE,
+    PAN_CARD,
+    AADHAAR_CARD,
+    PASSPORT,
+    PHOTO,
+    ADDRESS_PROOF,
     OTHER
 }

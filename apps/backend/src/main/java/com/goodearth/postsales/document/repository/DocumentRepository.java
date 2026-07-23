@@ -1,8 +1,10 @@
 package com.goodearth.postsales.document.repository;
 
 import com.goodearth.postsales.document.entity.Document;
+import com.goodearth.postsales.document.entity.DocumentCategory;
 import com.goodearth.postsales.document.entity.DocumentStatus;
 import com.goodearth.postsales.document.entity.DocumentType;
+import com.goodearth.postsales.kyc.entity.ApplicantType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +19,10 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     List<Document> findByWorkflowIdAndStatus(UUID workflowId, DocumentStatus status);
     Optional<Document> findFirstByWorkflowIdAndDocumentTypeOrderByVersionDesc(UUID workflowId, DocumentType documentType);
     Optional<Document> findByWorkflowIdAndDocumentTypeAndStatus(UUID workflowId, DocumentType documentType, DocumentStatus status);
+
+    List<Document> findByKycApplicationId(UUID kycApplicationId);
+    List<Document> findByKycApplicationIdAndCategory(UUID kycApplicationId, DocumentCategory category);
+    Optional<Document> findByKycApplicationIdAndDocumentTypeAndApplicantType(
+            UUID kycApplicationId, DocumentType documentType, ApplicantType applicantType
+    );
 }

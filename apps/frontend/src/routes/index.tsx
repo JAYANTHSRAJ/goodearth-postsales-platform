@@ -49,6 +49,13 @@ const DesignStudioPage = withSuspense(() => import('../features/annotations/page
 const ClientSupportPage = withSuspense(() => import('../features/dashboard/pages/ClientSupportPage'), 'ClientSupportPage');
 const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages/ClientProfilePage'), 'ClientProfilePage');
 
+// KYC Module Lazy Routes
+const KycDashboardPage = withSuspense(() => import('../features/kyc/pages/KycDashboardPage'), 'KycDashboardPage');
+const KycPropertyPage = withSuspense(() => import('../features/kyc/pages/KycPropertyPage'), 'KycPropertyPage');
+const KycApplicantsPage = withSuspense(() => import('../features/kyc/pages/KycApplicantsPage'), 'KycApplicantsPage');
+const KycDocumentsPage = withSuspense(() => import('../features/kyc/pages/KycDocumentsPage'), 'KycDocumentsPage');
+const KycReviewPage = withSuspense(() => import('../features/kyc/pages/KycReviewPage'), 'KycReviewPage');
+
 const Unauthorized = withSuspense(() => import('../pages/Unauthorized'), 'Unauthorized');
 const NotFound = withSuspense(() => import('../pages/NotFound'), 'NotFound');
 
@@ -158,6 +165,26 @@ export const router = createBrowserRouter([
               {
                 path: '/my-home',
                 element: <MyHomePage />,
+              },
+              {
+                path: '/client/kyc',
+                element: <KycDashboardPage />,
+              },
+              {
+                path: '/client/kyc/property',
+                element: <KycPropertyPage />,
+              },
+              {
+                path: '/client/kyc/applicants',
+                element: <KycApplicantsPage />,
+              },
+              {
+                path: '/client/kyc/documents',
+                element: <KycDocumentsPage />,
+              },
+              {
+                path: '/client/kyc/review',
+                element: <KycReviewPage />,
               },
               {
                 path: '/design-studio',

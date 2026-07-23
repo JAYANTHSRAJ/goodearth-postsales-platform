@@ -1,0 +1,515 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.7-create-kyc-applications
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: kyc_applications
+      changes:
+        - createTable:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completion_percentage
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: client_notes
+                  type: TEXT
+              - column:
+                  name: submitted_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: verified_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: verified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - createIndex:
+            indexName: idx_kyc_applications_booking_id
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: booking_id
+        - createIndex:
+            indexName: idx_kyc_applications_status
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: status
+      rollback:
+        - dropTable:
+            tableName: kyc_applications
+
+  - changeSet:
+      id: 3.7-create-kyc-applicants
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: kyc_applicants
+      changes:
+        - createTable:
+            tableName: kyc_applicants
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_kyc_applicants_kyc_applications
+                    referencedTableName: kyc_applications
+                    referencedColumnNames: id
+                    onDelete: CASCADE
+              - column:
+                  name: applicant_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+              - column:
+                  name: phone
+                  type: VARCHAR(50)
+              - column:
+                  name: relation
+                  type: VARCHAR(50)
+              - column:
+                  name: pan_number
+                  type: VARCHAR(20)
+              - column:
+                  name: aadhaar_number
+                  type: VARCHAR(20)
+              - column:
+                  name: address_street
+                  type: VARCHAR(500)
+              - column:
+                  name: address_city
+                  type: VARCHAR(100)
+              - column:
+                  name: address_state
+                  type: VARCHAR(100)
+              - column:
+                  name: address_pincode
+                  type: VARCHAR(20)
+              - column:
+                  name: address_country
+                  type: VARCHAR(100)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addUniqueConstraint:
+            constraintName: uq_kyc_app_applicant_type
+            tableName: kyc_applicants
+            columnNames: kyc_application_id, applicant_type
+        - createIndex:
+            indexName: idx_kyc_applicants_app_id
+            tableName: kyc_applicants
+            columns:
+              - column:
+                  name: kyc_application_id
+        - createIndex:
+            indexName: idx_kyc_applicants_pan
+            tableName: kyc_applicants
+            columns:
+              - column:
+                  name: pan_number
+      rollback:
+        - dropTable:
+            tableName: kyc_applicants
+
+  - changeSet:
+      id: 3.7-extend-documents-table
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        tableExists:
+          tableName: documents
+      changes:
+        - dropNotNullConstraint:
+            tableName: documents
+            columnName: workflow_id
+            columnDataType: UUID
+        - dropNotNullConstraint:
+            tableName: documents
+            columnName: workdrive_file_id
+            columnDataType: VARCHAR(255)
+        - addColumn:
+            tableName: documents
+            columns:
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_documents_kyc_applications
+                    referencedTableName: kyc_applications
+                    referencedColumnNames: id
+                    onDelete: SET NULL
+              - column:
+                  name: kyc_applicant_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_documents_kyc_applicants
+                    referencedTableName: kyc_applicants
+                    referencedColumnNames: id
+                    onDelete: SET NULL
+              - column:
+                  name: category
+                  type: VARCHAR(50)
+              - column:
+                  name: applicant_type
+                  type: VARCHAR(50)
+              - column:
+                  name: is_required
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+        - createIndex:
+            indexName: idx_documents_kyc_app_id
+            tableName: documents
+            columns:
+              - column:
+                  name: kyc_application_id
+        - createIndex:
+            indexName: idx_documents_kyc_applicant_id
+            tableName: documents
+            columns:
+              - column:
+                  name: kyc_applicant_id
+      rollback:
+        - dropIndex:
+            indexName: idx_documents_kyc_applicant_id
+            tableName: documents
+        - dropIndex:
+            indexName: idx_documents_kyc_app_id
+            tableName: documents
+        - dropForeignKeyConstraint:
+            baseTableName: documents
+            constraintName: fk_documents_kyc_applicants
+        - dropForeignKeyConstraint:
+            baseTableName: documents
+            constraintName: fk_documents_kyc_applications
+        - dropColumn:
+            tableName: documents
+            columnName: is_required
+        - dropColumn:
+            tableName: documents
+            columnName: applicant_type
+        - dropColumn:
+            tableName: documents
+            columnName: category
+        - dropColumn:
+            tableName: documents
+            columnName: kyc_applicant_id
+        - dropColumn:
+            tableName: documents
+            columnName: kyc_application_id
+
+  - changeSet:
+      id: 3.7-create-document-versions
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: document_versions
+      changes:
+        - createTable:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: document_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_document_versions_documents
+                    referencedTableName: documents
+                    referencedColumnNames: id
+                    onDelete: CASCADE
+              - column:
+                  name: version_number
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workdrive_file_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workdrive_permalink
+                  type: VARCHAR(1000)
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_size_bytes
+                  type: BIGINT
+              - column:
+                  name: mime_type
+                  type: VARCHAR(100)
+              - column:
+                  name: checksum_sha256
+                  type: VARCHAR(64)
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rejection_reason_code
+                  type: VARCHAR(100)
+              - column:
+                  name: rejection_comments
+                  type: TEXT
+              - column:
+                  name: uploaded_by
+                  type: VARCHAR(255)
+              - column:
+                  name: uploaded_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: is_current
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+        - addUniqueConstraint:
+            constraintName: uq_doc_versions_doc_ver
+            tableName: document_versions
+            columnNames: document_id, version_number
+        - createIndex:
+            indexName: idx_doc_versions_doc_id
+            tableName: document_versions
+            columns:
+              - column:
+                  name: document_id
+        - createIndex:
+            indexName: idx_doc_versions_workdrive_id
+            tableName: document_versions
+            columns:
+              - column:
+                  name: workdrive_file_id
+        - createIndex:
+            indexName: idx_doc_versions_is_current
+            tableName: document_versions
+            columns:
+              - column:
+                  name: is_current
+      rollback:
+        - dropTable:
+            tableName: document_versions
+
+  - changeSet:
+      id: 3.7-create-workdrive-folders
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: workdrive_folders
+      changes:
+        - createTable:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: project_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: booking_folder_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kyc_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: agreements_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: payments_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: handover_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(255)
+      rollback:
+        - dropTable:
+            tableName: workdrive_folders
+
+  - changeSet:
+      id: 3.7-create-kyc-audit-logs
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: kyc_audit_logs
+      changes:
+        - createTable:
+            tableName: kyc_audit_logs
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kyc_application_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_kyc_audit_logs_kyc_applications
+                    referencedTableName: kyc_applications
+                    referencedColumnNames: id
+                    onDelete: CASCADE
+              - column:
+                  name: event_type
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_role
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: summary
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: metadata_json
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_kyc_audit_logs_app_id
+            tableName: kyc_audit_logs
+            columns:
+              - column:
+                  name: kyc_application_id
+      rollback:
+        - dropTable:
+            tableName: kyc_audit_logs
