@@ -85,26 +85,57 @@ export const KycDocumentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Document Slots List */}
+      {/* Primary Applicant Document Slots */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Verification Slots</h3>
-
-        {documentSlots.length > 0 ? (
-          documentSlots.map((slot) => (
-            <KycDocumentSlotCard
-              key={slot.documentId}
-              slot={slot}
-              kycApplicationId={kycData?.kycApplicationId || ''}
-              onRefresh={loadData}
-              canEdit={canEdit}
-            />
-          ))
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Primary Applicant Documents</h3>
+        {documentSlots.filter((s) => s.applicantType === 'PRIMARY').length > 0 ? (
+          documentSlots
+            .filter((s) => s.applicantType === 'PRIMARY')
+            .map((slot) => (
+              <KycDocumentSlotCard
+                key={slot.documentId}
+                slot={slot}
+                kycApplicationId={kycData?.kycApplicationId || ''}
+                onRefresh={loadData}
+                canEdit={canEdit}
+              />
+            ))
         ) : (
-          <div className="p-8 text-center bg-white dark:bg-slate-900 border rounded-2xl">
-            <p className="text-sm text-slate-500">No document slots provisioned yet.</p>
+          <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
+            <p className="text-sm text-slate-500">No primary document slots provisioned.</p>
           </div>
         )}
       </div>
+
+      {/* Co-Applicant Document Slots (Conditional) */}
+      {kycData?.hasCoApplicant === 'Yes' && (
+        <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Co-Applicant Documents</h3>
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+              Co-Applicant Active
+            </span>
+          </div>
+
+          {documentSlots.filter((s) => s.applicantType === 'JOINT_1').length > 0 ? (
+            documentSlots
+              .filter((s) => s.applicantType === 'JOINT_1')
+              .map((slot) => (
+                <KycDocumentSlotCard
+                  key={slot.documentId}
+                  slot={slot}
+                  kycApplicationId={kycData?.kycApplicationId || ''}
+                  onRefresh={loadData}
+                  canEdit={canEdit}
+                />
+              ))
+          ) : (
+            <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
+              <p className="text-sm text-slate-500">No co-applicant document slots provisioned.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <KycNavigation
         onBack={() => navigate('/client/kyc/applicants')}

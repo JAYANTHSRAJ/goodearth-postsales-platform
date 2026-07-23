@@ -5,6 +5,7 @@ import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.document.dto.DocumentSlotDto;
 import com.goodearth.postsales.document.entity.Document;
 import com.goodearth.postsales.document.entity.DocumentStatus;
+import com.goodearth.postsales.document.entity.DocumentType;
 import com.goodearth.postsales.document.entity.DocumentVersion;
 import com.goodearth.postsales.document.entity.DocumentVersionStatus;
 import com.goodearth.postsales.document.repository.DocumentRepository;
@@ -566,9 +567,61 @@ public class KycServiceImpl implements KycService {
     @Transactional
     public KycApplicationResponseDto getKycApplicationByBooking(String bookingId) {
         KycApplication application = getOrCreateKycApplication(bookingId);
+        ensureDocumentSlots(application);
 
         List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
         return kycApplicationMapper.toResponseDto(application, documents);
+    }
+
+    private void ensureDocumentSlots(KycApplication application) {
+        List<Document> existingDocs = documentRepository.findByKycApplicationId(application.getId());
+
+        // 1. Primary Applicant Slots
+        ensureSlot(application, existingDocs, ApplicantType.PRIMARY, DocumentType.AADHAAR_CARD);
+        ensureSlot(application, existingDocs, ApplicantType.PRIMARY, DocumentType.PAN_CARD);
+        ensureSlot(application, existingDocs, ApplicantType.PRIMARY, DocumentType.ADDRESS_PROOF);
+        ensureSlot(application, existingDocs, ApplicantType.PRIMARY, DocumentType.VOTER_ID);
+
+        // 2. Co-Applicant Slots (JOINT_1)
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_1, DocumentType.AADHAAR_CARD);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_1, DocumentType.PAN_CARD);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_1, DocumentType.ADDRESS_PROOF);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_1, DocumentType.VOTER_ID);
+        }
+
+        // 3. Third Applicant Slots (JOINT_2)
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant()) && "Yes".equalsIgnoreCase(application.getHasThirdApplicant())) {
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.AADHAAR_CARD);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.PAN_CARD);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.ADDRESS_PROOF);
+            ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.VOTER_ID);
+        }
+    }
+
+    private void ensureSlot(KycApplication application, List<Document> existingDocs, ApplicantType applicantType, DocumentType docType) {
+        boolean exists = existingDocs.stream()
+                .anyMatch(d -> d.getApplicantType() == applicantType && d.getDocumentType() == docType);
+        if (!exists) {
+            com.goodearth.postsales.document.config.DocumentSlotConfig slotConfig =
+                    com.goodearth.postsales.document.config.DocumentSlotConfig.getConfig(applicantType, docType);
+            KycApplicant applicant = application.getApplicants() != null ? application.getApplicants().stream()
+                    .filter(a -> a.getApplicantType() == applicantType)
+                    .findFirst()
+                    .orElse(null) : null;
+
+            Document newDoc = new Document();
+            newDoc.setKycApplication(application);
+            newDoc.setKycApplicant(applicant);
+            newDoc.setCategory(com.goodearth.postsales.document.entity.DocumentCategory.KYC);
+            newDoc.setApplicantType(applicantType);
+            newDoc.setDocumentType(docType);
+            newDoc.setIsRequired(slotConfig.isRequired());
+            newDoc.setStatus(com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE);
+            newDoc.setWorkDriveFileId("WD-FILE-SLOT-" + UUID.randomUUID());
+            newDoc.setFileName(docType.name() + "_" + applicantType.name() + "_SLOT");
+            documentRepository.save(newDoc);
+        }
     }
 
     private KycApplication getOrCreateKycApplication(String bookingId) {
