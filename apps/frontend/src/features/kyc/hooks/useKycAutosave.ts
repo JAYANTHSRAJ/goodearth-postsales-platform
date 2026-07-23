@@ -141,6 +141,10 @@ export const useKycAutosave = (
 
   // Execute Save Draft
   const saveNow = async (): Promise<boolean> => {
+    if (initialData?.status && initialData.status !== 'DRAFT' && initialData.status !== 'ACTION_REQUIRED') {
+      return false;
+    }
+
     setStatus('saving');
     try {
       if (!navigator.onLine) {
@@ -175,6 +179,11 @@ export const useKycAutosave = (
       return;
     }
 
+    // Disable autosave if status is SUBMITTED, UNDER_REVIEW, APPROVED, or REJECTED
+    if (initialData?.status && initialData.status !== 'DRAFT' && initialData.status !== 'ACTION_REQUIRED') {
+      return;
+    }
+
     setIsDirty(true);
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -189,7 +198,7 @@ export const useKycAutosave = (
         clearTimeout(timerRef.current);
       }
     };
-  }, [applicationDate, consideringHomeLoan, hasCoApplicant, hasThirdApplicant, primaryApplicant, jointApplicants]);
+  }, [applicationDate, consideringHomeLoan, hasCoApplicant, hasThirdApplicant, primaryApplicant, jointApplicants, initialData?.status]);
 
   return {
     applicationDate,
