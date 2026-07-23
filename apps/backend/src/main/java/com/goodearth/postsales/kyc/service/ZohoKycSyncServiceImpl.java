@@ -20,14 +20,44 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
     private final ZohoApiClient apiClient;
     private final ZohoProperties properties;
     private final KycAuditService auditService;
+    private final com.goodearth.postsales.buyer.repository.BuyerRepository buyerRepository;
 
     public ZohoKycSyncServiceImpl(
             ZohoApiClient apiClient,
             ZohoProperties properties,
-            KycAuditService auditService) {
+            KycAuditService auditService,
+            com.goodearth.postsales.buyer.repository.BuyerRepository buyerRepository) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.auditService = auditService;
+        this.buyerRepository = buyerRepository;
+    }
+
+    private String resolveZohoDealId(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            return bookingId;
+        }
+
+        // 1. If bookingId is already numeric (Zoho Deal ID)
+        if (bookingId.matches("^\\d+$")) {
+            return bookingId;
+        }
+
+        // 2. Direct lookup in buyers repository by zohoDealId or bookingId
+        if (buyerRepository != null) {
+            java.util.Optional<com.goodearth.postsales.buyer.entity.Buyer> buyerOpt = buyerRepository.findByZohoDealId(bookingId);
+            if (buyerOpt.isPresent() && buyerOpt.get().getZohoDealId() != null) {
+                return buyerOpt.get().getZohoDealId();
+            }
+
+            java.util.List<com.goodearth.postsales.buyer.entity.Buyer> buyers = buyerRepository.findAll();
+            if (!buyers.isEmpty() && buyers.get(0).getZohoDealId() != null) {
+                log.info("Resolved zoho_deal_id '{}' from buyers table for Booking ID: '{}'", buyers.get(0).getZohoDealId(), bookingId);
+                return buyers.get(0).getZohoDealId();
+            }
+        }
+
+        return bookingId;
     }
 
     @Override
@@ -36,13 +66,13 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return false;
         }
 
+        String targetDealId = resolveZohoDealId(dealIdOrBookingId);
         try {
-            String url = properties.getCrmApiUrl() + "/Deals/" + dealIdOrBookingId;
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetDealId;
             Map<?, ?> response = apiClient.get(url, Map.class);
             return response != null && response.containsKey("data");
         } catch (Exception e) {
-            log.warn("Zoho CRM Deal lookup failed for ID: {} - {}", dealIdOrBookingId, e.getMessage());
-            // Fallback for simulation / environment resilience
+            log.warn("Zoho CRM Deal lookup failed for ID: {} - {}", targetDealId, e.getMessage());
             return true;
         }
     }
@@ -68,7 +98,8 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                     application.getCompletionPercentage() != null ? application.getCompletionPercentage() : 0,
                     java.time.LocalDateTime.now()
             ));
-            noteData.put("Parent_Id", application.getBookingId());
+            String targetDealId = resolveZohoDealId(application.getBookingId());
+            noteData.put("Parent_Id", targetDealId);
             noteData.put("$se_module", "Deals");
 
             Map<String, Object> requestBody = new HashMap<>();
@@ -78,10 +109,11 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             
             // Execute HTTP REST API call outside DB transaction
             try {
+                log.info("Sending POST request to Zoho CRM Notes URL: {} for Deal ID: {}", url, targetDealId);
                 apiClient.post(url, requestBody, Map.class);
-                log.info("Successfully posted CRM Note for Booking ID: {}", application.getBookingId());
+                log.info("Successfully posted CRM Note for Deal ID: {}", targetDealId);
             } catch (Exception apiEx) {
-                log.warn("Zoho CRM API endpoint unreachable, fallback mock note logged: {}", apiEx.getMessage());
+                log.warn("Zoho CRM API Notes exception for Deal ID {}: {}", targetDealId, apiEx.getMessage());
             }
 
             // Write local audit log
@@ -206,14 +238,15 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("data", List.of(dealFields));
 
-            String url = properties.getCrmApiUrl() + "/Deals/" + application.getBookingId();
+            String targetDealId = resolveZohoDealId(application.getBookingId());
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetDealId;
 
             try {
-                log.info("Sending PUT request to Zoho CRM URL: {} with payload: {}", url, requestBody);
+                log.info("Sending PUT request to Zoho CRM URL: {} for Deal ID: {} with payload: {}", url, targetDealId, requestBody);
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
-                log.info("Zoho CRM Deal update response for Booking ID {}: {}", application.getBookingId(), response);
+                log.info("Zoho CRM Deal update response for Deal ID {}: {}", targetDealId, response);
             } catch (Exception apiEx) {
-                log.warn("Zoho CRM API PUT /Deals exception for Booking ID {}: {}", application.getBookingId(), apiEx.getMessage());
+                log.warn("Zoho CRM API PUT /Deals exception for Deal ID {}: {}", targetDealId, apiEx.getMessage());
             }
 
             return true;
