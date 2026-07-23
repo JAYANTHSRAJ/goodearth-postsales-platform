@@ -35,29 +35,46 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
     private String resolveZohoDealId(String bookingId) {
         if (bookingId == null || bookingId.trim().isEmpty()) {
+            log.error("Zoho Deal ID resolution failed: bookingId parameter is null or empty.");
+            return null;
+        }
+
+        // 1. If bookingId is already a numeric Zoho Deal ID (15-22 digits, e.g. 6638590000146940001)
+        if (bookingId.matches("^\\d{15,22}$")) {
+            log.info("Booking ID '{}' is directly a valid numeric Zoho Deal ID.", bookingId);
             return bookingId;
         }
 
-        // 1. If bookingId is already numeric (Zoho Deal ID)
-        if (bookingId.matches("^\\d+$")) {
-            return bookingId;
-        }
-
-        // 2. Direct lookup in buyers repository by zohoDealId or bookingId
+        // 2. Lookup in buyers repository by zohoDealId = bookingId
         if (buyerRepository != null) {
-            java.util.Optional<com.goodearth.postsales.buyer.entity.Buyer> buyerOpt = buyerRepository.findByZohoDealId(bookingId);
-            if (buyerOpt.isPresent() && buyerOpt.get().getZohoDealId() != null) {
-                return buyerOpt.get().getZohoDealId();
+            java.util.Optional<com.goodearth.postsales.buyer.entity.Buyer> buyerByDeal = buyerRepository.findByZohoDealId(bookingId);
+            if (buyerByDeal.isPresent() && buyerByDeal.get().getZohoDealId() != null) {
+                log.info("Resolved zoho_deal_id '{}' for bookingId '{}' via Buyer.zohoDealId lookup.",
+                        buyerByDeal.get().getZohoDealId(), bookingId);
+                return buyerByDeal.get().getZohoDealId();
             }
 
-            java.util.List<com.goodearth.postsales.buyer.entity.Buyer> buyers = buyerRepository.findAll();
-            if (!buyers.isEmpty() && buyers.get(0).getZohoDealId() != null) {
-                log.info("Resolved zoho_deal_id '{}' from buyers table for Booking ID: '{}'", buyers.get(0).getZohoDealId(), bookingId);
-                return buyers.get(0).getZohoDealId();
+            // 3. Lookup via currently authenticated User email -> Buyer -> zohoDealId
+            try {
+                org.springframework.security.core.Authentication auth =
+                        org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getName() != null && !auth.getName().equals("anonymousUser")) {
+                    String currentUserEmail = auth.getName();
+                    java.util.Optional<com.goodearth.postsales.buyer.entity.Buyer> buyerByEmail = buyerRepository.findByEmailIgnoreCase(currentUserEmail);
+                    if (buyerByEmail.isPresent() && buyerByEmail.get().getZohoDealId() != null) {
+                        log.info("Resolved zoho_deal_id '{}' for bookingId '{}' via authenticated buyer email '{}'.",
+                                buyerByEmail.get().getZohoDealId(), bookingId, currentUserEmail);
+                        return buyerByEmail.get().getZohoDealId();
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("Could not inspect SecurityContext for buyer email resolution: {}", ex.getMessage());
             }
         }
 
-        return bookingId;
+        // 4. Lookup failed - log error and return null so sync is safely skipped
+        log.error("CRITICAL: Failed to deterministically resolve Zoho Deal ID for bookingId '{}'. Aborting CRM sync to prevent modifying another customer's Deal.", bookingId);
+        return null;
     }
 
     @Override
@@ -99,6 +116,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                     java.time.LocalDateTime.now()
             ));
             String targetDealId = resolveZohoDealId(application.getBookingId());
+            if (targetDealId == null) {
+                log.error("Aborting CRM Note sync for Booking ID {}: Unable to resolve target Zoho Deal ID.", application.getBookingId());
+                return false;
+            }
             noteData.put("Parent_Id", targetDealId);
             noteData.put("$se_module", "Deals");
 
@@ -239,6 +260,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             requestBody.put("data", List.of(dealFields));
 
             String targetDealId = resolveZohoDealId(application.getBookingId());
+            if (targetDealId == null) {
+                log.error("Aborting CRM Deal fields sync for Booking ID {}: Unable to resolve target Zoho Deal ID.", application.getBookingId());
+                return false;
+            }
             String url = properties.getCrmApiUrl() + "/Deals/" + targetDealId;
 
             try {
