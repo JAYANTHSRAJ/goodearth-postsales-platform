@@ -189,24 +189,48 @@ public class KycServiceImpl implements KycService {
         Map<String, Object> dealFields = new HashMap<>();
 
         // Personal Information
-        if (dto.getApplicantTitle() != null) dealFields.put("Title_A", dto.getApplicantTitle());
-        if (dto.getApplicantFirstName() != null) dealFields.put("First_Name_A", dto.getApplicantFirstName());
-        if (dto.getApplicantLastName() != null) dealFields.put("Last_Name_A", dto.getApplicantLastName());
+        if (dto.getApplicantTitle() != null) {
+            dealFields.put("Title_A", dto.getApplicantTitle());
+            dealFields.put("Applicant_Title", dto.getApplicantTitle());
+        }
+        if (dto.getApplicantFirstName() != null) {
+            dealFields.put("First_Name_A", dto.getApplicantFirstName());
+            dealFields.put("Applicant_First_Name", dto.getApplicantFirstName());
+        }
+        if (dto.getApplicantLastName() != null) {
+            dealFields.put("Last_Name_A", dto.getApplicantLastName());
+            dealFields.put("Applicant_Last_Name", dto.getApplicantLastName());
+        }
+
+        String fullName = ((dto.getApplicantFirstName() != null ? dto.getApplicantFirstName().trim() : "") + " " +
+                (dto.getApplicantLastName() != null ? dto.getApplicantLastName().trim() : "")).trim();
+        if (!fullName.isEmpty()) {
+            dealFields.put("First_Applicant", fullName);
+            dealFields.put("Applicant_Name", fullName);
+        }
+
         if (dto.getApplicantGender() != null) {
             dealFields.put("Gender", dto.getApplicantGender());
             dealFields.put("Applicant_Gender", dto.getApplicantGender());
         }
         if (dto.getApplicantDob() != null) {
-            dealFields.put("Applicant_Date_of_Birth", dto.getApplicantDob());
-            dealFields.put("DOB", dto.getApplicantDob());
+            String formattedDob = formatDateForZoho(dto.getApplicantDob());
+            dealFields.put("Applicant_Date_of_Birth", formattedDob);
+            dealFields.put("DOB", formattedDob);
         }
-        if (dto.getApplicantAge() != null) {
-            dealFields.put("Applicant_Age", dto.getApplicantAge());
-            dealFields.put("Age", dto.getApplicantAge());
+        if (dto.getApplicantAge() != null && !dto.getApplicantAge().trim().isEmpty()) {
+            try {
+                int ageVal = Integer.parseInt(dto.getApplicantAge().trim());
+                dealFields.put("Applicant_Age", ageVal);
+                dealFields.put("Age", ageVal);
+            } catch (Exception e) {
+                dealFields.put("Applicant_Age", dto.getApplicantAge());
+            }
         }
         if (dto.getApplicantPhone() != null) {
             dealFields.put("Applicant_Phone_number", dto.getApplicantPhone());
             dealFields.put("Phone", dto.getApplicantPhone());
+            dealFields.put("Applicant_Phone", dto.getApplicantPhone());
         }
         if (dto.getApplicantEmail() != null) {
             dealFields.put("Email", dto.getApplicantEmail());
@@ -214,9 +238,18 @@ public class KycServiceImpl implements KycService {
         }
 
         // Identity
-        if (dto.getApplicantPan() != null) dealFields.put("Applicant_PAN", dto.getApplicantPan().toUpperCase());
-        if (dto.getApplicantAadhar() != null) dealFields.put("Applicant_Aadhar", dto.getApplicantAadhar());
-        if (dto.getNewApplicantAadhar() != null) dealFields.put("New_Applicant_Aadhar", dto.getNewApplicantAadhar());
+        if (dto.getApplicantPan() != null) {
+            dealFields.put("Applicant_PAN", dto.getApplicantPan().toUpperCase());
+            dealFields.put("PAN_Number", dto.getApplicantPan().toUpperCase());
+        }
+        if (dto.getApplicantAadhar() != null) {
+            dealFields.put("Applicant_Aadhar", dto.getApplicantAadhar());
+            dealFields.put("New_Applicant_Aadhar", dto.getApplicantAadhar());
+        }
+        if (dto.getNewApplicantAadhar() != null) {
+            dealFields.put("New_Applicant_Aadhar", dto.getNewApplicantAadhar());
+            dealFields.put("Applicant_Aadhar", dto.getNewApplicantAadhar());
+        }
 
         // Family
         if (dto.getApplicantFatherFirstName() != null) {
@@ -245,7 +278,10 @@ public class KycServiceImpl implements KycService {
         }
 
         // Application
-        if (dto.getApplicationDate() != null) dealFields.put("Application_Date", dto.getApplicationDate());
+        if (dto.getApplicationDate() != null) {
+            String formattedAppDate = formatDateForZoho(dto.getApplicationDate());
+            dealFields.put("Application_Date", formattedAppDate);
+        }
         if (dto.getConsideringHomeLoan() != null) dealFields.put("Are_you_considering_a_home_loan", dto.getConsideringHomeLoan());
 
         // Co-Applicant
@@ -649,6 +685,17 @@ public class KycServiceImpl implements KycService {
             percentage += 40;
         }
         return Math.min(percentage, 100);
+    }
+
+    private String formatDateForZoho(String input) {
+        if (input == null || input.trim().isEmpty()) return null;
+        String str = input.trim();
+        if (str.matches("^\\d{4}-\\d{2}-\\d{2}$")) return str;
+        if (str.matches("^\\d{2}-\\d{2}-\\d{4}$")) {
+            String[] parts = str.split("-");
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+        return str;
     }
 
     private String getPrimaryApplicantName(KycApplication app) {
