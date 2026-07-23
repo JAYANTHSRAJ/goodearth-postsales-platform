@@ -14,6 +14,8 @@ public class ApplicantInfoSubmitRequestDto {
 
     @NotBlank(message = "Booking ID is required")
     private String bookingId;
+    private String zohoDealName;
+    private String zohoDealId;
 
     // Personal Information
     private String applicantTitle;       // Title_A

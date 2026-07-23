@@ -46,6 +46,10 @@ public class KycServiceImplTest {
     private KycAuditService auditService;
     @Mock
     private ZohoKycSyncService zohoKycSyncService;
+    @Mock
+    private com.goodearth.postsales.buyer.repository.BuyerRepository buyerRepository;
+    @Mock
+    private com.goodearth.postsales.workflow.repository.WorkflowRepository workflowRepository;
 
     private KycServiceImpl kycService;
 
@@ -60,7 +64,9 @@ public class KycServiceImplTest {
                 kycApplicationMapper,
                 kycTimelineMapper,
                 auditService,
-                zohoKycSyncService
+                zohoKycSyncService,
+                buyerRepository,
+                workflowRepository
         );
     }
 

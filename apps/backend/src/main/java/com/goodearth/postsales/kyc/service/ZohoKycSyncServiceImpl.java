@@ -374,10 +374,12 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
 
             try {
-                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {} Payload: {}", targetRecordId, requestBody);
+                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {}", targetRecordId);
+                log.info("[KYC_SYNC] Resolved Deal Record ID = {}", targetRecordId);
+                log.info("[KYC_SYNC] PUT Request Payload = {}", requestBody);
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
-                log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: SUCCESS\nHTTP Status: 200\nResponse Payload: {}",
-                        bookingId, bookingId, targetRecordId, response);
+                log.info("[KYC_SYNC] Response Status = 200 SUCCESS");
+                log.info("[KYC_SYNC] Zoho Response = {}", response);
                 return true;
             } catch (Exception apiEx) {
                 String errorMsg = apiEx.getMessage();

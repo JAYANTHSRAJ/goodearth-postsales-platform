@@ -17,6 +17,8 @@ public class ClientUnitDto {
     private String unitName;
     private String projectName;
     private String projectCode;
+    private String zohoDealName;
+    private String zohoDealId;
     private String location;
     private String status;
 }

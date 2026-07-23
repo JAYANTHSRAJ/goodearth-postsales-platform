@@ -8,10 +8,13 @@ export const ApplicantInfoPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { activeUnit } = useUnitStore();
 
-  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
+  const targetDealName = searchParams.get('dealName') || activeUnit?.zohoDealName || activeUnit?.projectName || searchParams.get('bookingId') || activeUnit?.unitName || 'motif16-280726';
+  const targetDealId = activeUnit?.zohoDealId || undefined;
 
   const [form, setForm] = useState({
-    bookingId,
+    bookingId: targetDealName,
+    zohoDealName: targetDealName,
+    zohoDealId: targetDealId,
     // Personal Information
     applicantTitle: 'Mr.',
     applicantFirstName: '',
@@ -49,8 +52,13 @@ export const ApplicantInfoPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setForm((prev) => ({ ...prev, bookingId }));
-  }, [bookingId]);
+    setForm((prev) => ({
+      ...prev,
+      bookingId: targetDealName,
+      zohoDealName: targetDealName,
+      zohoDealId: targetDealId,
+    }));
+  }, [targetDealName, targetDealId]);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

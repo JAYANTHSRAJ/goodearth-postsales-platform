@@ -7,6 +7,8 @@ export interface ClientUnit {
   unitName: string;
   projectName?: string;
   projectCode?: string;
+  zohoDealName?: string;
+  zohoDealId?: string;
   location?: string;
   status?: string;
 }

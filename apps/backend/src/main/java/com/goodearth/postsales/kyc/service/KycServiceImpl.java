@@ -1,5 +1,7 @@
 package com.goodearth.postsales.kyc.service;
 
+import com.goodearth.postsales.buyer.entity.Buyer;
+import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.document.dto.DocumentSlotDto;
 import com.goodearth.postsales.document.entity.Document;
 import com.goodearth.postsales.document.entity.DocumentStatus;
@@ -38,6 +40,8 @@ import com.goodearth.postsales.kyc.mapper.KycTimelineMapper;
 import com.goodearth.postsales.kyc.repository.KycApplicantRepository;
 import com.goodearth.postsales.kyc.repository.KycApplicationRepository;
 import com.goodearth.postsales.kyc.repository.KycAuditLogRepository;
+import com.goodearth.postsales.workflow.entity.Workflow;
+import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -50,9 +54,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Service
 public class KycServiceImpl implements KycService {
+
+    private static final Logger log = LoggerFactory.getLogger(KycServiceImpl.class);
 
     private final KycApplicationRepository kycApplicationRepository;
     private final KycApplicantRepository kycApplicantRepository;
@@ -63,6 +72,8 @@ public class KycServiceImpl implements KycService {
     private final KycTimelineMapper kycTimelineMapper;
     private final KycAuditService auditService;
     private final ZohoKycSyncService zohoKycSyncService;
+    private final BuyerRepository buyerRepository;
+    private final WorkflowRepository workflowRepository;
 
     public KycServiceImpl(
             KycApplicationRepository kycApplicationRepository,
@@ -73,7 +84,9 @@ public class KycServiceImpl implements KycService {
             KycApplicationMapper kycApplicationMapper,
             KycTimelineMapper kycTimelineMapper,
             KycAuditService auditService,
-            ZohoKycSyncService zohoKycSyncService) {
+            ZohoKycSyncService zohoKycSyncService,
+            BuyerRepository buyerRepository,
+            WorkflowRepository workflowRepository) {
         this.kycApplicationRepository = kycApplicationRepository;
         this.kycApplicantRepository = kycApplicantRepository;
         this.documentRepository = documentRepository;
@@ -83,6 +96,8 @@ public class KycServiceImpl implements KycService {
         this.kycTimelineMapper = kycTimelineMapper;
         this.auditService = auditService;
         this.zohoKycSyncService = zohoKycSyncService;
+        this.buyerRepository = buyerRepository;
+        this.workflowRepository = workflowRepository;
     }
 
     @Override
@@ -128,12 +143,48 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional
     public KycApplicationResponseDto submitApplicantInfo(com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto dto, String actorId) {
-        if (dto == null || dto.getBookingId() == null || dto.getBookingId().trim().isEmpty()) {
-            throw new IllegalArgumentException("Booking ID is required for applicant info submission");
+        if (dto == null) {
+            throw new IllegalArgumentException("Request DTO is required for applicant info submission");
         }
 
-        String bookingId = dto.getBookingId().trim();
-        KycApplication application = getOrCreateKycApplication(bookingId);
+        String rawBookingId = dto.getBookingId() != null ? dto.getBookingId().trim() : "";
+        String targetDealName = dto.getZohoDealName() != null ? dto.getZohoDealName().trim() : rawBookingId;
+        String targetDealId = dto.getZohoDealId() != null ? dto.getZohoDealId().trim() : null;
+
+        Buyer resolvedBuyer = null;
+        Workflow resolvedWorkflow = null;
+
+        if (actorId != null && !actorId.trim().isEmpty()) {
+            List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(actorId.trim());
+            if (!buyers.isEmpty()) {
+                resolvedBuyer = buyers.get(0);
+                if (targetDealId == null || targetDealId.isEmpty()) {
+                    targetDealId = resolvedBuyer.getZohoDealId();
+                }
+                Optional<Workflow> wfOpt = workflowRepository.findFirstByBuyerId(resolvedBuyer.getId());
+                if (wfOpt.isPresent()) {
+                    resolvedWorkflow = wfOpt.get();
+                    if (resolvedWorkflow.getProject() != null) {
+                        targetDealName = resolvedWorkflow.getProject().getProjectName();
+                        if (targetDealId == null || targetDealId.isEmpty()) {
+                            targetDealId = resolvedWorkflow.getProject().getZohoDealId();
+                        }
+                    }
+                }
+            }
+        }
+
+        log.info("[TRACE_IDENTIFIER]\nStage: Applicant API -> KycServiceImpl.submitApplicantInfo()\nActor (Email): {}\nBuyer ID: {}\nWorkflow ID: {}\nUnit Name: {}\nBooking Reference: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
+                actorId,
+                resolvedBuyer != null ? resolvedBuyer.getId() : "N/A",
+                resolvedWorkflow != null ? resolvedWorkflow.getId() : "N/A",
+                resolvedBuyer != null ? resolvedBuyer.getUnitName() : "N/A",
+                rawBookingId,
+                targetDealName,
+                targetDealId);
+
+        String effectiveTargetKey = targetDealId != null && !targetDealId.isEmpty() ? targetDealId : targetDealName;
+        KycApplication application = getOrCreateKycApplication(effectiveTargetKey);
 
         Map<String, Object> dealFields = new HashMap<>();
 
@@ -204,7 +255,7 @@ public class KycServiceImpl implements KycService {
         if (dto.getLastNameA() != null) dealFields.put("Last_Name_C", dto.getLastNameA());
 
         // Sync directly to Zoho CRM Deal
-        zohoKycSyncService.syncApplicantMapToCrm(bookingId, dealFields);
+        zohoKycSyncService.syncApplicantMapToCrm(effectiveTargetKey, dealFields);
 
         // Update local application state
         application.setUpdatedAt(LocalDateTime.now());

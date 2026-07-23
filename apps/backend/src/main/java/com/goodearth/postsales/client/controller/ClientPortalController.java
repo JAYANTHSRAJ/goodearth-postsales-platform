@@ -86,6 +86,7 @@ public class ClientPortalController {
             ClientUnitDto dto = new ClientUnitDto();
             dto.setId(b.getId());
             dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + b.getZohoDealId());
+            dto.setZohoDealId(b.getZohoDealId());
             dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
 
             Optional<Workflow> wf = workflowRepository.findFirstByBuyerId(b.getId());
@@ -94,8 +95,16 @@ public class ClientPortalController {
                 if (workflow.getProject() != null) {
                     dto.setProjectName(workflow.getProject().getProjectName());
                     dto.setProjectCode(workflow.getProject().getProjectCode());
+                    dto.setZohoDealName(workflow.getProject().getProjectName());
+                    if (dto.getZohoDealId() == null) {
+                        dto.setZohoDealId(workflow.getProject().getZohoDealId());
+                    }
                 }
             });
+
+            log.info("[TRACE_IDENTIFIER]\nStage: Client Login -> getOwnedUnits()\nUser Email: {}\nBuyer ID: {}\nWorkflow ID: {}\nUnit Name: {}\nBooking Reference: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
+                    user.getEmail(), b.getId(), dto.getWorkflowId(), b.getUnitName(), dto.getUnitName(), dto.getZohoDealName(), dto.getZohoDealId());
+
             return dto;
         }).collect(Collectors.toList());
 

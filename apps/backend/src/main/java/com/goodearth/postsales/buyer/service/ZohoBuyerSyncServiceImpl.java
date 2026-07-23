@@ -307,6 +307,9 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             log.info("Buyer created for email: {}", email);
         }
 
+        log.info("[TRACE_IDENTIFIER]\nStage: Webhook / Zoho Deal Sync -> processSingleDeal()\nBuyer Email: {}\nBuyer ID: {}\nUnit Name: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
+                email, buyer.getId(), buyer.getUnitName(), crmDeal.getDealName(), dealId);
+
         // 3. Project Creation/Lookup
         String projectName = crmDeal.getDealName();
         if (projectName == null || projectName.trim().isEmpty()) {
