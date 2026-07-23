@@ -176,12 +176,15 @@ export const useKycAutosave = (
         jointApplicants,
       });
 
-      // 2. Submit applicant info to sync with Zoho CRM Deal & persist primary applicant address
+      // 2. Submit applicant info to sync with Zoho CRM Deal & persist primary & co-applicant address
       if (primaryApplicant) {
-        await kycService.submitApplicantInfo({
+        const coApp = jointApplicants.find((a) => a.applicantType === 'JOINT_1') || jointApplicants[0];
+
+        const submitPayload: any = {
           bookingId,
           applicationDate,
           consideringHomeLoan,
+          hasCoApplicant,
           applicantTitle: primaryApplicant.salutation,
           applicantFirstName: primaryApplicant.firstName,
           applicantLastName: primaryApplicant.lastName,
@@ -202,7 +205,33 @@ export const useKycAutosave = (
           addressState: primaryApplicant.address?.state,
           addressPincode: primaryApplicant.address?.pincode,
           addressCountry: primaryApplicant.address?.country,
-        });
+        };
+
+        if (hasCoApplicant === 'Yes' && coApp) {
+          submitPayload.titleA = coApp.salutation;
+          submitPayload.firstNameA = coApp.firstName;
+          submitPayload.lastNameA = coApp.lastName;
+          submitPayload.coApplicantEmail = coApp.email;
+          submitPayload.coApplicantPhone = coApp.phone;
+          submitPayload.coApplicantPhoneCode = coApp.phoneCode;
+          submitPayload.coApplicantDob = coApp.dateOfBirth;
+          submitPayload.coApplicantOccupation = coApp.occupation;
+          submitPayload.coApplicantPan = coApp.panNumber;
+          submitPayload.coApplicantAadhar = coApp.aadhaarNumber;
+          submitPayload.coApplicantSoDoWo = coApp.guardianRelation;
+          submitPayload.coApplicantFatherSalutation = coApp.guardianSalutation;
+          submitPayload.coApplicantFatherFirstName = coApp.guardianFirstName;
+          submitPayload.coApplicantFatherLastName = coApp.guardianLastName;
+          submitPayload.coApplicantAddressSameAsPrimary = coApp.addressSameAsPrimary;
+          submitPayload.coApplicantAddressStreet = coApp.address?.street;
+          submitPayload.coApplicantAddressLine2 = coApp.address?.addressLine2;
+          submitPayload.coApplicantAddressCity = coApp.address?.city;
+          submitPayload.coApplicantAddressState = coApp.address?.state;
+          submitPayload.coApplicantAddressPincode = coApp.address?.pincode;
+          submitPayload.coApplicantAddressCountry = coApp.address?.country;
+        }
+
+        await kycService.submitApplicantInfo(submitPayload);
       }
 
       setStatus('saved');

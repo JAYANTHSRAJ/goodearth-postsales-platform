@@ -58,8 +58,26 @@ public class ApplicantInfoSubmitRequestDto {
     private String consideringHomeLoan;          // Are_you_considering_a_home_loan
 
     // Co-Applicant
-    private String soDoWoA;             // S_o_D_o_W_o_A
+    private String hasCoApplicant;       // Yes/No
+    private String soDoWoA;             // S_o_D_o_W_o_A / S_o_D_o_W_o_C
     private String titleA;              // Title_C
     private String firstNameA;          // First_Name_C
     private String lastNameA;           // Last_Name_C
+    private String coApplicantEmail;    // Email_C / Co_Applicant_Email
+    private String coApplicantPhone;    // Phone_C / Co_Applicant_Phone
+    private String coApplicantPhoneCode;
+    private String coApplicantDob;      // DOB_C / Co_Applicant_Date_of_Birth
+    private String coApplicantOccupation;// Co_Applicant_Occupation
+    private String coApplicantPan;      // Co_Applicant_PAN
+    private String coApplicantAadhar;   // Co_Applicant_Aadhar
+    private String coApplicantFatherSalutation;
+    private String coApplicantFatherFirstName;
+    private String coApplicantFatherLastName;
+    private Boolean coApplicantAddressSameAsPrimary;
+    private String coApplicantAddressStreet;
+    private String coApplicantAddressLine2;
+    private String coApplicantAddressCity;
+    private String coApplicantAddressState;
+    private String coApplicantAddressPincode;
+    private String coApplicantAddressCountry;
 }
