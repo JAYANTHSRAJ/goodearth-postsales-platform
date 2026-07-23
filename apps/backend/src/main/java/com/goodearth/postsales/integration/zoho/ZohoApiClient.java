@@ -42,6 +42,18 @@ public class ZohoApiClient {
         }
     }
 
+    public <T> T get(java.net.URI uri, Class<T> responseType) {
+        try {
+            return restClient.get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(responseType);
+        } catch (Exception ex) {
+            handleAndLogException("GET", uri.toString(), ex);
+            throw new ZohoIntegrationException("GET request failed for URI: " + uri + " - " + ex.getMessage(), ex);
+        }
+    }
+
     public <T> T post(String url, Object body, Class<T> responseType) {
         try {
             return restClient.post()
