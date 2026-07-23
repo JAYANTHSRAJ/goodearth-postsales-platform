@@ -23,16 +23,14 @@ export const KycAddressForm: React.FC<KycAddressFormProps> = ({
   };
 
   return (
-    <div className="space-y-4 pt-2">
-      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Address Details</h4>
-      
+    <div className="space-y-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KycInputField
           label="Street Address"
           name={`${prefix}.street`}
           value={address.street || ''}
           onChange={(e) => handleChange('street', e.target.value)}
-          placeholder="Street Address"
+          placeholder="Building name, street, locality"
           error={errors[`${prefix}.street`]}
           isRequired
         />
@@ -42,7 +40,7 @@ export const KycAddressForm: React.FC<KycAddressFormProps> = ({
           name={`${prefix}.addressLine2`}
           value={address.addressLine2 || ''}
           onChange={(e) => handleChange('addressLine2', e.target.value)}
-          placeholder="Apartment, suite, unit, etc."
+          placeholder="Apartment, suite, unit (optional)"
           error={errors[`${prefix}.addressLine2`]}
         />
       </div>
@@ -63,7 +61,7 @@ export const KycAddressForm: React.FC<KycAddressFormProps> = ({
           name={`${prefix}.pincode`}
           value={address.pincode || ''}
           onChange={(e) => handleChange('pincode', e.target.value)}
-          placeholder="Postal / Zip Code"
+          placeholder="6-digit Pincode"
           maxLength={10}
           error={errors[`${prefix}.pincode`]}
           isRequired
@@ -72,24 +70,24 @@ export const KycAddressForm: React.FC<KycAddressFormProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KycInputField
-          label="State/Region/Province"
+          label="State / Region / Province"
           name={`${prefix}.state`}
           value={address.state || ''}
           onChange={(e) => handleChange('state', e.target.value)}
-          placeholder="State/Region/Province"
+          placeholder="State"
           error={errors[`${prefix}.state`]}
           isRequired
         />
 
         <div className="space-y-1">
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
             Country <span className="text-rose-500">*</span>
           </label>
           <select
             name={`${prefix}.country`}
             value={address.country || 'India'}
             onChange={(e) => handleChange('country', e.target.value)}
-            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
           >
             <option value="-Select-">-Select-</option>
             <option value="India">India</option>
@@ -105,7 +103,7 @@ export const KycAddressForm: React.FC<KycAddressFormProps> = ({
           </select>
         </div>
       </div>
-      <p className="text-xs text-slate-500 italic">Please match Address with Address proof document you are attaching.</p>
+      <p className="text-[11px] text-slate-400 italic">Please match address with the address proof document attached in step 2.</p>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { User, Users, UserPlus, ShieldCheck, Sparkles, Calendar, CheckCircle2, Landmark } from 'lucide-react';
 import KycStepper from '../components/KycStepper';
 import KycNavigation from '../components/KycNavigation';
 import KycLoadingSkeleton from '../components/KycLoadingSkeleton';
@@ -95,13 +96,16 @@ export const KycApplicantsPage: React.FC = () => {
   const thirdApplicantDto = jointApplicants.find((a) => a.applicantType === 'JOINT_2') || jointApplicants[1];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-      {/* Top Bar with Autosave */}
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      {/* Top Header & Platform Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Saarang KYC Form</h1>
+          <div className="flex items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-1">
+            <ShieldCheck className="w-4 h-4" /> GoodEarth Buyer Onboarding
+          </div>
+          <h1 className="text-3xl font-bold font-serif text-slate-900 dark:text-white">KYC & Applicant Registration</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Good Earth - Application Form & Buyer Verification
+            Official buyer identification and contact verification for legal agreement generation
           </p>
         </div>
 
@@ -110,70 +114,111 @@ export const KycApplicantsPage: React.FC = () => {
 
       <KycStepper currentStepId="applicants" status={initialData?.status} />
 
-      {/* Header Banner & Instructions */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 text-center sm:text-left">
-        <div className="flex flex-col items-center justify-center space-y-2 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-12 h-12 rounded-full bg-brand-500/10 dark:bg-brand-400/10 flex items-center justify-center font-serif text-brand-700 dark:text-brand-300 font-bold text-xl">
-            GE
+      {/* Platform Hero Card Banner */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800 relative overflow-hidden space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" /> GoodEarth Post-Sales Portal
+            </div>
+            <h2 className="text-2xl font-bold font-serif tracking-tight text-white">Applicant Registration</h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              Please enter your full details exactly as they appear on your government-issued ID proofs.
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white font-serif">Good Earth - Application form</h2>
+
+          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15">
+            <Calendar className="w-5 h-5 text-brand-400" />
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Application Date</div>
+              <input
+                type="text"
+                placeholder="dd-MM-yyyy"
+                value={applicationDate}
+                onChange={(e) => setApplicationDate(e.target.value)}
+                className="bg-transparent text-sm font-bold text-white outline-none w-28 placeholder:text-slate-500"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Instructions */}
-        <div className="bg-amber-50/50 dark:bg-slate-800/50 border border-amber-200/60 dark:border-slate-700 rounded-xl p-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-          <p className="font-bold text-amber-900 dark:text-amber-300">Instructions:</p>
-          <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
-            <li>All the particulars entered here will be reflected in all future legal documents.</li>
-            <li>Kindly ensure that there are no errors in the entry fields, and that the correct document is uploaded.</li>
-            <li>Please ensure that your details are as per your address proof & Identity proof attached in this form.</li>
-            <li>Fill your details in title case.</li>
-          </ul>
-        </div>
-
-        {/* Application Date */}
-        <div className="pt-2 max-w-xs">
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-            Application date <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="dd-MM-yyyy"
-            value={applicationDate}
-            onChange={(e) => setApplicationDate(e.target.value)}
-            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-          />
-          <span className="text-[10px] text-slate-400 mt-1 block">Format: dd-MM-yyyy</span>
+        {/* Instructions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 border-t border-white/10 text-xs text-slate-300">
+          <div className="flex items-start gap-2.5 bg-white/5 p-3 rounded-xl border border-white/5">
+            <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+            <span>All entries will be reflected across all legal sale agreements and registry documents.</span>
+          </div>
+          <div className="flex items-start gap-2.5 bg-white/5 p-3 rounded-xl border border-white/5">
+            <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+            <span>Ensure name, Aadhaar, and PAN numbers match attached proof documents exactly.</span>
+          </div>
         </div>
       </div>
 
       {/* Primary Applicant Section */}
       <KycApplicantFormSection
-        title="Applicant Details"
+        title="Primary Applicant"
         applicantType="PRIMARY"
         applicant={primaryApplicant}
         onChange={setPrimaryApplicant}
         errors={errors}
       />
 
-      {/* Co-Applicant Conditional Question */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
-        <label className="block text-sm font-bold text-slate-900 dark:text-white">
-          Do you have co-applicant? <span className="text-rose-500">*</span>
-        </label>
-        <select
-          value={hasCoApplicant}
-          onChange={(e) => handleCoApplicantToggle(e.target.value)}
-          className="w-full max-w-xs px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
-        >
-          <option value="No">No</option>
-          <option value="Yes">Yes</option>
-        </select>
+      {/* Co-Applicant Segmented Cards Choice */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Co-Applicant Selection</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Do you wish to add a joint applicant or co-owner to this booking?</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <button
+            type="button"
+            onClick={() => handleCoApplicantToggle('No')}
+            className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+              hasCoApplicant === 'No'
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${hasCoApplicant === 'No' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">Single Primary Applicant</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Property will be registered under one buyer name.</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleCoApplicantToggle('Yes')}
+            className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+              hasCoApplicant === 'Yes'
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${hasCoApplicant === 'Yes' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">Add Joint Co-Applicant</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Add spouse, parent, or business partner as joint buyer.</div>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Co-Applicant Details Section */}
       {hasCoApplicant === 'Yes' && coApplicantDto && (
         <KycApplicantFormSection
-          title="Co-applicant Details"
+          title="Co-Applicant Details"
           applicantType="JOINT_1"
           applicant={coApplicantDto}
           primaryApplicantAddress={primaryApplicant.address}
@@ -188,20 +233,56 @@ export const KycApplicantsPage: React.FC = () => {
         />
       )}
 
-      {/* Third Applicant Conditional Question (Shown if Co-Applicant is Yes) */}
+      {/* Third Applicant Segmented Choice (Shown if Co-Applicant is Yes) */}
       {hasCoApplicant === 'Yes' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
-          <label className="block text-sm font-bold text-slate-900 dark:text-white">
-            Do you have third applicant? <span className="text-rose-500">*</span>
-          </label>
-          <select
-            value={hasThirdApplicant}
-            onChange={(e) => handleThirdApplicantToggle(e.target.value)}
-            className="w-full max-w-xs px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
-          >
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
-          </select>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+              <UserPlus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Third Applicant Option</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Do you wish to register a 3rd joint owner on the property?</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <button
+              type="button"
+              onClick={() => handleThirdApplicantToggle('No')}
+              className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                hasThirdApplicant === 'No'
+                  ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+              }`}
+            >
+              <div className={`p-2.5 rounded-xl ${hasThirdApplicant === 'No' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">No 3rd Applicant</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Two owners on booking.</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleThirdApplicantToggle('Yes')}
+              className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                hasThirdApplicant === 'Yes'
+                  ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+              }`}
+            >
+              <div className={`p-2.5 rounded-xl ${hasThirdApplicant === 'Yes' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">Add 3rd Joint Owner</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Include 3rd applicant details.</div>
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
@@ -225,18 +306,54 @@ export const KycApplicantsPage: React.FC = () => {
       )}
 
       {/* Home Loan Section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
-        <label className="block text-sm font-bold text-slate-900 dark:text-white">
-          Are you considering a home loan? <span className="text-rose-500">*</span>
-        </label>
-        <select
-          value={consideringHomeLoan}
-          onChange={(e) => setConsideringHomeLoan(e.target.value)}
-          className="w-full max-w-xs px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
-        >
-          <option value="No">No</option>
-          <option value="Yes">Yes</option>
-        </select>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+            <Landmark className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Home Loan Assistance</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Are you considering applying for a home loan for this unit purchase?</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <button
+            type="button"
+            onClick={() => setConsideringHomeLoan('No')}
+            className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+              consideringHomeLoan === 'No'
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${consideringHomeLoan === 'No' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">Self-Funded / No Loan</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Payment will be made directly without bank financing.</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setConsideringHomeLoan('Yes')}
+            className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+              consideringHomeLoan === 'Yes'
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${consideringHomeLoan === 'Yes' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">Applying for Home Loan</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">GoodEarth home loan desk will assist with bank sanction documents.</div>
+            </div>
+          </button>
+        </div>
       </div>
 
       <KycNavigation
