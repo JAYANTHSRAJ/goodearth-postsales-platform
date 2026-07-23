@@ -73,6 +73,14 @@ public class KycController {
         long startTime = System.currentTimeMillis();
         String actorId = authentication != null ? authentication.getName() : "CLIENT";
 
+        log.info("==================== [INCOMING APPLICANT SUBMISSION] ====================");
+        log.info("Actor: {}", actorId);
+        log.info("Booking ID: {}", requestDto.getBookingId());
+        log.info("Zoho Deal Name: {}", requestDto.getZohoDealName());
+        log.info("Zoho Deal ID: {}", requestDto.getZohoDealId());
+        log.info("Incoming DTO: {}", requestDto);
+        log.info("==========================================================================");
+
         KycApplicationResponseDto response = kycService.submitApplicantInfo(requestDto, actorId);
         long duration = System.currentTimeMillis() - startTime;
         log.info("Endpoint: PUT /api/v1/kyc/applicant, Execution Time: {}ms, Booking ID: {}", duration, requestDto.getBookingId());

@@ -375,21 +375,32 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             String envType = baseUrl.contains("sandbox") ? "Zoho Sandbox" : "Zoho Production";
             String url = baseUrl + "/Deals/" + targetRecordId;
 
-            log.info("[ZOHO_CRM_VERIFICATION]\n1. Zoho Base URL: {}\n2. Environment: {}\n3. Numeric Deal Record ID: {}\n4. Payload Field API Names: {}\n5. COMPLETE JSON Payload: {}",
-                    baseUrl, envType, targetRecordId, dealFields.keySet(), requestBody);
+            log.info("==================== [ZOHO CRM DEAL UPDATE DIAGNOSTICS] ====================");
+            log.info("1. Zoho Base URL: {}", baseUrl);
+            log.info("2. Target Environment: {}", envType);
+            log.info("3. Numeric Deal Record ID: {}", targetRecordId);
+            log.info("4. Payload Field API Names: {}", dealFields.keySet());
+            log.info("5. COMPLETE JSON Payload Sent to Zoho: {}", requestBody);
+            log.info("============================================================================");
 
             try {
-                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {}", targetRecordId);
+                log.info("[ZOHO_PUT_EXECUTION] Sending PUT request to URL: {}", url);
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
-                log.info("[ZOHO_CRM_VERIFICATION]\n6. HTTP Status: 200 OK\n7. COMPLETE Zoho Response: {}", response);
+                log.info("==================== [ZOHO CRM PUT RESPONSE] ====================");
+                log.info("HTTP Status: 200 OK");
+                log.info("COMPLETE Zoho PUT Response: {}", response);
+                log.info("=================================================================");
 
                 // Immediate Post-Update Verification GET
                 try {
-                    log.info("[ZOHO_CRM_VERIFICATION] Executing immediate GET /Deals/{} to verify updated values...", targetRecordId);
+                    log.info("[ZOHO_GET_VERIFICATION] Executing immediate GET /Deals/{} to verify updated values...", targetRecordId);
                     Map<?, ?> getResponse = apiClient.get(url, Map.class);
-                    log.info("[ZOHO_CRM_VERIFICATION] Post-Update GET Deal Response: {}", getResponse);
+                    log.info("==================== [ZOHO CRM IMMEDIATE GET RESPONSE] ====================");
+                    log.info("HTTP Status: 200 OK");
+                    log.info("COMPLETE Immediate GET Response: {}", getResponse);
+                    log.info("==========================================================================");
                 } catch (Exception getEx) {
-                    log.warn("[ZOHO_CRM_VERIFICATION] Could not fetch Deal post-update for verification: {}", getEx.getMessage());
+                    log.error("[ZOHO_GET_VERIFICATION_FAILED] Could not fetch Deal post-update for verification: {}", getEx.getMessage());
                 }
 
                 return true;
