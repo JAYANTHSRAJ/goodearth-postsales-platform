@@ -80,4 +80,28 @@ public class ApplicantInfoSubmitRequestDto {
     private String coApplicantAddressState;
     private String coApplicantAddressPincode;
     private String coApplicantAddressCountry;
+    // Third Applicant
+    private String hasThirdApplicant;    // Yes/No
+    private String thirdApplicantTitle;  // Title_T
+    private String thirdApplicantFirstName;// First_Name_T
+    private String thirdApplicantLastName; // Last_Name_T
+    private String thirdApplicantEmail;  // Email_T / Third_Applicant_Email
+    private String thirdApplicantPhone;  // Phone_T / Third_Applicant_Phone
+    private String thirdApplicantPhoneCode;
+    private String thirdApplicantDob;    // DOB_T / Third_Applicant_Date_of_Birth
+    private String thirdApplicantOccupation;// Third_Applicant_Occupation
+    private String thirdApplicantPan;    // Third_Applicant_PAN
+    private String thirdApplicantAadhar; // Third_Applicant_Aadhar
+    private String thirdApplicantSoDoWo; // S_o_D_o_W_o_T
+    private String thirdApplicantFatherSalutation;
+    private String thirdApplicantFatherFirstName;
+    private String thirdApplicantFatherLastName;
+    private Boolean thirdApplicantAddressSameAsPrimary;
+    private Boolean thirdApplicantAddressSameAsSecondary;
+    private String thirdApplicantAddressStreet;
+    private String thirdApplicantAddressLine2;
+    private String thirdApplicantAddressCity;
+    private String thirdApplicantAddressState;
+    private String thirdApplicantAddressPincode;
+    private String thirdApplicantAddressCountry;
 }

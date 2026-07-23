@@ -225,10 +225,37 @@ export const useKycAutosave = (
           submitPayload.coApplicantAddressSameAsPrimary = coApp.addressSameAsPrimary;
           submitPayload.coApplicantAddressStreet = coApp.address?.street;
           submitPayload.coApplicantAddressLine2 = coApp.address?.addressLine2;
-          submitPayload.coApplicantAddressCity = coApp.address?.city;
-          submitPayload.coApplicantAddressState = coApp.address?.state;
           submitPayload.coApplicantAddressPincode = coApp.address?.pincode;
           submitPayload.coApplicantAddressCountry = coApp.address?.country;
+        }
+
+        if (hasThirdApplicant === 'Yes' && hasCoApplicant === 'Yes') {
+          const thirdApp = jointApplicants.find((a) => a.applicantType === 'JOINT_2') || jointApplicants[1];
+          if (thirdApp) {
+            submitPayload.hasThirdApplicant = hasThirdApplicant;
+            submitPayload.thirdApplicantTitle = thirdApp.salutation;
+            submitPayload.thirdApplicantFirstName = thirdApp.firstName;
+            submitPayload.thirdApplicantLastName = thirdApp.lastName;
+            submitPayload.thirdApplicantEmail = thirdApp.email;
+            submitPayload.thirdApplicantPhone = thirdApp.phone;
+            submitPayload.thirdApplicantPhoneCode = thirdApp.phoneCode;
+            submitPayload.thirdApplicantDob = thirdApp.dateOfBirth;
+            submitPayload.thirdApplicantOccupation = thirdApp.occupation;
+            submitPayload.thirdApplicantPan = thirdApp.panNumber;
+            submitPayload.thirdApplicantAadhar = thirdApp.aadhaarNumber;
+            submitPayload.thirdApplicantSoDoWo = thirdApp.guardianRelation;
+            submitPayload.thirdApplicantFatherSalutation = thirdApp.guardianSalutation;
+            submitPayload.thirdApplicantFatherFirstName = thirdApp.guardianFirstName;
+            submitPayload.thirdApplicantFatherLastName = thirdApp.guardianLastName;
+            submitPayload.thirdApplicantAddressSameAsPrimary = thirdApp.addressSameAsPrimary;
+            submitPayload.thirdApplicantAddressSameAsSecondary = thirdApp.addressSameAsSecondary;
+            submitPayload.thirdApplicantAddressStreet = thirdApp.address?.street;
+            submitPayload.thirdApplicantAddressLine2 = thirdApp.address?.addressLine2;
+            submitPayload.thirdApplicantAddressCity = thirdApp.address?.city;
+            submitPayload.thirdApplicantAddressState = thirdApp.address?.state;
+            submitPayload.thirdApplicantAddressPincode = thirdApp.address?.pincode;
+            submitPayload.thirdApplicantAddressCountry = thirdApp.address?.country;
+          }
         }
 
         await kycService.submitApplicantInfo(submitPayload);
