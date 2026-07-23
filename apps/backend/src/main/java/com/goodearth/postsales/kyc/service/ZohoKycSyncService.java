@@ -6,5 +6,7 @@ public interface ZohoKycSyncService {
 
     boolean syncKycStatusToCrm(KycApplication application, String milestoneNoteTitle, String milestoneNoteContent);
 
+    boolean syncKycDealFieldsToCrm(KycApplication application);
+
     boolean verifyDealExists(String dealIdOrBookingId);
 }

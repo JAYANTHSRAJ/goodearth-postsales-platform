@@ -15,6 +15,9 @@ public class AddressDto {
     @Size(max = 500, message = "Street address must not exceed 500 characters")
     private String street;
 
+    @Size(max = 500, message = "Address line 2 must not exceed 500 characters")
+    private String addressLine2;
+
     @Size(max = 100, message = "City must not exceed 100 characters")
     private String city;
 

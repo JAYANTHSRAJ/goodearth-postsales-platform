@@ -22,6 +22,10 @@ public class KycApplicationResponseDto {
     private KycApplicationStatus status;
     private Integer completionPercentage;
     private String clientNotes;
+    private String applicationDate;
+    private String consideringHomeLoan;
+    private String hasCoApplicant;
+    private String hasThirdApplicant;
     private LocalDateTime submittedAt;
     private LocalDateTime verifiedAt;
     private String verifiedBy;

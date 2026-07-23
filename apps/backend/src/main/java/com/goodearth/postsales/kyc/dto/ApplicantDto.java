@@ -27,6 +27,22 @@ public class ApplicantDto {
     @Size(max = 255, message = "Full name must not exceed 255 characters")
     private String fullName;
 
+    private String salutation;
+    private String firstName;
+    private String lastName;
+
+    private String guardianRelation;
+    private String guardianSalutation;
+    private String guardianFirstName;
+    private String guardianLastName;
+    private String guardianName;
+
+    private String dateOfBirth;
+    private String occupation;
+
+    private Boolean addressSameAsPrimary;
+    private Boolean addressSameAsSecondary;
+
     @Email(message = "Email must be valid")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;

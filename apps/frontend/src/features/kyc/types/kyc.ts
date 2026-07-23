@@ -27,6 +27,7 @@ export type DocumentVersionStatus =
 
 export interface AddressDto {
   street?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
   pincode?: string;
@@ -37,8 +38,21 @@ export interface ApplicantDto {
   id?: string;
   applicantType: ApplicantType;
   fullName?: string;
+  salutation?: string;
+  firstName?: string;
+  lastName?: string;
+  guardianRelation?: string;
+  guardianSalutation?: string;
+  guardianFirstName?: string;
+  guardianLastName?: string;
+  guardianName?: string;
+  dateOfBirth?: string;
+  occupation?: string;
+  addressSameAsPrimary?: boolean;
+  addressSameAsSecondary?: boolean;
   email?: string;
   phone?: string;
+  phoneCode?: string;
   relation?: string;
   panNumber?: string;
   aadhaarNumber?: string;
@@ -76,6 +90,10 @@ export interface KycApplicationResponseDto {
   status: KycApplicationStatus;
   completionPercentage: number;
   clientNotes?: string;
+  applicationDate?: string;
+  consideringHomeLoan?: string;
+  hasCoApplicant?: string;
+  hasThirdApplicant?: string;
   submittedAt?: string;
   verifiedAt?: string;
   verifiedBy?: string;
@@ -115,6 +133,10 @@ export interface KycTimelineResponseDto {
 
 export interface KycDraftSaveRequestDto {
   bookingId: string;
+  applicationDate?: string;
+  consideringHomeLoan?: string;
+  hasCoApplicant?: string;
+  hasThirdApplicant?: string;
   primaryApplicant?: ApplicantDto;
   jointApplicants?: ApplicantDto[];
 }

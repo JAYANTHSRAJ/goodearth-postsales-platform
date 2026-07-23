@@ -31,6 +31,36 @@ public class KycApplicant extends BaseEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(name = "salutation", length = 20)
+    private String salutation;
+
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+
+    @Column(name = "guardian_relation", length = 20)
+    private String guardianRelation;
+
+    @Column(name = "guardian_salutation", length = 20)
+    private String guardianSalutation;
+
+    @Column(name = "guardian_first_name", length = 100)
+    private String guardianFirstName;
+
+    @Column(name = "guardian_last_name", length = 100)
+    private String guardianLastName;
+
+    @Column(name = "guardian_name", length = 255)
+    private String guardianName;
+
+    @Column(name = "date_of_birth", length = 50)
+    private String dateOfBirth;
+
+    @Column(name = "occupation", length = 100)
+    private String occupation;
+
     @Column(name = "email")
     private String email;
 
@@ -49,6 +79,9 @@ public class KycApplicant extends BaseEntity {
     @Column(name = "address_street", length = 500)
     private String addressStreet;
 
+    @Column(name = "address_line2", length = 500)
+    private String addressLine2;
+
     @Column(name = "address_city", length = 100)
     private String addressCity;
 
@@ -60,4 +93,10 @@ public class KycApplicant extends BaseEntity {
 
     @Column(name = "address_country", length = 100)
     private String addressCountry;
+
+    @Column(name = "address_same_as_primary")
+    private Boolean addressSameAsPrimary;
+
+    @Column(name = "address_same_as_secondary")
+    private Boolean addressSameAsSecondary;
 }

@@ -46,6 +46,18 @@ public class KycApplication extends BaseEntity {
     @Column(name = "verified_by")
     private String verifiedBy;
 
+    @Column(name = "application_date", length = 50)
+    private String applicationDate;
+
+    @Column(name = "considering_home_loan", length = 10)
+    private String consideringHomeLoan;
+
+    @Column(name = "has_co_applicant", length = 10)
+    private String hasCoApplicant;
+
+    @Column(name = "has_third_applicant", length = 10)
+    private String hasThirdApplicant;
+
     @OneToMany(mappedBy = "kycApplication", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<KycApplicant> applicants = new ArrayList<>();
 }

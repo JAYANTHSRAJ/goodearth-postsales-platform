@@ -16,6 +16,19 @@ export const useKycAutosave = (
   bookingId: string,
   initialData?: KycApplicationResponseDto | null
 ) => {
+  const [applicationDate, setApplicationDate] = useState<string>(
+    initialData?.applicationDate || new Date().toISOString().split('T')[0]
+  );
+  const [consideringHomeLoan, setConsideringHomeLoan] = useState<string>(
+    initialData?.consideringHomeLoan || 'No'
+  );
+  const [hasCoApplicant, setHasCoApplicant] = useState<string>(
+    initialData?.hasCoApplicant || (initialData?.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No')
+  );
+  const [hasThirdApplicant, setHasThirdApplicant] = useState<string>(
+    initialData?.hasThirdApplicant || (initialData?.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No')
+  );
+
   const [primaryApplicant, setPrimaryApplicant] = useState<ApplicantDto>(
     initialData?.primaryApplicant || { applicantType: 'PRIMARY', address: {} }
   );
@@ -34,6 +47,11 @@ export const useKycAutosave = (
   // Sync initialData when loaded from backend
   useEffect(() => {
     if (initialData) {
+      if (initialData.applicationDate) setApplicationDate(initialData.applicationDate);
+      if (initialData.consideringHomeLoan) setConsideringHomeLoan(initialData.consideringHomeLoan);
+      if (initialData.hasCoApplicant) setHasCoApplicant(initialData.hasCoApplicant);
+      if (initialData.hasThirdApplicant) setHasThirdApplicant(initialData.hasThirdApplicant);
+
       if (initialData.primaryApplicant) {
         setPrimaryApplicant(initialData.primaryApplicant);
       }
@@ -132,6 +150,10 @@ export const useKycAutosave = (
 
       const response = await kycService.saveDraft({
         bookingId,
+        applicationDate,
+        consideringHomeLoan,
+        hasCoApplicant,
+        hasThirdApplicant,
         primaryApplicant,
         jointApplicants,
       });
@@ -167,9 +189,17 @@ export const useKycAutosave = (
         clearTimeout(timerRef.current);
       }
     };
-  }, [primaryApplicant, jointApplicants]);
+  }, [applicationDate, consideringHomeLoan, hasCoApplicant, hasThirdApplicant, primaryApplicant, jointApplicants]);
 
   return {
+    applicationDate,
+    setApplicationDate,
+    consideringHomeLoan,
+    setConsideringHomeLoan,
+    hasCoApplicant,
+    setHasCoApplicant,
+    hasThirdApplicant,
+    setHasThirdApplicant,
     primaryApplicant,
     setPrimaryApplicant,
     jointApplicants,

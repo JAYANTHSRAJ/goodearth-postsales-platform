@@ -93,13 +93,20 @@ public class KycServiceImpl implements KycService {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Save Draft");
         }
 
+        if (dto.getApplicationDate() != null) application.setApplicationDate(dto.getApplicationDate());
+        if (dto.getConsideringHomeLoan() != null) application.setConsideringHomeLoan(dto.getConsideringHomeLoan());
+        if (dto.getHasCoApplicant() != null) application.setHasCoApplicant(dto.getHasCoApplicant());
+        if (dto.getHasThirdApplicant() != null) application.setHasThirdApplicant(dto.getHasThirdApplicant());
+
         if (dto.getPrimaryApplicant() != null) {
             updateOrCreateApplicant(application, dto.getPrimaryApplicant(), ApplicantType.PRIMARY);
         }
 
         if (dto.getJointApplicants() != null) {
             for (ApplicantDto jointDto : dto.getJointApplicants()) {
-                updateOrCreateApplicant(application, jointDto, jointDto.getApplicantType());
+                if (jointDto.getApplicantType() != null) {
+                    updateOrCreateApplicant(application, jointDto, jointDto.getApplicantType());
+                }
             }
         }
 
@@ -108,6 +115,9 @@ public class KycServiceImpl implements KycService {
         KycApplication savedApp = kycApplicationRepository.save(application);
 
         auditService.logEvent(savedApp, KycAuditEventType.DRAFT_SAVED, actorId, "CLIENT", "KYC draft saved", null);
+
+        // Sync Deal fields and milestone to Zoho CRM
+        zohoKycSyncService.syncKycDealFieldsToCrm(savedApp);
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);
@@ -458,6 +468,19 @@ public class KycServiceImpl implements KycService {
                 });
 
         if (dto.getFullName() != null) applicant.setFullName(dto.getFullName());
+        if (dto.getSalutation() != null) applicant.setSalutation(dto.getSalutation());
+        if (dto.getFirstName() != null) applicant.setFirstName(dto.getFirstName());
+        if (dto.getLastName() != null) applicant.setLastName(dto.getLastName());
+        if (dto.getGuardianRelation() != null) applicant.setGuardianRelation(dto.getGuardianRelation());
+        if (dto.getGuardianSalutation() != null) applicant.setGuardianSalutation(dto.getGuardianSalutation());
+        if (dto.getGuardianFirstName() != null) applicant.setGuardianFirstName(dto.getGuardianFirstName());
+        if (dto.getGuardianLastName() != null) applicant.setGuardianLastName(dto.getGuardianLastName());
+        if (dto.getGuardianName() != null) applicant.setGuardianName(dto.getGuardianName());
+        if (dto.getDateOfBirth() != null) applicant.setDateOfBirth(dto.getDateOfBirth());
+        if (dto.getOccupation() != null) applicant.setOccupation(dto.getOccupation());
+        if (dto.getAddressSameAsPrimary() != null) applicant.setAddressSameAsPrimary(dto.getAddressSameAsPrimary());
+        if (dto.getAddressSameAsSecondary() != null) applicant.setAddressSameAsSecondary(dto.getAddressSameAsSecondary());
+
         if (dto.getEmail() != null) applicant.setEmail(dto.getEmail());
         if (dto.getPhone() != null) applicant.setPhone(dto.getPhone());
         if (dto.getRelation() != null) applicant.setRelation(dto.getRelation());
@@ -465,11 +488,12 @@ public class KycServiceImpl implements KycService {
         if (dto.getAadhaarNumber() != null) applicant.setAadhaarNumber(dto.getAadhaarNumber());
 
         if (dto.getAddress() != null) {
-            applicant.setAddressStreet(dto.getAddress().getStreet());
-            applicant.setAddressCity(dto.getAddress().getCity());
-            applicant.setAddressState(dto.getAddress().getState());
-            applicant.setAddressPincode(dto.getAddress().getPincode());
-            applicant.setAddressCountry(dto.getAddress().getCountry());
+            if (dto.getAddress().getStreet() != null) applicant.setAddressStreet(dto.getAddress().getStreet());
+            if (dto.getAddress().getAddressLine2() != null) applicant.setAddressLine2(dto.getAddress().getAddressLine2());
+            if (dto.getAddress().getCity() != null) applicant.setAddressCity(dto.getAddress().getCity());
+            if (dto.getAddress().getState() != null) applicant.setAddressState(dto.getAddress().getState());
+            if (dto.getAddress().getPincode() != null) applicant.setAddressPincode(dto.getAddress().getPincode());
+            if (dto.getAddress().getCountry() != null) applicant.setAddressCountry(dto.getAddress().getCountry());
         }
 
         kycApplicantRepository.save(applicant);

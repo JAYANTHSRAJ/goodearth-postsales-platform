@@ -18,6 +18,11 @@ public class KycDraftSaveRequestDto {
     @NotBlank(message = "Booking ID is required")
     private String bookingId;
 
+    private String applicationDate;
+    private String consideringHomeLoan;
+    private String hasCoApplicant;
+    private String hasThirdApplicant;
+
     @Valid
     private ApplicantDto primaryApplicant;
 
