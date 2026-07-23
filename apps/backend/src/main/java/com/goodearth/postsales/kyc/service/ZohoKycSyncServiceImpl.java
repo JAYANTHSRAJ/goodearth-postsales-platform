@@ -106,45 +106,99 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
         try {
             Map<String, Object> dealFields = new HashMap<>();
-            dealFields.put("KYC_Status", application.getStatus() != null ? application.getStatus().name() : "DRAFT");
-            dealFields.put("KYC_Completion_Percentage", application.getCompletionPercentage());
+            
             if (application.getApplicationDate() != null) dealFields.put("Application_Date", application.getApplicationDate());
-            if (application.getConsideringHomeLoan() != null) dealFields.put("Considering_Home_Loan", application.getConsideringHomeLoan());
+            if (application.getConsideringHomeLoan() != null) dealFields.put("Are_you_considering_a_home_loan", application.getConsideringHomeLoan());
+            if (application.getHasCoApplicant() != null) dealFields.put("Do_you_have_coapplicant", application.getHasCoApplicant());
+            if (application.getHasThirdApplicant() != null) dealFields.put("Do_you_have_third_applicant", application.getHasThirdApplicant());
 
             if (application.getApplicants() != null) {
                 for (com.goodearth.postsales.kyc.entity.KycApplicant app : application.getApplicants()) {
                     if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.PRIMARY) {
-                        if (app.getFullName() != null) dealFields.put("Applicant_Name", app.getFullName());
-                        if (app.getEmail() != null) dealFields.put("Applicant_Email", app.getEmail());
-                        if (app.getPhone() != null) dealFields.put("Applicant_Phone", app.getPhone());
-                        if (app.getPanNumber() != null) dealFields.put("Applicant_PAN", app.getPanNumber());
-                        if (app.getAadhaarNumber() != null) dealFields.put("Applicant_Aadhaar", app.getAadhaarNumber());
+                        if (app.getSalutation() != null) dealFields.put("Title_A", app.getSalutation());
+                        if (app.getFirstName() != null) dealFields.put("First_Name_A", app.getFirstName());
+                        if (app.getLastName() != null) dealFields.put("Last_Name_A", app.getLastName());
+                        if (app.getFullName() != null) {
+                            dealFields.put("First_Applicant", app.getFullName());
+                            dealFields.put("Applicant_Name", app.getFullName());
+                        }
+                        if (app.getEmail() != null) dealFields.put("Email", app.getEmail());
+                        if (app.getPhone() != null) {
+                            dealFields.put("Applicant_Phone_number", app.getPhone());
+                            dealFields.put("Phone", app.getPhone());
+                        }
+                        if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_A", app.getGuardianRelation());
+                        if (app.getGuardianSalutation() != null) dealFields.put("Applicant_Title", app.getGuardianSalutation());
+                        if (app.getGuardianFirstName() != null) dealFields.put("Applicant_Spouse_Father_First_Name", app.getGuardianFirstName());
+                        if (app.getGuardianLastName() != null) dealFields.put("Applicant_Spouse_Father_Last_Name", app.getGuardianLastName());
+                        if (app.getDateOfBirth() != null) dealFields.put("Applicant_Date_of_Birth", app.getDateOfBirth());
                         if (app.getOccupation() != null) dealFields.put("Applicant_Occupation", app.getOccupation());
-                        
-                        String fullAddr = buildFullAddress(app);
-                        if (!fullAddr.isEmpty()) dealFields.put("Applicant_Address", fullAddr);
+                        if (app.getPanNumber() != null) dealFields.put("Applicant_PAN", app.getPanNumber().toUpperCase());
+                        if (app.getAadhaarNumber() != null) {
+                            dealFields.put("New_Applicant_Aadhar", app.getAadhaarNumber());
+                            dealFields.put("Applicant_Aadhar", app.getAadhaarNumber());
+                        }
+                        if (app.getAddressStreet() != null) dealFields.put("Street_Address", app.getAddressStreet());
+                        if (app.getAddressCity() != null) dealFields.put("City", app.getAddressCity());
+                        if (app.getAddressState() != null) dealFields.put("State_Region_Province", app.getAddressState());
+                        if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_Code_2", app.getAddressPincode());
+                        if (app.getAddressCountry() != null) dealFields.put("Country", app.getAddressCountry());
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_1) {
-                        if (app.getFullName() != null) dealFields.put("Co_Applicant_Name", app.getFullName());
-                        if (app.getEmail() != null) dealFields.put("Co_Applicant_Email", app.getEmail());
-                        if (app.getPhone() != null) dealFields.put("Co_Applicant_Phone", app.getPhone());
-                        if (app.getPanNumber() != null) dealFields.put("Co_Applicant_PAN", app.getPanNumber());
-                        if (app.getAadhaarNumber() != null) dealFields.put("Co_Applicant_Aadhaar", app.getAadhaarNumber());
+                        if (app.getSalutation() != null) dealFields.put("Title_C", app.getSalutation());
+                        if (app.getFirstName() != null) dealFields.put("First_Name_C", app.getFirstName());
+                        if (app.getLastName() != null) dealFields.put("Last_Name_C", app.getLastName());
+                        if (app.getFullName() != null) {
+                            dealFields.put("Co_applicant_Name", app.getFullName());
+                            dealFields.put("Second_Applicant", app.getFullName());
+                        }
+                        if (app.getEmail() != null) dealFields.put("Co_applicant_Email", app.getEmail());
+                        if (app.getPhone() != null) dealFields.put("Co_applicant_Phone", app.getPhone());
+                        if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_C", app.getGuardianRelation());
+                        if (app.getGuardianFirstName() != null) dealFields.put("Co_applicant_Father_First_Name", app.getGuardianFirstName());
+                        if (app.getGuardianLastName() != null) dealFields.put("Co_applicant_Father_Last_Name", app.getGuardianLastName());
+                        if (app.getDateOfBirth() != null) dealFields.put("Co_applicant_DOB", app.getDateOfBirth());
                         if (app.getOccupation() != null) dealFields.put("Co_Applicant_Occupation", app.getOccupation());
-
-                        String fullAddr = buildFullAddress(app);
-                        if (!fullAddr.isEmpty()) dealFields.put("Co_Applicant_Address", fullAddr);
+                        if (app.getPanNumber() != null) dealFields.put("Co_applicant_PAN_Number", app.getPanNumber().toUpperCase());
+                        if (app.getAadhaarNumber() != null) {
+                            dealFields.put("New_CoApplicant_Aadhar", app.getAadhaarNumber());
+                            dealFields.put("CoApplicant_Aadhar", app.getAadhaarNumber());
+                        }
+                        if (app.getAddressSameAsPrimary() != null) {
+                            dealFields.put("Is_it_the_same_address_as_the_first_applicant_s", app.getAddressSameAsPrimary() ? "Yes" : "No");
+                        }
+                        if (app.getAddressStreet() != null) dealFields.put("Street_Address_C", app.getAddressStreet());
+                        if (app.getAddressCity() != null) dealFields.put("City_C", app.getAddressCity());
+                        if (app.getAddressState() != null) dealFields.put("State_C", app.getAddressState());
+                        if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_code_C", app.getAddressPincode());
+                        if (app.getAddressCountry() != null) dealFields.put("Country_C", app.getAddressCountry());
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_2) {
-                        if (app.getFullName() != null) dealFields.put("Third_Applicant_Name", app.getFullName());
+                        if (app.getSalutation() != null) dealFields.put("Title_S", app.getSalutation());
+                        if (app.getFirstName() != null) dealFields.put("First_Name_S", app.getFirstName());
+                        if (app.getLastName() != null) dealFields.put("Last_Name_S", app.getLastName());
+                        if (app.getFullName() != null) dealFields.put("Third_Applicant", app.getFullName());
                         if (app.getEmail() != null) dealFields.put("Third_Applicant_Email", app.getEmail());
                         if (app.getPhone() != null) dealFields.put("Third_Applicant_Phone", app.getPhone());
-                        if (app.getPanNumber() != null) dealFields.put("Third_Applicant_PAN", app.getPanNumber());
-                        if (app.getAadhaarNumber() != null) dealFields.put("Third_Applicant_Aadhaar", app.getAadhaarNumber());
+                        if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_S", app.getGuardianRelation());
+                        if (app.getDateOfBirth() != null) dealFields.put("Third_Applicant_Date_of_Birth", app.getDateOfBirth());
                         if (app.getOccupation() != null) dealFields.put("Third_Applicant_Occupation", app.getOccupation());
-
-                        String fullAddr = buildFullAddress(app);
-                        if (!fullAddr.isEmpty()) dealFields.put("Third_Applicant_Address", fullAddr);
+                        if (app.getPanNumber() != null) dealFields.put("Third_Applicant_PAN", app.getPanNumber().toUpperCase());
+                        if (app.getAadhaarNumber() != null) {
+                            dealFields.put("New_Third_Applicant_Aadhar", app.getAadhaarNumber());
+                            dealFields.put("Third_Applicant_Aadhar", app.getAadhaarNumber());
+                        }
+                        if (app.getAddressSameAsPrimary() != null) {
+                            dealFields.put("Is_it_the_same_address_as_the_1st_applicant_s", app.getAddressSameAsPrimary() ? "Yes" : "No");
+                        }
+                        if (app.getAddressSameAsSecondary() != null) {
+                            dealFields.put("Is_it_the_same_address_as_the_second_applicant_s", app.getAddressSameAsSecondary() ? "Yes" : "No");
+                        }
+                        if (app.getAddressStreet() != null) dealFields.put("Street_Address_T", app.getAddressStreet());
+                        if (app.getAddressCity() != null) dealFields.put("City_T", app.getAddressCity());
+                        if (app.getAddressState() != null) dealFields.put("State_T", app.getAddressState());
+                        if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_Code_T", app.getAddressPincode());
+                        if (app.getAddressCountry() != null) dealFields.put("Country_T", app.getAddressCountry());
                     }
                 }
             }
@@ -155,10 +209,11 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             String url = properties.getCrmApiUrl() + "/Deals/" + application.getBookingId();
 
             try {
-                apiClient.put(url, requestBody, Map.class);
-                log.info("Successfully updated Zoho CRM Deal fields for Booking ID: {}", application.getBookingId());
+                log.info("Sending PUT request to Zoho CRM URL: {} with payload: {}", url, requestBody);
+                Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
+                log.info("Zoho CRM Deal update response for Booking ID {}: {}", application.getBookingId(), response);
             } catch (Exception apiEx) {
-                log.warn("Zoho CRM API PUT /Deals exception (resilient fallback): {}", apiEx.getMessage());
+                log.warn("Zoho CRM API PUT /Deals exception for Booking ID {}: {}", application.getBookingId(), apiEx.getMessage());
             }
 
             return true;
