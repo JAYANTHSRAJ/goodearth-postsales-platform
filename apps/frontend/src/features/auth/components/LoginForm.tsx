@@ -52,16 +52,26 @@ export const LoginForm: React.FC = () => {
         }
       };
 
+      const mappedRole = roleMap(response.user.role);
       const mappedUser = {
         id: response.user.id,
         name: response.user.fullName,
         email: response.user.email,
-        role: roleMap(response.user.role),
+        role: mappedRole,
         onboardingStage: response.user.onboardingStage,
       };
 
       login(response.accessToken, response.refreshToken, mappedUser);
-      navigate('/');
+
+      // Route users after login based on role & KYC onboarding state
+      if (mappedRole === 'buyer') {
+        const isCompleted = response.user.onboardingStage === 'COMPLETED';
+        navigate(isCompleted ? '/my-home' : '/client/kyc');
+      } else if (mappedRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid email or password.');
     } finally {
@@ -158,3 +168,5 @@ export const LoginForm: React.FC = () => {
     </form>
   );
 };
+
+export default LoginForm;

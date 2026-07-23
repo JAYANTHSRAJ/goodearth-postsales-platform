@@ -11,7 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
   const { isAuthenticated, user } = useAuthStore();
   const location = useLocation();
 
-  // Handle loading or uninitialized state (mock state is instant, but hooks into framework design)
+  // Handle loading or uninitialized state
   if (isAuthenticated === undefined) {
     return <LoadingScreen />;
   }
@@ -26,16 +26,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Onboarding Route Guard
+  // KYC / Onboarding Route Guard for Buyers
   if (user && user.role === 'buyer') {
-    const isCompleted = !user.onboardingStage || user.onboardingStage === 'COMPLETED';
-    if (!isCompleted && location.pathname !== '/onboarding') {
-      return <Navigate to="/onboarding" replace />;
-    }
-    if (isCompleted && location.pathname === '/onboarding') {
-      return <Navigate to="/" replace />;
+    const isCompleted = user.onboardingStage === 'COMPLETED';
+    const isKycRoute = location.pathname.startsWith('/client/kyc');
+
+    // If onboarding is incomplete and user is not currently inside KYC portal, redirect to KYC
+    if (!isCompleted && !isKycRoute) {
+      return <Navigate to="/client/kyc" replace />;
     }
   }
 
   return <Outlet />;
 };
+
+export default ProtectedRoute;

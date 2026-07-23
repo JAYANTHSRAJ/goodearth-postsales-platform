@@ -19,6 +19,7 @@ import {
   Settings,
   Shield,
   X,
+  FileCheck,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -35,6 +36,7 @@ interface NavItem {
 const clientNavItems: NavItem[] = [
   { name: 'Profile', path: '/profile', icon: User, requiresUnit: false },
   { name: 'My Home', path: '/my-home', icon: Home, requiresUnit: false },
+  { name: 'KYC Portal', path: '/client/kyc', icon: FileCheck, requiresUnit: false },
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiresUnit: true },
   { name: 'Design Studio', path: '/design-studio', icon: Highlighter, requiresUnit: true },
   { name: 'Construction Updates', path: '/construction-updates', icon: Hammer, requiresUnit: true },
@@ -154,3 +156,5 @@ export const Sidebar: React.FC = () => {
     </>
   );
 };
+
+export default Sidebar;
