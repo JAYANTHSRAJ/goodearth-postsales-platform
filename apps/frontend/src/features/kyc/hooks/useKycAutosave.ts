@@ -43,10 +43,21 @@ export const useKycAutosave = (
 
   const isInitialMount = useRef<boolean>(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const statusRef = useRef<string | undefined>(initialData?.status);
+
+  // Keep statusRef updated synchronously whenever initialData changes
+  useEffect(() => {
+    if (initialData?.status) {
+      statusRef.current = initialData.status;
+    }
+  }, [initialData?.status]);
 
   // Sync initialData when loaded from backend
   useEffect(() => {
     if (initialData) {
+      if (initialData.status) {
+        statusRef.current = initialData.status;
+      }
       if (initialData.applicationDate) setApplicationDate(initialData.applicationDate);
       if (initialData.consideringHomeLoan) setConsideringHomeLoan(initialData.consideringHomeLoan);
       if (initialData.hasCoApplicant) setHasCoApplicant(initialData.hasCoApplicant);
@@ -141,7 +152,9 @@ export const useKycAutosave = (
 
   // Execute Save Draft
   const saveNow = async (): Promise<boolean> => {
-    if (initialData?.status && initialData.status !== 'DRAFT' && initialData.status !== 'ACTION_REQUIRED') {
+    const currentStatus = statusRef.current || initialData?.status;
+    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED') {
+      console.warn(`[KYC_AUTOSAVE] Skipping saveDraft: Application status is '${currentStatus}'`);
       return false;
     }
 
@@ -179,8 +192,8 @@ export const useKycAutosave = (
       return;
     }
 
-    // Disable autosave if status is SUBMITTED, UNDER_REVIEW, APPROVED, or REJECTED
-    if (initialData?.status && initialData.status !== 'DRAFT' && initialData.status !== 'ACTION_REQUIRED') {
+    const currentStatus = statusRef.current || initialData?.status;
+    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED') {
       return;
     }
 
@@ -198,7 +211,7 @@ export const useKycAutosave = (
         clearTimeout(timerRef.current);
       }
     };
-  }, [applicationDate, consideringHomeLoan, hasCoApplicant, hasThirdApplicant, primaryApplicant, jointApplicants, initialData?.status]);
+  }, [applicationDate, consideringHomeLoan, hasCoApplicant, hasThirdApplicant, primaryApplicant, jointApplicants]);
 
   return {
     applicationDate,
