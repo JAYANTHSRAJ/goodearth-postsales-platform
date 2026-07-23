@@ -137,6 +137,36 @@ export const KycDocumentsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Third Applicant Document Slots (Conditional) */}
+      {kycData?.hasCoApplicant === 'Yes' && kycData?.hasThirdApplicant === 'Yes' && (
+        <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Third Applicant Documents</h3>
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+              Third Applicant Active
+            </span>
+          </div>
+
+          {documentSlots.filter((s) => s.applicantType === 'JOINT_2').length > 0 ? (
+            documentSlots
+              .filter((s) => s.applicantType === 'JOINT_2')
+              .map((slot) => (
+                <KycDocumentSlotCard
+                  key={slot.documentId}
+                  slot={slot}
+                  kycApplicationId={kycData?.kycApplicationId || ''}
+                  onRefresh={loadData}
+                  canEdit={canEdit}
+                />
+              ))
+          ) : (
+            <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
+              <p className="text-sm text-slate-500">No third applicant document slots provisioned.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       <KycNavigation
         onBack={() => navigate('/client/kyc/applicants')}
         onNext={() => navigate('/client/kyc/review')}

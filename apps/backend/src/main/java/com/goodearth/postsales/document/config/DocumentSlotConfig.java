@@ -115,7 +115,7 @@ public class DocumentSlotConfig {
                     .documentType(DocumentType.PAN_CARD)
                     .applicantType(ApplicantType.JOINT_2)
                     .required(true)
-                    .maxSizeBytes(2 * 1024 * 1024L) // 2MB
+                    .maxSizeBytes(5 * 1024 * 1024L) // 5MB
                     .allowedMimeTypes(DEFAULT_ALLOWED_MIME_TYPES)
                     .allowMultiple(false)
                     .build()),
