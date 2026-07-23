@@ -9,11 +9,16 @@ import {
   KycSubmitRequestDto,
   DocumentUploadResponseDto,
   DocumentDownloadResponseDto,
+  KycValidationSummaryResponseDto,
 } from '../types/kyc';
 
 export const kycService = {
   getKycByBooking: (bookingId: string): Promise<KycApplicationResponseDto> => {
     return api.get<KycApplicationResponseDto>(`/kyc/booking/${bookingId}`);
+  },
+
+  validateKyc: (bookingId: string): Promise<KycValidationSummaryResponseDto> => {
+    return api.get<KycValidationSummaryResponseDto>(`/kyc/booking/${bookingId}/validate`);
   },
 
   getKycProgress: (bookingId: string): Promise<KycProgressResponseDto> => {

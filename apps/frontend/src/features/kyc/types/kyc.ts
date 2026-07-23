@@ -178,3 +178,24 @@ export interface DocumentDownloadResponseDto {
   downloadUrl: string;
   expiresAt: string;
 }
+
+export interface KycMissingItemDto {
+  section: string;
+  key: string;
+  requirement: string;
+  applicantType?: ApplicantType;
+}
+
+export interface KycValidationSummaryResponseDto {
+  bookingId: string;
+  overallValid: boolean;
+  primaryApplicantComplete: boolean;
+  primaryApplicantMissingFields: string[];
+  coApplicantComplete: boolean;
+  coApplicantMissingFields: string[];
+  thirdApplicantComplete: boolean;
+  thirdApplicantMissingFields: string[];
+  documentsComplete: boolean;
+  documentsMissingSlots: string[];
+  missingItems: KycMissingItemDto[];
+}

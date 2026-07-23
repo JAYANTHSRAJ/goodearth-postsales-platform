@@ -116,6 +116,18 @@ public class KycController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
+    @GetMapping({"/booking/{bookingId}/validate", "/{bookingId}/validate"})
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Validate complete KYC application", description = "Performs non-mutating validation of PII, addresses, applicant combinations, and mandatory document uploads")
+    public ResponseEntity<ApiResponse<com.goodearth.postsales.kyc.dto.KycValidationSummaryResponseDto>> validateKyc(@PathVariable String bookingId) {
+        long startTime = System.currentTimeMillis();
+        com.goodearth.postsales.kyc.dto.KycValidationSummaryResponseDto response = kycService.validateKyc(bookingId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: GET /api/v1/kyc/booking/{}/validate, Execution Time: {}ms, Overall Valid: {}", bookingId, duration, response.isOverallValid());
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
     @PostMapping("/submit")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Submit KYC application for review", description = "Finalizes draft and transitions state to SUBMITTED after verifying mandatory uploads")

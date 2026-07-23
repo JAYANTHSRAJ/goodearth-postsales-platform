@@ -19,7 +19,9 @@ import com.goodearth.postsales.kyc.dto.KycDashboardItemDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardMetricsDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardSummaryResponseDto;
 import com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto;
+import com.goodearth.postsales.kyc.dto.KycMissingItemDto;
 import com.goodearth.postsales.kyc.dto.KycProgressResponseDto;
+import com.goodearth.postsales.kyc.dto.KycValidationSummaryResponseDto;
 import com.goodearth.postsales.kyc.dto.KycRejectRequestDto;
 import com.goodearth.postsales.kyc.dto.KycRequestChangesRequestDto;
 import com.goodearth.postsales.kyc.dto.KycReviewStartRequestDto;
@@ -633,6 +635,143 @@ public class KycServiceImpl implements KycService {
                     newApp.setCompletionPercentage(0);
                     return kycApplicationRepository.save(newApp);
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public KycValidationSummaryResponseDto validateKyc(String bookingId) {
+        KycApplication application = getOrCreateKycApplication(bookingId);
+        List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
+
+        KycValidationSummaryResponseDto summary = new KycValidationSummaryResponseDto();
+        summary.setBookingId(bookingId);
+
+        // 1. Applicant Combination check
+        if ("Yes".equalsIgnoreCase(application.getHasThirdApplicant()) && !"Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
+            summary.getMissingItems().add(KycMissingItemDto.builder()
+                    .section("APPLICATION")
+                    .key("hasThirdApplicant")
+                    .requirement("Third Applicant cannot be enabled without enabling Co-Applicant")
+                    .build());
+        }
+
+        // 2. Primary Applicant PII & Address validation
+        KycApplicant primaryApp = application.getApplicants() != null ? application.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .findFirst()
+                .orElse(null) : null;
+
+        validateApplicantDetails(primaryApp, ApplicantType.PRIMARY, "PRIMARY_APPLICANT", summary.getPrimaryApplicantMissingFields(), summary.getMissingItems());
+        summary.setPrimaryApplicantComplete(summary.getPrimaryApplicantMissingFields().isEmpty());
+
+        // 3. Co-Applicant PII & Address validation
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
+            KycApplicant coApp = application.getApplicants() != null ? application.getApplicants().stream()
+                    .filter(a -> a.getApplicantType() == ApplicantType.JOINT_1)
+                    .findFirst()
+                    .orElse(null) : null;
+
+            validateApplicantDetails(coApp, ApplicantType.JOINT_1, "CO_APPLICANT", summary.getCoApplicantMissingFields(), summary.getMissingItems());
+            summary.setCoApplicantComplete(summary.getCoApplicantMissingFields().isEmpty());
+        } else {
+            summary.setCoApplicantComplete(true);
+        }
+
+        // 4. Third Applicant PII & Address validation
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant()) && "Yes".equalsIgnoreCase(application.getHasThirdApplicant())) {
+            KycApplicant thirdApp = application.getApplicants() != null ? application.getApplicants().stream()
+                    .filter(a -> a.getApplicantType() == ApplicantType.JOINT_2)
+                    .findFirst()
+                    .orElse(null) : null;
+
+            validateApplicantDetails(thirdApp, ApplicantType.JOINT_2, "THIRD_APPLICANT", summary.getThirdApplicantMissingFields(), summary.getMissingItems());
+            summary.setThirdApplicantComplete(summary.getThirdApplicantMissingFields().isEmpty());
+        } else {
+            summary.setThirdApplicantComplete(true);
+        }
+
+        // 5. Mandatory Documents Validation (Aadhaar, PAN, Address Proof mandatory; Voter ID optional)
+        validateRequiredDocumentSlot(documents, ApplicantType.PRIMARY, DocumentType.AADHAAR_CARD, "Primary Applicant Aadhaar Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+        validateRequiredDocumentSlot(documents, ApplicantType.PRIMARY, DocumentType.PAN_CARD, "Primary Applicant PAN Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+        validateRequiredDocumentSlot(documents, ApplicantType.PRIMARY, DocumentType.ADDRESS_PROOF, "Primary Applicant Address Proof", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_1, DocumentType.AADHAAR_CARD, "Co-Applicant Aadhaar Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_1, DocumentType.PAN_CARD, "Co-Applicant PAN Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_1, DocumentType.ADDRESS_PROOF, "Co-Applicant Address Proof", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+        }
+
+        if ("Yes".equalsIgnoreCase(application.getHasCoApplicant()) && "Yes".equalsIgnoreCase(application.getHasThirdApplicant())) {
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_2, DocumentType.AADHAAR_CARD, "Third Applicant Aadhaar Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_2, DocumentType.PAN_CARD, "Third Applicant PAN Card", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+            validateRequiredDocumentSlot(documents, ApplicantType.JOINT_2, DocumentType.ADDRESS_PROOF, "Third Applicant Address Proof", summary.getDocumentsMissingSlots(), summary.getMissingItems());
+        }
+
+        summary.setDocumentsComplete(summary.getDocumentsMissingSlots().isEmpty());
+        summary.setOverallValid(summary.isPrimaryApplicantComplete() && summary.isCoApplicantComplete() && summary.isThirdApplicantComplete() && summary.isDocumentsComplete() && summary.getMissingItems().isEmpty());
+
+        return summary;
+    }
+
+    private void validateApplicantDetails(KycApplicant applicant, ApplicantType type, String sectionName, List<String> missingFields, List<KycMissingItemDto> missingItems) {
+        if (applicant == null) {
+            missingFields.add("Applicant Record");
+            missingItems.add(KycMissingItemDto.builder()
+                    .section(sectionName)
+                    .key("applicant")
+                    .requirement(type + " Applicant information record has not been created")
+                    .applicantType(type)
+                    .build());
+            return;
+        }
+
+        checkField(applicant.getSalutation(), "salutation", type + " Applicant Title/Salutation", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getFirstName(), "firstName", type + " Applicant First Name", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getLastName(), "lastName", type + " Applicant Last Name", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getEmail(), "email", type + " Applicant Email", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getPhone(), "phone", type + " Applicant Phone Number", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getDateOfBirth(), "dateOfBirth", type + " Applicant Date of Birth", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getOccupation(), "occupation", type + " Applicant Occupation", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getPanNumber(), "panNumber", type + " Applicant PAN Number", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getAadhaarNumber(), "aadhaarNumber", type + " Applicant Aadhaar Number", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getGuardianRelation(), "guardianRelation", type + " Applicant S/o, D/o, W/o Relation", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getGuardianName() != null ? applicant.getGuardianName() : applicant.getGuardianFirstName(), "guardianName", type + " Applicant Father/Spouse Name", sectionName, type, missingFields, missingItems);
+
+        // Address
+        checkField(applicant.getAddressStreet(), "addressStreet", type + " Applicant Street Address", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getAddressCity(), "addressCity", type + " Applicant Address City", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getAddressState(), "addressState", type + " Applicant Address State", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getAddressPincode(), "addressPincode", type + " Applicant Address Pincode", sectionName, type, missingFields, missingItems);
+        checkField(applicant.getAddressCountry(), "addressCountry", type + " Applicant Address Country", sectionName, type, missingFields, missingItems);
+    }
+
+    private void checkField(String val, String key, String label, String section, ApplicantType type, List<String> missingFields, List<KycMissingItemDto> missingItems) {
+        if (val == null || val.trim().isEmpty()) {
+            missingFields.add(key);
+            missingItems.add(KycMissingItemDto.builder()
+                    .section(section)
+                    .key(key)
+                    .requirement(label + " is required")
+                    .applicantType(type)
+                    .build());
+        }
+    }
+
+    private void validateRequiredDocumentSlot(List<Document> documents, ApplicantType applicantType, DocumentType docType, String label, List<String> missingSlots, List<KycMissingItemDto> missingItems) {
+        boolean hasUploadedVersion = documents.stream()
+                .filter(d -> d.getApplicantType() == applicantType && d.getDocumentType() == docType)
+                .anyMatch(d -> d.getVersions() != null && d.getVersions().stream().anyMatch(v -> Boolean.TRUE.equals(v.getIsCurrent())));
+
+        if (!hasUploadedVersion) {
+            String slotKey = applicantType + "_" + docType;
+            missingSlots.add(slotKey);
+            missingItems.add(KycMissingItemDto.builder()
+                    .section("DOCUMENTS")
+                    .key(slotKey)
+                    .requirement(label + " document upload is required")
+                    .applicantType(applicantType)
+                    .build());
+        }
     }
 
     @Override

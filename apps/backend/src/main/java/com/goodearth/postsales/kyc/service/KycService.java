@@ -14,6 +14,8 @@ import com.goodearth.postsales.kyc.dto.KycSubmitRequestDto;
 import com.goodearth.postsales.kyc.dto.KycTimelineResponseDto;
 import com.goodearth.postsales.kyc.entity.KycApplicationStatus;
 
+import com.goodearth.postsales.kyc.dto.KycValidationSummaryResponseDto;
+
 public interface KycService {
 
     KycApplicationResponseDto saveDraft(KycDraftSaveRequestDto dto, String actorId);
@@ -23,6 +25,8 @@ public interface KycService {
     KycAutosaveResponseDto autosaveField(KycAutosaveRequestDto dto, String actorId);
 
     KycApplicationResponseDto getKycApplicationByBooking(String bookingId);
+
+    KycValidationSummaryResponseDto validateKyc(String bookingId);
 
     KycApplicationResponseDto submitKyc(KycSubmitRequestDto dto, String actorId);
 
