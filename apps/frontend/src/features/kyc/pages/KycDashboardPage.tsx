@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import KycDashboard from '../components/KycDashboard';
 import KycStepper from '../components/KycStepper';
 import KycErrorState from '../components/KycErrorState';
 import kycService from '../services/kyc.service';
 import { KycApplicationResponseDto, KycTimelineResponseDto } from '../types/kyc';
+import { useUnitStore } from '../../../store/unitStore';
 
 export const KycDashboardPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const { activeUnit } = useUnitStore();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [kycData, setKycData] = useState<KycApplicationResponseDto | null>(null);
   const [timeline, setTimeline] = useState<KycTimelineResponseDto | null>(null);
 
-  const bookingId = 'BKG-2026-101'; // Uses active booking / context
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
 
   const fetchKycData = async () => {
     setLoading(true);

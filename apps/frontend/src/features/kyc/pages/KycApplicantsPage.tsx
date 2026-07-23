@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Users, UserPlus, ShieldCheck, Sparkles, Calendar, CheckCircle2, Landmark } from 'lucide-react';
 import KycStepper from '../components/KycStepper';
 import KycNavigation from '../components/KycNavigation';
@@ -9,13 +9,16 @@ import AutosaveIndicator from '../components/forms/AutosaveIndicator';
 import useKycAutosave from '../hooks/useKycAutosave';
 import kycService from '../services/kyc.service';
 import { KycApplicationResponseDto } from '../types/kyc';
+import { useUnitStore } from '../../../store/unitStore';
 
 export const KycApplicantsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { activeUnit } = useUnitStore();
   const [loading, setLoading] = useState<boolean>(true);
   const [initialData, setInitialData] = useState<KycApplicationResponseDto | null>(null);
 
-  const bookingId = 'BKG-2026-101';
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
 
   useEffect(() => {
     kycService.getKycByBooking(bookingId)

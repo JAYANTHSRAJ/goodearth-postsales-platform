@@ -53,17 +53,17 @@ export const ClientProfilePage: React.FC = () => {
   // Profile Form state
   const [personalForm, setPersonalForm] = useState({
     fullName: user?.name || '',
-    phone: '+91 98765 43210',
-    altEmail: 'arjun.alternate@example.com',
-    dob: '1988-06-15',
-    gender: 'Male',
-    nationality: 'Indian',
-    panNumber: 'ABCDE1234F',
-    address: 'No. 45, GoodEarth Malhar Estate, Kengeri',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    country: 'India',
-    postalCode: '560060',
+    phone: '',
+    altEmail: '',
+    dob: '',
+    gender: '',
+    nationality: '',
+    panNumber: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+    postalCode: '',
   });
 
   // Queries
