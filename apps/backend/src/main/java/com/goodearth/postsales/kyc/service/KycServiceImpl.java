@@ -86,14 +86,7 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional
     public KycApplicationResponseDto saveDraft(KycDraftSaveRequestDto dto, String actorId) {
-        KycApplication application = kycApplicationRepository.findByBookingId(dto.getBookingId())
-                .orElseGet(() -> {
-                    KycApplication newApp = new KycApplication();
-                    newApp.setBookingId(dto.getBookingId());
-                    newApp.setStatus(KycApplicationStatus.DRAFT);
-                    newApp.setCompletionPercentage(0);
-                    return kycApplicationRepository.save(newApp);
-                });
+        KycApplication application = getOrCreateKycApplication(dto.getBookingId());
 
         // State Machine Check: Cannot save draft if under review, approved, or rejected
         if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
@@ -141,13 +134,23 @@ public class KycServiceImpl implements KycService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public KycApplicationResponseDto getKycApplicationByBooking(String bookingId) {
-        KycApplication application = kycApplicationRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new KycNotFoundException("Booking ID", bookingId));
+        KycApplication application = getOrCreateKycApplication(bookingId);
 
         List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
         return kycApplicationMapper.toResponseDto(application, documents);
+    }
+
+    private KycApplication getOrCreateKycApplication(String bookingId) {
+        return kycApplicationRepository.findByBookingId(bookingId)
+                .orElseGet(() -> {
+                    KycApplication newApp = new KycApplication();
+                    newApp.setBookingId(bookingId);
+                    newApp.setStatus(KycApplicationStatus.DRAFT);
+                    newApp.setCompletionPercentage(0);
+                    return kycApplicationRepository.save(newApp);
+                });
     }
 
     @Override
