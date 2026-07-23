@@ -7,10 +7,12 @@ interface KycDocumentDropzoneProps {
   onCancel?: () => void;
   onRetry?: () => void;
   error?: string | null;
+  maxSizeBytes?: number;
+  allowedTypes?: string[];
 }
 
-const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const DEFAULT_ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+const DEFAULT_MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB default
 
 export const KycDocumentDropzone: React.FC<KycDocumentDropzoneProps> = ({
   onFileSelect,
@@ -19,19 +21,23 @@ export const KycDocumentDropzone: React.FC<KycDocumentDropzoneProps> = ({
   onCancel,
   onRetry,
   error,
+  maxSizeBytes = DEFAULT_MAX_SIZE_BYTES,
+  allowedTypes = DEFAULT_ALLOWED_TYPES,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const maxMbLabel = `${Math.round(maxSizeBytes / (1024 * 1024))}MB`;
+
   const validateAndPassFile = (file: File) => {
     setLocalError(null);
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setLocalError('Invalid file type. Allowed: PDF, JPEG, PNG, WEBP');
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setLocalError('Invalid file type. Allowed: PDF, JPG, PNG');
       return;
     }
-    if (file.size > MAX_SIZE_BYTES) {
-      setLocalError('File size exceeds maximum permitted limit of 10MB.');
+    if (file.size > maxSizeBytes) {
+      setLocalError(`File size exceeds maximum permitted limit of ${maxMbLabel}.`);
       return;
     }
     onFileSelect(file);
@@ -107,7 +113,7 @@ export const KycDocumentDropzone: React.FC<KycDocumentDropzoneProps> = ({
               Drag & drop file here, or <span className="text-brand-600 underline">browse</span>
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Supported formats: PDF, JPG, PNG, WEBP (Max 10MB)
+              Supported formats: PDF, JPG, PNG (Max {maxMbLabel})
             </p>
           </div>
         )}

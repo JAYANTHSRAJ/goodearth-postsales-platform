@@ -15,7 +15,9 @@ export type DocumentType =
   | 'AADHAAR_CARD'
   | 'PASSPORT'
   | 'PHOTO'
-  | 'ADDRESS_PROOF';
+  | 'ADDRESS_PROOF'
+  | 'VOTER_ID'
+  | 'OTHER';
 
 export type DocumentVersionStatus =
   | 'DRAFT'

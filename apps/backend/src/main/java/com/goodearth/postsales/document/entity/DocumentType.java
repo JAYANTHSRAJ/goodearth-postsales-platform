@@ -12,5 +12,6 @@ public enum DocumentType {
     PASSPORT,
     PHOTO,
     ADDRESS_PROOF,
+    VOTER_ID,
     OTHER
 }

@@ -35,9 +35,19 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
       case 'PASSPORT': return 'Passport';
       case 'PHOTO': return 'Passport Size Photograph';
       case 'ADDRESS_PROOF': return 'Address Proof Document';
+      case 'VOTER_ID': return 'Voter ID Card';
       default: return type.replace(/_/g, ' ');
     }
   };
+
+  const getMaxSizeBytes = (type: string) => {
+    if (type === 'AADHAAR_CARD' || type === 'VOTER_ID') {
+      return 2 * 1024 * 1024; // 2MB
+    }
+    return 5 * 1024 * 1024; // 5MB
+  };
+
+  const maxSizeBytes = getMaxSizeBytes(slot.documentType);
 
   const handleFileSelect = async (file: File) => {
     setIsUploading(true);
@@ -137,6 +147,7 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             error={error}
+            maxSizeBytes={maxSizeBytes}
           />
         )
       ) : (

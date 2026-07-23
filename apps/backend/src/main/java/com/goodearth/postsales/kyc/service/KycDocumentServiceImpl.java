@@ -84,8 +84,18 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Upload Document");
         }
 
-        if (size > 10 * 1024 * 1024) { // 10MB limit
-            throw new KycValidationException("File size exceeds maximum permitted limit of 10MB");
+        com.goodearth.postsales.document.config.DocumentSlotConfig slotConfig =
+                com.goodearth.postsales.document.config.DocumentSlotConfig.getConfig(applicantType, docType);
+
+        if (contentType != null && !slotConfig.getAllowedMimeTypes().contains(contentType.toLowerCase())) {
+            throw new KycValidationException(String.format("File type '%s' is not permitted for %s upload. Allowed formats: PDF, JPG, PNG",
+                    contentType, docType));
+        }
+
+        if (size > slotConfig.getMaxSizeBytes()) {
+            long maxMb = slotConfig.getMaxSizeBytes() / (1024 * 1024);
+            throw new KycValidationException(String.format("File size (%d KB) exceeds maximum permitted limit of %d MB for %s upload",
+                    size / 1024, maxMb, docType));
         }
 
         // Provision/ensure WorkDrive folder hierarchy exists for booking
@@ -103,7 +113,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             newDoc.setCategory(category != null ? category : DocumentCategory.KYC);
             newDoc.setApplicantType(applicantType);
             newDoc.setDocumentType(docType);
-            newDoc.setIsRequired(true);
+            newDoc.setIsRequired(slotConfig.isRequired());
             newDoc.setStatus(DocumentStatus.ACTIVE);
             newDoc.setWorkDriveFileId("WD-FILE-" + UUID.randomUUID());
             newDoc.setFileName(fileName);
