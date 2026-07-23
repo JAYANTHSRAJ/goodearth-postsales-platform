@@ -690,11 +690,31 @@ public class KycServiceImpl implements KycService {
     private String formatDateForZoho(String input) {
         if (input == null || input.trim().isEmpty()) return null;
         String str = input.trim();
+
+        // 1. Already ISO: YYYY-MM-DD
         if (str.matches("^\\d{4}-\\d{2}-\\d{2}$")) return str;
-        if (str.matches("^\\d{2}-\\d{2}-\\d{4}$")) {
-            String[] parts = str.split("-");
+
+        // 2. YYYY/MM/DD or YYYY.MM.DD -> YYYY-MM-DD
+        if (str.matches("^\\d{4}[/.\\-]\\d{2}[/.\\-]\\d{2}$")) {
+            return str.replaceAll("[/.]", "-");
+        }
+
+        // 3. DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY -> YYYY-MM-DD
+        if (str.matches("^\\d{2}[/.\\-]\\d{2}[/.\\-]\\d{4}$")) {
+            String[] parts = str.split("[/.\\-]");
             return parts[2] + "-" + parts[1] + "-" + parts[0];
         }
+
+        // 4. Try parsing with java.time.formatters
+        String[] parseFormats = {"yyyy-MM-dd", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "dd.MM.yyyy"};
+        for (String fmt : parseFormats) {
+            try {
+                java.time.LocalDate date = java.time.LocalDate.parse(str, java.time.format.DateTimeFormatter.ofPattern(fmt));
+                return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+            } catch (Exception ignored) {
+            }
+        }
+
         return str;
     }
 

@@ -47,7 +47,7 @@ app:
     client-secret: ${ZOHO_CLIENT_SECRET:mock-client-secret}
     refresh-token: ${ZOHO_REFRESH_TOKEN:mock-refresh-token}
     accounts-url: ${ZOHO_ACCOUNTS_URL:https://accounts.zoho.in}
-    crm-api-url: ${ZOHO_CRM_API_URL:https://crm.zoho.in/crm/v2}
+    crm-api-url: ${ZOHO_CRM_API_URL:https://crmsandbox.zoho.in/crm/v2}
     sync:
       enabled: ${ZOHO_SYNC_ENABLED:true}
       cron: ${ZOHO_SYNC_CRON:0 */15 * * * *}

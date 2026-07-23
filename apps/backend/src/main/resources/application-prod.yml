@@ -47,7 +47,7 @@ app:
     client-secret: ${ZOHO_CLIENT_SECRET:}
     refresh-token: ${ZOHO_REFRESH_TOKEN:}
     accounts-url: ${ZOHO_ACCOUNTS_URL:https://accounts.zoho.in}
-    crm-api-url: ${ZOHO_CRM_API_URL:https://www.zohoapis.in/crm/v3}
+    crm-api-url: ${ZOHO_CRM_API_URL:https://crmsandbox.zoho.in/crm/v2}
   workdrive:
     api-url: ${ZOHO_WORKDRIVE_API_URL:https://workdrive.zoho.in/api/v1}
   books:

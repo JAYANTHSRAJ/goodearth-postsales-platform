@@ -391,6 +391,39 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 log.info("COMPLETE Zoho PUT Response: {}", response);
                 log.info("=================================================================");
 
+                // Validate Zoho Response Status (Problem 2 Fix)
+                boolean isSuccess = false;
+                String errorDetails = null;
+
+                if (response != null && response.get("data") instanceof List) {
+                    List<?> dataList = (List<?>) response.get("data");
+                    if (!dataList.isEmpty() && dataList.get(0) instanceof Map) {
+                        Map<?, ?> firstRecord = (Map<?, ?>) dataList.get(0);
+                        Object statusObj = firstRecord.get("status");
+                        Object codeObj = firstRecord.get("code");
+                        Object messageObj = firstRecord.get("message");
+                        Object detailsObj = firstRecord.get("details");
+
+                        String statusStr = statusObj != null ? statusObj.toString() : "";
+                        String codeStr = codeObj != null ? codeObj.toString() : "";
+
+                        if ("success".equalsIgnoreCase(statusStr) && "SUCCESS".equalsIgnoreCase(codeStr)) {
+                            isSuccess = true;
+                        } else {
+                            errorDetails = String.format("Zoho CRM update rejected with Code: %s, Status: %s, Message: %s, Details: %s",
+                                    codeStr, statusStr, messageObj, detailsObj);
+                            log.error("[ZOHO_CRM_SYNC_REJECTED] {}", errorDetails);
+                        }
+                    }
+                }
+
+                if (!isSuccess) {
+                    if (errorDetails == null) {
+                        errorDetails = "Zoho CRM update failed: Invalid response payload returned from Zoho API.";
+                    }
+                    throw new com.goodearth.postsales.kyc.exception.KycValidationException(errorDetails);
+                }
+
                 // Immediate Post-Update Verification GET
                 try {
                     log.info("[ZOHO_GET_VERIFICATION] Executing immediate GET /Deals/{} to verify updated values...", targetRecordId);
@@ -405,6 +438,9 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
                 return true;
             } catch (Exception apiEx) {
+                if (apiEx instanceof com.goodearth.postsales.kyc.exception.KycValidationException) {
+                    throw (com.goodearth.postsales.kyc.exception.KycValidationException) apiEx;
+                }
                 String errorMsg = apiEx.getMessage();
                 int statusCode = 500;
                 if (apiEx.getCause() instanceof RestClientResponseException) {
@@ -414,7 +450,7 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 }
                 log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: FAILED\nHTTP Status: {}\nZoho Error Message: {}",
                         bookingId, bookingId, targetRecordId, statusCode, errorMsg);
-                return false;
+                throw new com.goodearth.postsales.kyc.exception.KycValidationException("Zoho CRM update failed: " + errorMsg);
             }
         } catch (Exception ex) {
             log.error("Failed to sync applicant info map to Zoho CRM for booking: {}", bookingId, ex);
