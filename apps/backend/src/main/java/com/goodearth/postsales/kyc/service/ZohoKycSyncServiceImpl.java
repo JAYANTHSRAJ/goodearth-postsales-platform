@@ -354,6 +354,52 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
         }
     }
 
+    @Override
+    public boolean syncApplicantMapToCrm(String bookingId, Map<String, Object> dealFields) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            log.warn("Cannot sync applicant info to Zoho CRM: Missing booking ID");
+            return false;
+        }
+
+        try {
+            String targetRecordId = resolveDealRecordIdByDealName(bookingId);
+            if (targetRecordId == null) {
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nSearch Status: FAILED\nUpdate Status: ABORTED\nReason: Record ID resolution failed.",
+                        bookingId, bookingId);
+                return false;
+            }
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("data", List.of(dealFields));
+
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
+
+            try {
+                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {} Payload: {}", targetRecordId, requestBody);
+                Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
+                log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: SUCCESS\nHTTP Status: 200\nResponse Payload: {}",
+                        bookingId, bookingId, targetRecordId, response);
+                return true;
+            } catch (Exception apiEx) {
+                String errorMsg = apiEx.getMessage();
+                int statusCode = 500;
+                if (apiEx.getCause() instanceof RestClientResponseException) {
+                    RestClientResponseException rce = (RestClientResponseException) apiEx.getCause();
+                    statusCode = rce.getStatusCode().value();
+                    errorMsg = rce.getResponseBodyAsString();
+                }
+                log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: FAILED\nHTTP Status: {}\nZoho Error Message: {}",
+                        bookingId, bookingId, targetRecordId, statusCode, errorMsg);
+                return false;
+            }
+        } catch (Exception ex) {
+            log.error("Failed to sync applicant info map to Zoho CRM for booking: {}", bookingId, ex);
+            return false;
+        } finally {
+            clearRequestCache();
+        }
+    }
+
     private void clearRequestCache() {
         REQUEST_DEAL_CACHE.get().clear();
     }

@@ -32,7 +32,6 @@ const ForgotPasswordPage = withSuspense(() => import('../features/auth/pages/For
 const ResetPasswordPage = withSuspense(() => import('../features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
 const ActivationPage = withSuspense(() => import('../features/auth/pages/ActivationPage'), 'ActivationPage');
 const DashboardPage = withSuspense(() => import('../features/dashboard/pages/DashboardPage'), 'DashboardPage');
-const MyHomePage = withSuspense(() => import('../features/dashboard/pages/MyHomePage'), 'MyHomePage');
 const AdminPage = withSuspense(() => import('../features/dashboard/pages/AdminPage'), 'AdminPage');
 const BuyersPage = withSuspense(() => import('../features/buyers/pages/BuyersPage'), 'BuyersPage');
 const ProjectsPage = withSuspense(() => import('../features/projects/pages/ProjectsPage'), 'ProjectsPage');
@@ -50,7 +49,7 @@ const ClientSupportPage = withSuspense(() => import('../features/dashboard/pages
 const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages/ClientProfilePage'), 'ClientProfilePage');
 
 // KYC Module Lazy Routes
-const KycDashboardPage = withSuspense(() => import('../features/kyc/pages/KycDashboardPage'), 'KycDashboardPage');
+const ApplicantInfoPage = withSuspense(() => import('../features/kyc/pages/ApplicantInfoPage'), 'ApplicantInfoPage');
 const KycPropertyPage = withSuspense(() => import('../features/kyc/pages/KycPropertyPage'), 'KycPropertyPage');
 const KycApplicantsPage = withSuspense(() => import('../features/kyc/pages/KycApplicantsPage'), 'KycApplicantsPage');
 const KycDocumentsPage = withSuspense(() => import('../features/kyc/pages/KycDocumentsPage'), 'KycDocumentsPage');
@@ -163,12 +162,16 @@ export const router = createBrowserRouter([
             element: <ProtectedRoute allowedRoles={['buyer']} />,
             children: [
               {
+                path: '/client/applicant-info',
+                element: <ApplicantInfoPage />,
+              },
+              {
                 path: '/my-home',
-                element: <MyHomePage />,
+                element: <ApplicantInfoPage />,
               },
               {
                 path: '/client/kyc',
-                element: <KycDashboardPage />,
+                element: <ApplicantInfoPage />,
               },
               {
                 path: '/client/kyc/property',

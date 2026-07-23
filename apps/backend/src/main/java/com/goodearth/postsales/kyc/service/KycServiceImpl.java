@@ -44,7 +44,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -118,6 +120,97 @@ public class KycServiceImpl implements KycService {
 
         // Sync Deal fields and milestone to Zoho CRM
         zohoKycSyncService.syncKycDealFieldsToCrm(savedApp);
+
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto submitApplicantInfo(com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto dto, String actorId) {
+        if (dto == null || dto.getBookingId() == null || dto.getBookingId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required for applicant info submission");
+        }
+
+        String bookingId = dto.getBookingId().trim();
+        KycApplication application = getOrCreateKycApplication(bookingId);
+
+        Map<String, Object> dealFields = new HashMap<>();
+
+        // Personal Information
+        if (dto.getApplicantTitle() != null) dealFields.put("Title_A", dto.getApplicantTitle());
+        if (dto.getApplicantFirstName() != null) dealFields.put("First_Name_A", dto.getApplicantFirstName());
+        if (dto.getApplicantLastName() != null) dealFields.put("Last_Name_A", dto.getApplicantLastName());
+        if (dto.getApplicantGender() != null) {
+            dealFields.put("Gender", dto.getApplicantGender());
+            dealFields.put("Applicant_Gender", dto.getApplicantGender());
+        }
+        if (dto.getApplicantDob() != null) {
+            dealFields.put("Applicant_Date_of_Birth", dto.getApplicantDob());
+            dealFields.put("DOB", dto.getApplicantDob());
+        }
+        if (dto.getApplicantAge() != null) {
+            dealFields.put("Applicant_Age", dto.getApplicantAge());
+            dealFields.put("Age", dto.getApplicantAge());
+        }
+        if (dto.getApplicantPhone() != null) {
+            dealFields.put("Applicant_Phone_number", dto.getApplicantPhone());
+            dealFields.put("Phone", dto.getApplicantPhone());
+        }
+        if (dto.getApplicantEmail() != null) {
+            dealFields.put("Email", dto.getApplicantEmail());
+            dealFields.put("Applicant_Email", dto.getApplicantEmail());
+        }
+
+        // Identity
+        if (dto.getApplicantPan() != null) dealFields.put("Applicant_PAN", dto.getApplicantPan().toUpperCase());
+        if (dto.getApplicantAadhar() != null) dealFields.put("Applicant_Aadhar", dto.getApplicantAadhar());
+        if (dto.getNewApplicantAadhar() != null) dealFields.put("New_Applicant_Aadhar", dto.getNewApplicantAadhar());
+
+        // Family
+        if (dto.getApplicantFatherFirstName() != null) {
+            dealFields.put("Applicant_Spouse_Father_First_Name", dto.getApplicantFatherFirstName());
+            dealFields.put("Applicant_Father_First_Name", dto.getApplicantFatherFirstName());
+        }
+        if (dto.getApplicantFatherLastName() != null) {
+            dealFields.put("Applicant_Spouse_Father_Last_Name", dto.getApplicantFatherLastName());
+            dealFields.put("Applicant_Father_Last_Name", dto.getApplicantFatherLastName());
+        }
+
+        // Professional
+        if (dto.getApplicantOccupation() != null) dealFields.put("Applicant_Occupation", dto.getApplicantOccupation());
+        if (dto.getApplicantDesignation() != null) {
+            dealFields.put("Designation", dto.getApplicantDesignation());
+            dealFields.put("Applicant_Designation", dto.getApplicantDesignation());
+        }
+        if (dto.getApplicantOrganizationName() != null) {
+            dealFields.put("Organization_Name", dto.getApplicantOrganizationName());
+            dealFields.put("Applicant_Organization_Name", dto.getApplicantOrganizationName());
+        }
+        if (dto.getIndustry() != null) dealFields.put("Industry", dto.getIndustry());
+        if (dto.getApplicantCitizenshipStatus() != null) {
+            dealFields.put("Citizenship_Status", dto.getApplicantCitizenshipStatus());
+            dealFields.put("Applicant_Citizenship_Status", dto.getApplicantCitizenshipStatus());
+        }
+
+        // Application
+        if (dto.getApplicationDate() != null) dealFields.put("Application_Date", dto.getApplicationDate());
+        if (dto.getConsideringHomeLoan() != null) dealFields.put("Are_you_considering_a_home_loan", dto.getConsideringHomeLoan());
+
+        // Co-Applicant
+        if (dto.getSoDoWoA() != null) dealFields.put("S_o_D_o_W_o_A", dto.getSoDoWoA());
+        if (dto.getTitleA() != null) dealFields.put("Title_C", dto.getTitleA());
+        if (dto.getFirstNameA() != null) dealFields.put("First_Name_C", dto.getFirstNameA());
+        if (dto.getLastNameA() != null) dealFields.put("Last_Name_C", dto.getLastNameA());
+
+        // Sync directly to Zoho CRM Deal
+        zohoKycSyncService.syncApplicantMapToCrm(bookingId, dealFields);
+
+        // Update local application state
+        application.setUpdatedAt(LocalDateTime.now());
+        KycApplication savedApp = kycApplicationRepository.save(application);
+
+        auditService.logEvent(savedApp, KycAuditEventType.DRAFT_SAVED, actorId, "CLIENT", "Applicant info submitted to Zoho CRM", null);
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);

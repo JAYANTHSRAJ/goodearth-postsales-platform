@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,6 +59,23 @@ public class KycController {
         KycApplicationResponseDto response = kycService.saveDraft(requestDto, actorId);
         long duration = System.currentTimeMillis() - startTime;
         log.info("Endpoint: POST /api/v1/kyc/draft, Execution Time: {}ms, Booking ID: {}", duration, requestDto.getBookingId());
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PutMapping("/applicant")
+    @PostMapping("/applicant")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Submit applicant information directly to Zoho CRM Deal", description = "Updates all applicant fields directly on the Zoho CRM Deal record")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> submitApplicantInfo(
+            @Valid @RequestBody com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto requestDto,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String actorId = authentication != null ? authentication.getName() : "CLIENT";
+
+        KycApplicationResponseDto response = kycService.submitApplicantInfo(requestDto, actorId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: PUT /api/v1/kyc/applicant, Execution Time: {}ms, Booking ID: {}", duration, requestDto.getBookingId());
 
         return ResponseEntity.ok(new ApiResponse<>(response));
     }

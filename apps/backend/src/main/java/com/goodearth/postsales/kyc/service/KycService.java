@@ -18,6 +18,8 @@ public interface KycService {
 
     KycApplicationResponseDto saveDraft(KycDraftSaveRequestDto dto, String actorId);
 
+    KycApplicationResponseDto submitApplicantInfo(com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto dto, String actorId);
+
     KycAutosaveResponseDto autosaveField(KycAutosaveRequestDto dto, String actorId);
 
     KycApplicationResponseDto getKycApplicationByBooking(String bookingId);

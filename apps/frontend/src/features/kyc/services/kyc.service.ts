@@ -28,6 +28,10 @@ export const kycService = {
     return api.post<KycApplicationResponseDto>('/kyc/draft', dto);
   },
 
+  submitApplicantInfo: (data: any): Promise<KycApplicationResponseDto> => {
+    return api.put<KycApplicationResponseDto>('/kyc/applicant', data);
+  },
+
   autosaveField: (dto: KycAutosaveRequestDto): Promise<KycAutosaveResponseDto> => {
     return api.patch<KycAutosaveResponseDto>('/kyc/draft/autosave', dto);
   },

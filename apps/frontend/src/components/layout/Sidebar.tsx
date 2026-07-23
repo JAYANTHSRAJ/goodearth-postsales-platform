@@ -2,12 +2,8 @@ import React, { ComponentType, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Home,
   Highlighter,
-  Hammer,
   CreditCard,
-  ClipboardCheck,
-  LifeBuoy,
   Bell,
   User,
   Users,
@@ -19,7 +15,6 @@ import {
   Settings,
   Shield,
   X,
-  FileCheck,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -34,16 +29,7 @@ interface NavItem {
 }
 
 const clientNavItems: NavItem[] = [
-  { name: 'Profile', path: '/profile', icon: User, requiresUnit: false },
-  { name: 'My Home', path: '/my-home', icon: Home, requiresUnit: false },
-  { name: 'KYC Portal', path: '/client/kyc', icon: FileCheck, requiresUnit: false },
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiresUnit: true },
-  { name: 'Design Studio', path: '/design-studio', icon: Highlighter, requiresUnit: true },
-  { name: 'Construction Updates', path: '/construction-updates', icon: Hammer, requiresUnit: true },
-  { name: 'Finance', path: '/finance', icon: CreditCard, requiresUnit: true },
-  { name: 'My Selections', path: '/selections', icon: ClipboardCheck, requiresUnit: true },
-  { name: 'Support', path: '/support', icon: LifeBuoy, requiresUnit: true },
-  { name: 'Notifications', path: '/notifications', icon: Bell, requiresUnit: true },
+  { name: 'Applicant Information', path: '/client/applicant-info', icon: User, requiresUnit: false },
 ];
 
 const crmNavItems: NavItem[] = [
