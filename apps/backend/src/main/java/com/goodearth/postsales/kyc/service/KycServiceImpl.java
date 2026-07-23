@@ -189,6 +189,10 @@ public class KycServiceImpl implements KycService {
         String effectiveTargetKey = targetDealId != null && !targetDealId.isEmpty() ? targetDealId : targetDealName;
         KycApplication application = getOrCreateKycApplication(effectiveTargetKey);
 
+        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+            throw new KycInvalidStateTransitionException(application.getStatus().name(), "Submit Applicant Info");
+        }
+
         Map<String, Object> dealFields = new HashMap<>();
 
         // Personal Information
@@ -785,14 +789,13 @@ public class KycServiceImpl implements KycService {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Submit KYC");
         }
 
-        List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
-        long requiredUploadedCount = documents.stream()
-                .filter(d -> Boolean.TRUE.equals(d.getIsRequired()))
-                .filter(d -> d.getVersions() != null && !d.getVersions().isEmpty())
-                .count();
-
-        if (requiredUploadedCount == 0 && !documents.isEmpty()) {
-            throw new KycValidationException("Cannot submit KYC: Mandatory document uploads are incomplete.");
+        // Re-run validation immediately before final submission
+        KycValidationSummaryResponseDto valSummary = validateKyc(application.getBookingId());
+        if (!valSummary.isOverallValid()) {
+            String missingMsg = valSummary.getMissingItems() != null && !valSummary.getMissingItems().isEmpty()
+                    ? valSummary.getMissingItems().get(0).getRequirement()
+                    : "Mandatory KYC requirements or uploads are incomplete.";
+            throw new KycValidationException("Cannot submit KYC application: " + missingMsg);
         }
 
         application.setStatus(KycApplicationStatus.SUBMITTED);
@@ -809,6 +812,7 @@ public class KycServiceImpl implements KycService {
         // Synchronize milestone with Zoho CRM
         zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Submitted", "Homebuyer submitted complete KYC application.");
 
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);
     }
 
