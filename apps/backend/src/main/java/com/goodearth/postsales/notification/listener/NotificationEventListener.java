@@ -25,14 +25,17 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
     private final NotificationTemplateRepository templateRepository;
+    private final com.goodearth.postsales.notification.service.EmailService emailService;
 
     public NotificationEventListener(
             NotificationService notificationService,
             UserRepository userRepository,
-            NotificationTemplateRepository templateRepository) {
+            NotificationTemplateRepository templateRepository,
+            com.goodearth.postsales.notification.service.EmailService emailService) {
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.templateRepository = templateRepository;
+        this.emailService = emailService;
     }
 
     private User findUserByEmail(String email) {
@@ -478,5 +481,49 @@ public class NotificationEventListener {
         notif.setTargetUrl("/client/dashboard");
 
         notificationService.createAndSendNotification(notif);
+    }
+
+    @Async
+    @EventListener
+    public void handleKycStatusChanged(NotificationEvents.KycStatusChangedEvent event) {
+        log.info("Handling KycStatusChangedEvent for booking {}: status={}", event.bookingId(), event.status());
+        User user = findUserByEmail(event.email());
+
+        String title = "KYC Status Update: " + event.status();
+        String message = String.format("Your KYC application (%s) status is now %s.", event.bookingId(), event.status());
+        if (event.remarks() != null && !event.remarks().trim().isEmpty()) {
+            message += " Note: " + event.remarks();
+        }
+
+        Notification notif = new Notification();
+        notif.setUser(user);
+        notif.setTitle(title);
+        notif.setMessage(message);
+        notif.setNotificationType(NotificationType.SYSTEM);
+        notif.setNotificationCategory("APPROVED".equalsIgnoreCase(event.status()) ? NotificationCategory.SUCCESS : NotificationCategory.INFORMATION);
+        notif.setPriority(NotificationPriority.HIGH);
+        notif.setIcon("KYC");
+        notif.setReferenceType("KYC");
+        notif.setReferenceId(event.kycApplicationId());
+        notif.setTargetUrl("/client/kyc?bookingId=" + event.bookingId());
+
+        notificationService.createAndSendNotification(notif);
+
+        // Send Email if buyer email exists
+        if (event.email() != null && !event.email().trim().isEmpty()) {
+            try {
+                String subject = "GoodEarth Post-Sales | KYC Application " + event.status();
+                String emailBody = String.format(
+                        "Dear %s,\n\nYour KYC application for booking reference %s has updated to status: %s.\n%s\n\nPlease log in to your GoodEarth portal to view details.\n\nWarm regards,\nGoodEarth Post-Sales Compliance Team",
+                        event.buyerName() != null ? event.buyerName() : "Homebuyer",
+                        event.bookingId(),
+                        event.status(),
+                        event.remarks() != null ? "Remarks: " + event.remarks() : ""
+                );
+                emailService.sendEmail(event.email(), subject, emailBody);
+            } catch (Exception ex) {
+                log.warn("Could not deliver KYC status email to {}: {}", event.email(), ex.getMessage());
+            }
+        }
     }
 }

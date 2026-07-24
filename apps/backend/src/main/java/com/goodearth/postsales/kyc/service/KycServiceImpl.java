@@ -77,6 +77,7 @@ public class KycServiceImpl implements KycService {
     private final ZohoKycSyncService zohoKycSyncService;
     private final BuyerRepository buyerRepository;
     private final WorkflowRepository workflowRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public KycServiceImpl(
             KycApplicationRepository kycApplicationRepository,
@@ -89,7 +90,8 @@ public class KycServiceImpl implements KycService {
             KycAuditService auditService,
             ZohoKycSyncService zohoKycSyncService,
             BuyerRepository buyerRepository,
-            WorkflowRepository workflowRepository) {
+            WorkflowRepository workflowRepository,
+            org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.kycApplicationRepository = kycApplicationRepository;
         this.kycApplicantRepository = kycApplicantRepository;
         this.documentRepository = documentRepository;
@@ -101,6 +103,7 @@ public class KycServiceImpl implements KycService {
         this.zohoKycSyncService = zohoKycSyncService;
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -916,8 +919,32 @@ public class KycServiceImpl implements KycService {
         // Synchronize milestone with Zoho CRM
         zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Submitted - Under Review", "Homebuyer submitted complete KYC application.");
 
+        publishKycNotification(savedApp, "UNDER_REVIEW", "KYC submitted for compliance verification.");
+
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    private void publishKycNotification(KycApplication application, String status, String remarks) {
+        if (application == null || eventPublisher == null) return;
+        try {
+            KycApplicant primary = application.getApplicants() != null
+                    ? application.getApplicants().stream().filter(a -> a.getApplicantType() == ApplicantType.PRIMARY).findFirst().orElse(null)
+                    : null;
+            String email = primary != null ? primary.getEmail() : null;
+            String name = primary != null ? primary.getFullName() : null;
+
+            eventPublisher.publishEvent(new com.goodearth.postsales.notification.event.NotificationEvents.KycStatusChangedEvent(
+                    application.getId(),
+                    application.getBookingId(),
+                    status,
+                    email,
+                    name,
+                    remarks
+            ));
+        } catch (Exception ex) {
+            log.warn("Failed to publish KycStatusChangedEvent: {}", ex.getMessage());
+        }
     }
 
     @Override
@@ -1078,6 +1105,7 @@ public class KycServiceImpl implements KycService {
                 "Granted edit access to buyer: " + dto.getReason(), dto.getReason());
 
         zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Edit Access Granted", "Compliance team granted edit access: " + dto.getReason());
+        publishKycNotification(savedApp, "EDIT_ENABLED", dto.getReason());
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);

@@ -111,4 +111,13 @@ public final class NotificationEvents {
             String customerName,
             String email
     ) {}
+
+    public static record KycStatusChangedEvent(
+            UUID kycApplicationId,
+            String bookingId,
+            String status,
+            String email,
+            String buyerName,
+            String remarks
+    ) {}
 }
