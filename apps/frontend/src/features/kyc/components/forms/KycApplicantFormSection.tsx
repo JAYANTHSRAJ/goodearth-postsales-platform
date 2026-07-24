@@ -4,9 +4,10 @@ import KycInputField from './KycInputField';
 import KycAddressForm from './KycAddressForm';
 import KycDatePicker from '../common/KycDatePicker';
 import KycAadhaarInput from './KycAadhaarInput';
-import KycPanInput from './KycPanInput';
+import KycPanInput, { PAN_REGEX } from './KycPanInput';
 import KycPhoneInput from './KycPhoneInput';
-import { ApplicantDto, ApplicantType } from '../../types/kyc';
+import KycDocumentSlotCard from '../documents/KycDocumentSlotCard';
+import { ApplicantDto, ApplicantType, DocumentSlotDto } from '../../types/kyc';
 
 interface KycApplicantFormSectionProps {
   title: string;
@@ -18,6 +19,10 @@ interface KycApplicantFormSectionProps {
   onRemove?: () => void;
   primaryApplicantAddress?: any;
   secondaryApplicantAddress?: any;
+  documentSlots?: DocumentSlotDto[];
+  kycApplicationId?: string;
+  onRefreshDocuments?: () => void;
+  canEdit?: boolean;
 }
 
 export const OCCUPATIONS = [
@@ -50,6 +55,10 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
   onRemove,
   primaryApplicantAddress,
   secondaryApplicantAddress,
+  documentSlots = [],
+  kycApplicationId = '',
+  onRefreshDocuments,
+  canEdit = true,
 }) => {
   const handleChange = (field: keyof ApplicantDto, value: any) => {
     let formattedValue = value;
@@ -136,6 +145,17 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
     }
   };
 
+  // Find document slots for PAN and Aadhaar for this applicant
+  const panSlot = documentSlots.find(
+    (s) => s.applicantType === applicantType && s.documentType === 'PAN_CARD'
+  );
+  const aadhaarSlot = documentSlots.find(
+    (s) => s.applicantType === applicantType && s.documentType === 'AADHAAR_CARD'
+  );
+
+  const isPanValid = !!applicant.panNumber && PAN_REGEX.test(applicant.panNumber);
+  const isAadhaarValid = !!applicant.aadhaarNumber && applicant.aadhaarNumber.length === 12;
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-8">
       {/* Header Badge */}
@@ -147,7 +167,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           <div>
             <h3 className="text-xl font-bold font-serif text-slate-900 dark:text-white">{title}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Personal information, contact particulars & identity documents
+              Personal information, contact particulars & identity document uploads
             </p>
           </div>
         </div>
@@ -489,32 +509,92 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
         />
       </div>
 
-      {/* Group 4: Tax & Government Identity Verification */}
-      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+      {/* Group 4: Tax & Government Identity Verification with Direct Document Uploads */}
+      <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
           <ShieldCheck className="w-4 h-4 text-brand-500" /> 4. Government Identity & Tax Verification
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-          <KycAadhaarInput
-            id={`${fieldPrefix}-aadhaar`}
-            label={`${applicantPrefix} Aadhaar`}
-            name={`applicant_${applicantType}_aadhaar`}
-            value={applicant.aadhaarNumber || ''}
-            onChange={(rawDigits) => handleChange('aadhaarNumber', rawDigits)}
-            error={errors[`${applicantType}.aadhaarNumber`]}
-            isRequired
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* PAN Section */}
+          <div className="bg-slate-50/70 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+            <KycPanInput
+              id={`${fieldPrefix}-pan`}
+              label={`${applicantPrefix} PAN *`}
+              name={`applicant_${applicantType}_pan`}
+              value={applicant.panNumber || ''}
+              onChange={(val) => handleChange('panNumber', val)}
+              error={errors[`${applicantType}.panNumber`]}
+              isRequired
+            />
 
-          <KycPanInput
-            id={`${fieldPrefix}-pan`}
-            label={`${applicantPrefix} PAN Card`}
-            name={`applicant_${applicantType}_pan`}
-            value={applicant.panNumber || ''}
-            onChange={(val) => handleChange('panNumber', val)}
-            error={errors[`${applicantType}.panNumber`]}
-            isRequired
-          />
+            <div>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                Upload PAN Card <span className="text-rose-500">*</span>
+              </p>
+              {isPanValid ? (
+                panSlot ? (
+                  <KycDocumentSlotCard
+                    slot={panSlot}
+                    kycApplicationId={kycApplicationId}
+                    onRefresh={onRefreshDocuments || (() => {})}
+                    canEdit={canEdit}
+                  />
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    Provisioning PAN Card upload slot...
+                  </div>
+                )
+              ) : (
+                <div className="p-4 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl text-center space-y-1">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Upload PAN Card Disabled</p>
+                  <p className="text-[11px] text-slate-400">
+                    Please enter a valid 10-character PAN number above to unlock document upload.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Aadhaar Section */}
+          <div className="bg-slate-50/70 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+            <KycAadhaarInput
+              id={`${fieldPrefix}-aadhaar`}
+              label={`${applicantPrefix} Aadhaar *`}
+              name={`applicant_${applicantType}_aadhaar`}
+              value={applicant.aadhaarNumber || ''}
+              onChange={(rawDigits) => handleChange('aadhaarNumber', rawDigits)}
+              error={errors[`${applicantType}.aadhaarNumber`]}
+              isRequired
+            />
+
+            <div>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                Upload Aadhaar Card <span className="text-rose-500">*</span>
+              </p>
+              {isAadhaarValid ? (
+                aadhaarSlot ? (
+                  <KycDocumentSlotCard
+                    slot={aadhaarSlot}
+                    kycApplicationId={kycApplicationId}
+                    onRefresh={onRefreshDocuments || (() => {})}
+                    canEdit={canEdit}
+                  />
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    Provisioning Aadhaar Card upload slot...
+                  </div>
+                )
+              ) : (
+                <div className="p-4 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl text-center space-y-1">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Upload Aadhaar Card Disabled</p>
+                  <p className="text-[11px] text-slate-400">
+                    Please enter a valid 12-digit Aadhaar number above to unlock document upload.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

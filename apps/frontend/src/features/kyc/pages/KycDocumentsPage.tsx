@@ -24,7 +24,7 @@ export const KycDocumentsPage: React.FC = () => {
       setKycData(data);
       const prog = await kycService.getKycProgress(bookingId).catch(() => null);
       if (prog) setProgress(prog);
-    } catch (err) {
+    } catch {
       // Handled in UI
     } finally {
       setLoading(false);
@@ -43,15 +43,20 @@ export const KycDocumentsPage: React.FC = () => {
     );
   }
 
-  const documentSlots = kycData?.documentSlots || [];
+  const allDocumentSlots = kycData?.documentSlots || [];
   const canEdit = kycData?.status === 'DRAFT' || kycData?.status === 'ACTION_REQUIRED';
+
+  // Filter out PAN_CARD and AADHAAR_CARD slots since they are uploaded in the Identity Verification section
+  const documentSlots = allDocumentSlots.filter(
+    (s) => s.documentType !== 'PAN_CARD' && s.documentType !== 'AADHAAR_CARD'
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Step 3: Mandatory Document Uploads</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Upload clear scanned copies or photos of your required verification documents.
+          Upload clear scanned copies or photos of your address proof and optional identification documents. Note: PAN and Aadhaar cards are uploaded directly under Applicant Details.
         </p>
       </div>
 
@@ -60,15 +65,15 @@ export const KycDocumentsPage: React.FC = () => {
       {/* Upload Progress Overview */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase">Required Slots</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase">Total Slots</span>
           <p className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-            {progress?.requiredSlotsCount ?? documentSlots.filter(s => s.isRequired).length}
+            {progress?.requiredSlotsCount ?? allDocumentSlots.filter((s) => s.isRequired).length}
           </p>
         </div>
         <div>
           <span className="text-xs font-semibold text-slate-500 uppercase">Uploaded</span>
           <p className="text-lg font-bold text-brand-600 mt-0.5">
-            {progress?.uploadedSlotsCount ?? documentSlots.filter(s => s.currentVersion).length}
+            {progress?.uploadedSlotsCount ?? allDocumentSlots.filter((s) => s.currentVersion).length}
           </p>
         </div>
         <div>
@@ -85,7 +90,7 @@ export const KycDocumentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Primary Applicant Document Slots */}
+      {/* Primary Applicant Document Slots (Address Proof, Voter ID) */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Primary Applicant Documents</h3>
         {documentSlots.filter((s) => s.applicantType === 'PRIMARY').length > 0 ? (
@@ -102,7 +107,7 @@ export const KycDocumentsPage: React.FC = () => {
             ))
         ) : (
           <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
-            <p className="text-sm text-slate-500">No primary document slots provisioned.</p>
+            <p className="text-sm text-slate-500">No additional primary document slots provisioned.</p>
           </div>
         )}
       </div>
@@ -131,7 +136,7 @@ export const KycDocumentsPage: React.FC = () => {
               ))
           ) : (
             <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
-              <p className="text-sm text-slate-500">No co-applicant document slots provisioned.</p>
+              <p className="text-sm text-slate-500">No additional co-applicant document slots provisioned.</p>
             </div>
           )}
         </div>
@@ -161,7 +166,7 @@ export const KycDocumentsPage: React.FC = () => {
               ))
           ) : (
             <div className="p-6 text-center bg-white dark:bg-slate-900 border rounded-2xl">
-              <p className="text-sm text-slate-500">No third applicant document slots provisioned.</p>
+              <p className="text-sm text-slate-500">No additional third applicant document slots provisioned.</p>
             </div>
           )}
         </div>

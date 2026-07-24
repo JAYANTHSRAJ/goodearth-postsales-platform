@@ -40,10 +40,7 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
     }
   };
 
-  const getMaxSizeBytes = (type: string) => {
-    if (type === 'AADHAAR_CARD' || type === 'VOTER_ID') {
-      return 2 * 1024 * 1024; // 2MB
-    }
+  const getMaxSizeBytes = (_type?: string) => {
     return 5 * 1024 * 1024; // 5MB
   };
 

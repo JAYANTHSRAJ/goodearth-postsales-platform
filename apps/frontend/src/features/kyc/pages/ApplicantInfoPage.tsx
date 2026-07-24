@@ -5,9 +5,11 @@ import kycService from '../services/kyc.service';
 import { useUnitStore } from '../../../store/unitStore';
 import KycDatePicker from '../components/common/KycDatePicker';
 import KycAadhaarInput from '../components/forms/KycAadhaarInput';
-import KycPanInput from '../components/forms/KycPanInput';
+import KycPanInput, { PAN_REGEX } from '../components/forms/KycPanInput';
 import KycPhoneInput from '../components/forms/KycPhoneInput';
+import KycDocumentSlotCard from '../components/documents/KycDocumentSlotCard';
 import { OCCUPATIONS } from '../components/forms/KycApplicantFormSection';
+import { DocumentSlotDto } from '../types/kyc';
 
 export const ApplicantInfoPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +24,9 @@ export const ApplicantInfoPage: React.FC = () => {
     activeUnit?.unitName ||
     'motif16-280726';
   const targetDealId = activeUnit?.zohoDealId || undefined;
+
+  const [documentSlots, setDocumentSlots] = useState<DocumentSlotDto[]>([]);
+  const [kycApplicationId, setKycApplicationId] = useState<string>('');
 
   const [form, setForm] = useState({
     bookingId: targetDealName,
@@ -59,6 +64,16 @@ export const ApplicantInfoPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const loadKycDetails = async () => {
+    try {
+      const data = await kycService.getKycByBooking(targetDealName);
+      if (data?.documentSlots) setDocumentSlots(data.documentSlots);
+      if (data?.kycApplicationId) setKycApplicationId(data.kycApplicationId);
+    } catch {
+      // Ignored
+    }
+  };
+
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
@@ -66,6 +81,7 @@ export const ApplicantInfoPage: React.FC = () => {
       zohoDealName: targetDealName,
       zohoDealId: targetDealId,
     }));
+    loadKycDetails();
   }, [targetDealName, targetDealId]);
 
   const handleChange = (field: string, value: string) => {
@@ -87,7 +103,6 @@ export const ApplicantInfoPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation check for Occupation when 'Other' is selected
     if (selectedOccDropdown === 'Other' && !form.customOccupation.trim() && form.applicantOccupation === 'Other') {
       setErrorMsg('Please specify your occupation.');
       return;
@@ -112,6 +127,12 @@ export const ApplicantInfoPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const panSlot = documentSlots.find((s) => s.applicantType === 'PRIMARY' && s.documentType === 'PAN_CARD');
+  const aadhaarSlot = documentSlots.find((s) => s.applicantType === 'PRIMARY' && s.documentType === 'AADHAAR_CARD');
+
+  const isPanValid = !!form.applicantPan && PAN_REGEX.test(form.applicantPan);
+  const isAadhaarValid = !!form.applicantAadhar && form.applicantAadhar.length === 12;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
@@ -310,34 +331,94 @@ export const ApplicantInfoPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. Identity Verification */}
+        {/* 2. Identity Verification & Document Uploads */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
             <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Identity Verification</h2>
-              <p className="text-xs text-slate-500">Government tax & identity numbers</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Identity Verification & Document Uploads</h2>
+              <p className="text-xs text-slate-500">Government tax & identity numbers and clear document copies</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <KycPanInput
-              id="applicantPan"
-              label="Applicant PAN"
-              value={form.applicantPan}
-              onChange={(val) => handleChange('applicantPan', val)}
-              isRequired
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* PAN Section */}
+            <div className="bg-slate-50/70 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+              <KycPanInput
+                id="applicantPan"
+                label="Applicant PAN *"
+                value={form.applicantPan}
+                onChange={(val) => handleChange('applicantPan', val)}
+                isRequired
+              />
 
-            <KycAadhaarInput
-              id="applicantAadhar"
-              label="Applicant Aadhaar"
-              value={form.applicantAadhar}
-              onChange={(rawDigits) => handleChange('applicantAadhar', rawDigits)}
-              isRequired
-            />
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                  Upload PAN Card <span className="text-rose-500">*</span>
+                </p>
+                {isPanValid ? (
+                  panSlot ? (
+                    <KycDocumentSlotCard
+                      slot={panSlot}
+                      kycApplicationId={kycApplicationId}
+                      onRefresh={loadKycDetails}
+                      canEdit
+                    />
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                      Provisioning PAN Card upload slot...
+                    </div>
+                  )
+                ) : (
+                  <div className="p-4 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl text-center space-y-1">
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Upload PAN Card Disabled</p>
+                    <p className="text-[11px] text-slate-400">
+                      Please enter a valid 10-character PAN number above to unlock document upload.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Aadhaar Section */}
+            <div className="bg-slate-50/70 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+              <KycAadhaarInput
+                id="applicantAadhar"
+                label="Applicant Aadhaar *"
+                value={form.applicantAadhar}
+                onChange={(rawDigits) => handleChange('applicantAadhar', rawDigits)}
+                isRequired
+              />
+
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                  Upload Aadhaar Card <span className="text-rose-500">*</span>
+                </p>
+                {isAadhaarValid ? (
+                  aadhaarSlot ? (
+                    <KycDocumentSlotCard
+                      slot={aadhaarSlot}
+                      kycApplicationId={kycApplicationId}
+                      onRefresh={loadKycDetails}
+                      canEdit
+                    />
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                      Provisioning Aadhaar Card upload slot...
+                    </div>
+                  )
+                ) : (
+                  <div className="p-4 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl text-center space-y-1">
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Upload Aadhaar Card Disabled</p>
+                    <p className="text-[11px] text-slate-400">
+                      Please enter a valid 12-digit Aadhaar number above to unlock document upload.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

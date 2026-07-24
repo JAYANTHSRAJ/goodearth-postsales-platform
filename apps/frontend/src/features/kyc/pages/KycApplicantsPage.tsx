@@ -20,11 +20,19 @@ export const KycApplicantsPage: React.FC = () => {
 
   const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
 
+  const loadInitialData = async () => {
+    try {
+      const data = await kycService.getKycByBooking(bookingId);
+      setInitialData(data);
+    } catch {
+      // Handled in UI
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    kycService.getKycByBooking(bookingId)
-      .then(setInitialData)
-      .catch(() => null)
-      .finally(() => setLoading(false));
+    loadInitialData();
   }, []);
 
   const {
@@ -98,6 +106,10 @@ export const KycApplicantsPage: React.FC = () => {
   const coApplicantDto = jointApplicants.find((a) => a.applicantType === 'JOINT_1') || jointApplicants[0];
   const thirdApplicantDto = jointApplicants.find((a) => a.applicantType === 'JOINT_2') || jointApplicants[1];
 
+  const documentSlots = initialData?.documentSlots || [];
+  const kycApplicationId = initialData?.kycApplicationId || '';
+  const canEdit = initialData?.status === 'DRAFT' || initialData?.status === 'ACTION_REQUIRED';
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
       {/* Top Header & Platform Title */}
@@ -165,6 +177,10 @@ export const KycApplicantsPage: React.FC = () => {
         applicant={primaryApplicant}
         onChange={setPrimaryApplicant}
         errors={errors}
+        documentSlots={documentSlots}
+        kycApplicationId={kycApplicationId}
+        onRefreshDocuments={loadInitialData}
+        canEdit={canEdit}
       />
 
       {/* Co-Applicant Segmented Cards Choice */}
@@ -233,6 +249,10 @@ export const KycApplicantsPage: React.FC = () => {
             setJointApplicants(list);
           }}
           errors={errors}
+          documentSlots={documentSlots}
+          kycApplicationId={kycApplicationId}
+          onRefreshDocuments={loadInitialData}
+          canEdit={canEdit}
         />
       )}
 
@@ -305,6 +325,10 @@ export const KycApplicantsPage: React.FC = () => {
             setJointApplicants(list);
           }}
           errors={errors}
+          documentSlots={documentSlots}
+          kycApplicationId={kycApplicationId}
+          onRefreshDocuments={loadInitialData}
+          canEdit={canEdit}
         />
       )}
 
