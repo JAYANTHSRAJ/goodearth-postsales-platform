@@ -445,92 +445,136 @@ public class KycServiceImpl implements KycService {
             application.setHasCoApplicant(dto.getHasCoApplicant());
 
             if ("Yes".equalsIgnoreCase(dto.getHasCoApplicant())) {
+                boolean hasCoData = !coApplicantFullName.isEmpty() ||
+                        (dto.getCoApplicantEmail() != null && !dto.getCoApplicantEmail().trim().isEmpty()) ||
+                        (dto.getCoApplicantPhone() != null && !dto.getCoApplicantPhone().trim().isEmpty()) ||
+                        (dto.getCoApplicantPan() != null && !dto.getCoApplicantPan().trim().isEmpty()) ||
+                        (dto.getCoApplicantAadhar() != null && !dto.getCoApplicantAadhar().trim().isEmpty());
+
                 KycApplicant coApplicant = application.getApplicants().stream()
                         .filter(a -> a.getApplicantType() == ApplicantType.JOINT_1)
                         .findFirst()
-                        .orElseGet(() -> {
-                            KycApplicant newCo = new KycApplicant();
-                            newCo.setKycApplication(application);
-                            newCo.setApplicantType(ApplicantType.JOINT_1);
-                            application.getApplicants().add(newCo);
-                            return newCo;
-                        });
+                        .orElse(null);
 
-                if (dto.getTitleA() != null) coApplicant.setSalutation(dto.getTitleA());
-                if (dto.getFirstNameA() != null) coApplicant.setFirstName(dto.getFirstNameA());
-                if (dto.getLastNameA() != null) coApplicant.setLastName(dto.getLastNameA());
-                if (!coApplicantFullName.isEmpty()) coApplicant.setFullName(coApplicantFullName);
-                if (dto.getCoApplicantEmail() != null) coApplicant.setEmail(dto.getCoApplicantEmail());
-                if (dto.getCoApplicantPhone() != null) coApplicant.setPhone(dto.getCoApplicantPhone());
-                if (dto.getCoApplicantDob() != null) coApplicant.setDateOfBirth(dto.getCoApplicantDob());
-                if (dto.getCoApplicantOccupation() != null) coApplicant.setOccupation(dto.getCoApplicantOccupation());
-                if (dto.getCoApplicantPan() != null) coApplicant.setPanNumber(dto.getCoApplicantPan().toUpperCase());
-                if (dto.getCoApplicantAadhar() != null) coApplicant.setAadhaarNumber(dto.getCoApplicantAadhar());
+                if (hasCoData) {
+                    if (coApplicant == null) {
+                        coApplicant = new KycApplicant();
+                        coApplicant.setKycApplication(application);
+                        coApplicant.setApplicantType(ApplicantType.JOINT_1);
+                        application.getApplicants().add(coApplicant);
+                    }
 
-                if (dto.getSoDoWoA() != null) coApplicant.setGuardianRelation(dto.getSoDoWoA());
-                if (dto.getCoApplicantFatherSalutation() != null) coApplicant.setGuardianSalutation(dto.getCoApplicantFatherSalutation());
-                if (dto.getCoApplicantFatherFirstName() != null) coApplicant.setGuardianFirstName(dto.getCoApplicantFatherFirstName());
-                if (dto.getCoApplicantFatherLastName() != null) coApplicant.setGuardianLastName(dto.getCoApplicantFatherLastName());
+                    if (dto.getTitleA() != null) coApplicant.setSalutation(dto.getTitleA());
+                    if (dto.getFirstNameA() != null) coApplicant.setFirstName(dto.getFirstNameA());
+                    if (dto.getLastNameA() != null) coApplicant.setLastName(dto.getLastNameA());
 
-                String coGuardianFullName = ((dto.getCoApplicantFatherFirstName() != null ? dto.getCoApplicantFatherFirstName().trim() : "") + " " +
-                        (dto.getCoApplicantFatherLastName() != null ? dto.getCoApplicantFatherLastName().trim() : "")).trim();
-                if (!coGuardianFullName.isEmpty()) coApplicant.setGuardianName(coGuardianFullName);
+                    String effectiveCoName = coApplicantFullName;
+                    if (effectiveCoName.isEmpty()) {
+                        effectiveCoName = ((coApplicant.getFirstName() != null ? coApplicant.getFirstName().trim() : "") + " " +
+                                (coApplicant.getLastName() != null ? coApplicant.getLastName().trim() : "")).trim();
+                    }
+                    if (effectiveCoName.isEmpty()) {
+                        effectiveCoName = "Co-Applicant";
+                    }
+                    coApplicant.setFullName(effectiveCoName);
 
-                if (dto.getCoApplicantAddressSameAsPrimary() != null) coApplicant.setAddressSameAsPrimary(dto.getCoApplicantAddressSameAsPrimary());
-                if (dto.getCoApplicantAddressStreet() != null) coApplicant.setAddressStreet(dto.getCoApplicantAddressStreet());
-                if (dto.getCoApplicantAddressLine2() != null) coApplicant.setAddressLine2(dto.getCoApplicantAddressLine2());
-                if (dto.getCoApplicantAddressCity() != null) coApplicant.setAddressCity(dto.getCoApplicantAddressCity());
-                if (dto.getCoApplicantAddressState() != null) coApplicant.setAddressState(dto.getCoApplicantAddressState());
-                if (dto.getCoApplicantAddressPincode() != null) coApplicant.setAddressPincode(dto.getCoApplicantAddressPincode());
-                if (dto.getCoApplicantAddressCountry() != null) coApplicant.setAddressCountry(dto.getCoApplicantAddressCountry());
+                    if (dto.getCoApplicantEmail() != null) coApplicant.setEmail(dto.getCoApplicantEmail());
+                    if (dto.getCoApplicantPhone() != null) coApplicant.setPhone(dto.getCoApplicantPhone());
+                    if (dto.getCoApplicantDob() != null) coApplicant.setDateOfBirth(dto.getCoApplicantDob());
+                    if (dto.getCoApplicantOccupation() != null) coApplicant.setOccupation(dto.getCoApplicantOccupation());
+                    if (dto.getCoApplicantPan() != null) coApplicant.setPanNumber(dto.getCoApplicantPan().toUpperCase());
+                    if (dto.getCoApplicantAadhar() != null) coApplicant.setAadhaarNumber(dto.getCoApplicantAadhar());
+
+                    if (dto.getSoDoWoA() != null) coApplicant.setGuardianRelation(dto.getSoDoWoA());
+                    if (dto.getCoApplicantFatherSalutation() != null) coApplicant.setGuardianSalutation(dto.getCoApplicantFatherSalutation());
+                    if (dto.getCoApplicantFatherFirstName() != null) coApplicant.setGuardianFirstName(dto.getCoApplicantFatherFirstName());
+                    if (dto.getCoApplicantFatherLastName() != null) coApplicant.setGuardianLastName(dto.getCoApplicantFatherLastName());
+
+                    String coGuardianFullName = ((dto.getCoApplicantFatherFirstName() != null ? dto.getCoApplicantFatherFirstName().trim() : "") + " " +
+                            (dto.getCoApplicantFatherLastName() != null ? dto.getCoApplicantFatherLastName().trim() : "")).trim();
+                    if (!coGuardianFullName.isEmpty()) coApplicant.setGuardianName(coGuardianFullName);
+
+                    if (dto.getCoApplicantAddressSameAsPrimary() != null) coApplicant.setAddressSameAsPrimary(dto.getCoApplicantAddressSameAsPrimary());
+                    if (dto.getCoApplicantAddressStreet() != null) coApplicant.setAddressStreet(dto.getCoApplicantAddressStreet());
+                    if (dto.getCoApplicantAddressLine2() != null) coApplicant.setAddressLine2(dto.getCoApplicantAddressLine2());
+                    if (dto.getCoApplicantAddressCity() != null) coApplicant.setAddressCity(dto.getCoApplicantAddressCity());
+                    if (dto.getCoApplicantAddressState() != null) coApplicant.setAddressState(dto.getCoApplicantAddressState());
+                    if (dto.getCoApplicantAddressPincode() != null) coApplicant.setAddressPincode(dto.getCoApplicantAddressPincode());
+                    if (dto.getCoApplicantAddressCountry() != null) coApplicant.setAddressCountry(dto.getCoApplicantAddressCountry());
+                } else if (coApplicant != null && (coApplicant.getFullName() == null || coApplicant.getFullName().trim().isEmpty())) {
+                    application.getApplicants().remove(coApplicant);
+                }
             } else {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_1);
+                application.setHasThirdApplicant("No");
+                application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
             }
         }
 
         if (dto.getHasThirdApplicant() != null) {
             application.setHasThirdApplicant(dto.getHasThirdApplicant());
 
-            if ("Yes".equalsIgnoreCase(dto.getHasThirdApplicant()) && "Yes".equalsIgnoreCase(dto.getHasCoApplicant())) {
+            if ("Yes".equalsIgnoreCase(dto.getHasThirdApplicant()) && "Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
+                boolean hasThirdData = !thirdApplicantFullName.isEmpty() ||
+                        (dto.getThirdApplicantEmail() != null && !dto.getThirdApplicantEmail().trim().isEmpty()) ||
+                        (dto.getThirdApplicantPhone() != null && !dto.getThirdApplicantPhone().trim().isEmpty()) ||
+                        (dto.getThirdApplicantPan() != null && !dto.getThirdApplicantPan().trim().isEmpty()) ||
+                        (dto.getThirdApplicantAadhar() != null && !dto.getThirdApplicantAadhar().trim().isEmpty());
+
                 KycApplicant thirdApplicant = application.getApplicants().stream()
                         .filter(a -> a.getApplicantType() == ApplicantType.JOINT_2)
                         .findFirst()
-                        .orElseGet(() -> {
-                            KycApplicant newThird = new KycApplicant();
-                            newThird.setKycApplication(application);
-                            newThird.setApplicantType(ApplicantType.JOINT_2);
-                            application.getApplicants().add(newThird);
-                            return newThird;
-                        });
+                        .orElse(null);
 
-                if (dto.getThirdApplicantTitle() != null) thirdApplicant.setSalutation(dto.getThirdApplicantTitle());
-                if (dto.getThirdApplicantFirstName() != null) thirdApplicant.setFirstName(dto.getThirdApplicantFirstName());
-                if (dto.getThirdApplicantLastName() != null) thirdApplicant.setLastName(dto.getThirdApplicantLastName());
-                if (!thirdApplicantFullName.isEmpty()) thirdApplicant.setFullName(thirdApplicantFullName);
-                if (dto.getThirdApplicantEmail() != null) thirdApplicant.setEmail(dto.getThirdApplicantEmail());
-                if (dto.getThirdApplicantPhone() != null) thirdApplicant.setPhone(dto.getThirdApplicantPhone());
-                if (dto.getThirdApplicantDob() != null) thirdApplicant.setDateOfBirth(dto.getThirdApplicantDob());
-                if (dto.getThirdApplicantOccupation() != null) thirdApplicant.setOccupation(dto.getThirdApplicantOccupation());
-                if (dto.getThirdApplicantPan() != null) thirdApplicant.setPanNumber(dto.getThirdApplicantPan().toUpperCase());
-                if (dto.getThirdApplicantAadhar() != null) thirdApplicant.setAadhaarNumber(dto.getThirdApplicantAadhar());
+                if (hasThirdData) {
+                    if (thirdApplicant == null) {
+                        thirdApplicant = new KycApplicant();
+                        thirdApplicant.setKycApplication(application);
+                        thirdApplicant.setApplicantType(ApplicantType.JOINT_2);
+                        application.getApplicants().add(thirdApplicant);
+                    }
 
-                if (dto.getThirdApplicantSoDoWo() != null) thirdApplicant.setGuardianRelation(dto.getThirdApplicantSoDoWo());
-                if (dto.getThirdApplicantFatherSalutation() != null) thirdApplicant.setGuardianSalutation(dto.getThirdApplicantFatherSalutation());
-                if (dto.getThirdApplicantFatherFirstName() != null) thirdApplicant.setGuardianFirstName(dto.getThirdApplicantFatherFirstName());
-                if (dto.getThirdApplicantFatherLastName() != null) thirdApplicant.setGuardianLastName(dto.getThirdApplicantFatherLastName());
+                    if (dto.getThirdApplicantTitle() != null) thirdApplicant.setSalutation(dto.getThirdApplicantTitle());
+                    if (dto.getThirdApplicantFirstName() != null) thirdApplicant.setFirstName(dto.getThirdApplicantFirstName());
+                    if (dto.getThirdApplicantLastName() != null) thirdApplicant.setLastName(dto.getThirdApplicantLastName());
 
-                String thirdGuardianFullName = ((dto.getThirdApplicantFatherFirstName() != null ? dto.getThirdApplicantFatherFirstName().trim() : "") + " " +
-                        (dto.getThirdApplicantFatherLastName() != null ? dto.getThirdApplicantFatherLastName().trim() : "")).trim();
-                if (!thirdGuardianFullName.isEmpty()) thirdApplicant.setGuardianName(thirdGuardianFullName);
+                    String effectiveThirdName = thirdApplicantFullName;
+                    if (effectiveThirdName.isEmpty()) {
+                        effectiveThirdName = ((thirdApplicant.getFirstName() != null ? thirdApplicant.getFirstName().trim() : "") + " " +
+                                (thirdApplicant.getLastName() != null ? thirdApplicant.getLastName().trim() : "")).trim();
+                    }
+                    if (effectiveThirdName.isEmpty()) {
+                        effectiveThirdName = "Third Applicant";
+                    }
+                    thirdApplicant.setFullName(effectiveThirdName);
 
-                if (dto.getThirdApplicantAddressSameAsPrimary() != null) thirdApplicant.setAddressSameAsPrimary(dto.getThirdApplicantAddressSameAsPrimary());
-                if (dto.getThirdApplicantAddressSameAsSecondary() != null) thirdApplicant.setAddressSameAsSecondary(dto.getThirdApplicantAddressSameAsSecondary());
-                if (dto.getThirdApplicantAddressStreet() != null) thirdApplicant.setAddressStreet(dto.getThirdApplicantAddressStreet());
-                if (dto.getThirdApplicantAddressLine2() != null) thirdApplicant.setAddressLine2(dto.getThirdApplicantAddressLine2());
-                if (dto.getThirdApplicantAddressCity() != null) thirdApplicant.setAddressCity(dto.getThirdApplicantAddressCity());
-                if (dto.getThirdApplicantAddressState() != null) thirdApplicant.setAddressState(dto.getThirdApplicantAddressState());
-                if (dto.getThirdApplicantAddressPincode() != null) thirdApplicant.setAddressPincode(dto.getThirdApplicantAddressPincode());
-                if (dto.getThirdApplicantAddressCountry() != null) thirdApplicant.setAddressCountry(dto.getThirdApplicantAddressCountry());
+                    if (dto.getThirdApplicantEmail() != null) thirdApplicant.setEmail(dto.getThirdApplicantEmail());
+                    if (dto.getThirdApplicantPhone() != null) thirdApplicant.setPhone(dto.getThirdApplicantPhone());
+                    if (dto.getThirdApplicantDob() != null) thirdApplicant.setDateOfBirth(dto.getThirdApplicantDob());
+                    if (dto.getThirdApplicantOccupation() != null) thirdApplicant.setOccupation(dto.getThirdApplicantOccupation());
+                    if (dto.getThirdApplicantPan() != null) thirdApplicant.setPanNumber(dto.getThirdApplicantPan().toUpperCase());
+                    if (dto.getThirdApplicantAadhar() != null) thirdApplicant.setAadhaarNumber(dto.getThirdApplicantAadhar());
+
+                    if (dto.getThirdApplicantSoDoWo() != null) thirdApplicant.setGuardianRelation(dto.getThirdApplicantSoDoWo());
+                    if (dto.getThirdApplicantFatherSalutation() != null) thirdApplicant.setGuardianSalutation(dto.getThirdApplicantFatherSalutation());
+                    if (dto.getThirdApplicantFatherFirstName() != null) thirdApplicant.setGuardianFirstName(dto.getThirdApplicantFatherFirstName());
+                    if (dto.getThirdApplicantFatherLastName() != null) thirdApplicant.setGuardianLastName(dto.getThirdApplicantFatherLastName());
+
+                    String thirdGuardianFullName = ((dto.getThirdApplicantFatherFirstName() != null ? dto.getThirdApplicantFatherFirstName().trim() : "") + " " +
+                            (dto.getThirdApplicantFatherLastName() != null ? dto.getThirdApplicantFatherLastName().trim() : "")).trim();
+                    if (!thirdGuardianFullName.isEmpty()) thirdApplicant.setGuardianName(thirdGuardianFullName);
+
+                    if (dto.getThirdApplicantAddressSameAsPrimary() != null) thirdApplicant.setAddressSameAsPrimary(dto.getThirdApplicantAddressSameAsPrimary());
+                    if (dto.getThirdApplicantAddressSameAsSecondary() != null) thirdApplicant.setAddressSameAsSecondary(dto.getThirdApplicantAddressSameAsSecondary());
+                    if (dto.getThirdApplicantAddressStreet() != null) thirdApplicant.setAddressStreet(dto.getThirdApplicantAddressStreet());
+                    if (dto.getThirdApplicantAddressLine2() != null) thirdApplicant.setAddressLine2(dto.getThirdApplicantAddressLine2());
+                    if (dto.getThirdApplicantAddressCity() != null) thirdApplicant.setAddressCity(dto.getThirdApplicantAddressCity());
+                    if (dto.getThirdApplicantAddressState() != null) thirdApplicant.setAddressState(dto.getThirdApplicantAddressState());
+                    if (dto.getThirdApplicantAddressPincode() != null) thirdApplicant.setAddressPincode(dto.getThirdApplicantAddressPincode());
+                    if (dto.getThirdApplicantAddressCountry() != null) thirdApplicant.setAddressCountry(dto.getThirdApplicantAddressCountry());
+                } else if (thirdApplicant != null && (thirdApplicant.getFullName() == null || thirdApplicant.getFullName().trim().isEmpty())) {
+                    application.getApplicants().remove(thirdApplicant);
+                }
             } else {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
             }
@@ -1074,6 +1118,31 @@ public class KycServiceImpl implements KycService {
     }
 
     private void updateOrCreateApplicant(KycApplication application, ApplicantDto dto, ApplicantType type) {
+        if (dto == null) return;
+
+        String computedFullName = dto.getFullName();
+        if (computedFullName == null || computedFullName.trim().isEmpty()) {
+            computedFullName = ((dto.getFirstName() != null ? dto.getFirstName().trim() : "") + " " +
+                    (dto.getLastName() != null ? dto.getLastName().trim() : "")).trim();
+        }
+
+        boolean hasData = !computedFullName.isEmpty() ||
+                (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) ||
+                (dto.getPhone() != null && !dto.getPhone().trim().isEmpty()) ||
+                (dto.getPanNumber() != null && !dto.getPanNumber().trim().isEmpty()) ||
+                (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty());
+
+        if (!hasData && type != ApplicantType.PRIMARY) {
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
+                    .ifPresent(existing -> {
+                        if (existing.getFullName() == null || existing.getFullName().trim().isEmpty()) {
+                            kycApplicantRepository.delete(existing);
+                        }
+                    });
+            application.getApplicants().removeIf(a -> a.getApplicantType() == type && (a.getFullName() == null || a.getFullName().trim().isEmpty()));
+            return;
+        }
+
         KycApplicant applicant = kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
                 .orElseGet(() -> {
                     KycApplicant newApp = new KycApplicant();
@@ -1082,7 +1151,12 @@ public class KycServiceImpl implements KycService {
                     return newApp;
                 });
 
-        if (dto.getFullName() != null) applicant.setFullName(dto.getFullName());
+        if (!computedFullName.isEmpty()) {
+            applicant.setFullName(computedFullName);
+        } else if (applicant.getFullName() == null || applicant.getFullName().trim().isEmpty()) {
+            applicant.setFullName(type == ApplicantType.PRIMARY ? "Primary Applicant" : (type == ApplicantType.JOINT_1 ? "Co-Applicant" : "Third Applicant"));
+        }
+
         if (dto.getSalutation() != null) applicant.setSalutation(dto.getSalutation());
         if (dto.getFirstName() != null) applicant.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) applicant.setLastName(dto.getLastName());
