@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.12-add-gender-and-age-to-kyc-applicants
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        tableExists:
+          tableName: kyc_applicants
+        not:
+          columnExists:
+            tableName: kyc_applicants
+            columnName: gender
+      changes:
+        - addColumn:
+            tableName: kyc_applicants
+            columns:
+              - column:
+                  name: gender
+                  type: VARCHAR(20)
+              - column:
+                  name: age
+                  type: VARCHAR(10)
