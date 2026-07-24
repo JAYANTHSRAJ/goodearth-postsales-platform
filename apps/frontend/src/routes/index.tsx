@@ -34,6 +34,7 @@ const ActivationPage = withSuspense(() => import('../features/auth/pages/Activat
 const DashboardPage = withSuspense(() => import('../features/dashboard/pages/DashboardPage'), 'DashboardPage');
 const AdminPage = withSuspense(() => import('../features/dashboard/pages/AdminPage'), 'AdminPage');
 const BuyersPage = withSuspense(() => import('../features/buyers/pages/BuyersPage'), 'BuyersPage');
+const BuyerDashboardPage = withSuspense(() => import('../features/buyers/pages/BuyerDashboardPage'), 'BuyerDashboardPage');
 const ProjectsPage = withSuspense(() => import('../features/projects/pages/ProjectsPage'), 'ProjectsPage');
 const WorkflowsPage = withSuspense(() => import('../features/workflows/pages/WorkflowsPage'), 'WorkflowsPage');
 const MySelectionsPage = withSuspense(() => import('../features/workflows/pages/MySelectionsPage'), 'MySelectionsPage');
@@ -115,6 +116,14 @@ export const router = createBrowserRouter([
               {
                 path: '/buyers',
                 element: <BuyersPage />,
+              },
+              {
+                path: '/buyers/:id',
+                element: <BuyerDashboardPage />,
+              },
+              {
+                path: '/buyers/booking/:bookingId',
+                element: <BuyerDashboardPage />,
               },
               {
                 path: '/projects',

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   UserCheck,
@@ -14,8 +15,6 @@ import {
   FileText,
   MessageSquare,
   Eye,
-  Edit2,
-  Trash2,
   Activity,
   Mail,
   Phone,
@@ -43,6 +42,7 @@ interface CRMBuyer extends Buyer {
 }
 
 export const BuyersPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     filteredBuyers,
     isLoading,
@@ -162,15 +162,7 @@ export const BuyersPage: React.FC = () => {
     return crmBuyers.find((b) => b.id === selectedBuyerId);
   }, [crmBuyers, selectedBuyerId]);
 
-  const handleOpenEdit = (buyer: CRMBuyer) => {
-    setFormName(buyer.name || '');
-    setFormEmail(buyer.email || '');
-    setFormStatus(buyer.status || 'pending');
-    setFormCoApplicantName(buyer.coApplicantName || '');
-    setFormPhone(buyer.phone || '');
-    setFormError(null);
-    setActiveBuyerForEdit(buyer);
-  };
+
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -750,79 +742,51 @@ export const BuyersPage: React.FC = () => {
                 <table className="min-w-full divide-y divide-brand-200 dark:divide-brand-850">
                   <thead className="bg-brand-50/50 dark:bg-brand-950/30">
                     <tr className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-                      <th scope="col" className="px-4 py-3 text-left">Buyer Details</th>
-                      <th scope="col" className="px-4 py-3 text-left">Villa & Project</th>
-                      <th scope="col" className="px-4 py-3 text-left">CRM Staff</th>
-                      <th scope="col" className="px-4 py-3 text-left">Progress Stage</th>
-                      <th scope="col" className="px-4 py-3 text-left">Payment Status</th>
-                      <th scope="col" className="px-4 py-3 text-left">Design Upgrade</th>
-                      <th scope="col" className="px-4 py-3 text-left">Open Snags</th>
-                      <th scope="col" className="px-4 py-3 text-left">Last Activity</th>
-                      <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                      <th scope="col" className="px-4 py-3 text-left">Buyer Name</th>
+                      <th scope="col" className="px-4 py-3 text-left">Booking Number</th>
+                      <th scope="col" className="px-4 py-3 text-left">Project</th>
+                      <th scope="col" className="px-4 py-3 text-left">Unit</th>
+                      <th scope="col" className="px-4 py-3 text-left">Phone</th>
+                      <th scope="col" className="px-4 py-3 text-left">Status</th>
+                      <th scope="col" className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-brand-900 divide-y divide-brand-100 dark:divide-brand-850/40 text-xs text-brand-800 dark:text-brand-200 font-semibold">
-                    {filteredCRMBuyers.map((b) => (
-                      <tr key={b.id} className="hover:bg-brand-50/30 dark:hover:bg-brand-950/10">
-                        <td className="px-4 py-3 text-left">
-                          <div className="font-bold text-brand-900 dark:text-white">{b.name}</div>
-                          <div className="text-[10px] text-brand-450 mt-0.5">{b.email}</div>
-                          <div className="text-[10px] text-brand-400 mt-0.5">{b.phone}</div>
-                        </td>
-                        <td className="px-4 py-3 text-left">
-                          <div className="font-bold">{b.projectName}</div>
-                          <div className="text-[10px] text-brand-450 mt-0.5">
-                            {b.properties.length > 1 ? `${b.properties.join(', ')} (${b.properties.length} units)` : b.unitName}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-left">{b.crmCoordinator}</td>
-                        <td className="px-4 py-3 text-left">
-                          <span className="rounded bg-brand-50 px-2 py-0.5 text-[10px] text-brand-700 dark:bg-brand-850 dark:text-brand-300">
-                            {b.constructionStage}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-left">
-                          <StatusBadge
-                            label={b.paymentStatus}
-                            type={b.paymentStatus === 'Cleared' ? 'success' : b.paymentStatus === 'Outstanding' ? 'neutral' : 'warning'}
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-left">
-                          <span>{b.designRequests.total} requests</span>
-                          {b.designRequests.pending > 0 && (
-                            <span className="ml-1 text-[9px] text-amber-600 block">({b.designRequests.pending} pending)</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-left">
-                          <span>{b.supportTickets.total} snags</span>
-                          {b.supportTickets.open > 0 && (
-                            <span className="ml-1 text-[9px] text-red-650 block">({b.supportTickets.open} open)</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-left truncate max-w-[120px]">{b.lastActivity}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-1.5">
+                    {filteredCRMBuyers.map((b, idx) => {
+                      const bookingNum = `BKG-2026-${101 + idx}`;
+                      return (
+                        <tr
+                          key={b.id}
+                          onClick={() => navigate(`/buyers/booking/${bookingNum}`)}
+                          className="hover:bg-brand-50/30 dark:hover:bg-brand-950/10 cursor-pointer transition-colors"
+                        >
+                          <td className="px-4 py-3 text-left font-bold text-brand-900 dark:text-white">
+                            <div>{b.name}</div>
+                            <div className="text-[10px] text-brand-450 mt-0.5">{b.email}</div>
+                          </td>
+                          <td className="px-4 py-3 text-left font-mono font-bold text-brand-600 dark:text-brand-400">
+                            {bookingNum}
+                          </td>
+                          <td className="px-4 py-3 text-left">{b.projectName || 'GoodEarth Malhar'}</td>
+                          <td className="px-4 py-3 text-left font-semibold">{b.unitName || 'Villa 14'}</td>
+                          <td className="px-4 py-3 text-left font-mono">{b.phone || '+91 98450 12345'}</td>
+                          <td className="px-4 py-3 text-left">
+                            <StatusBadge
+                              label={b.status === 'active' ? 'Active' : 'KYC Verified'}
+                              type={b.status === 'active' ? 'success' : 'info'}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={() => {
-                                setSelectedBuyerId(b.id);
-                                setSelectedPropertyIdx(0);
-                                setWorkspaceTab('overview');
-                              }}
-                              className="rounded-lg p-1.5 text-brand-500 hover:bg-brand-50 hover:text-brand-900"
-                              title="Buyer 360 Workspace"
+                              onClick={() => navigate(`/buyers/booking/${bookingNum}`)}
+                              className="px-3 py-1.5 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 ml-auto"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" /> View Dashboard
                             </button>
-                            <button onClick={() => handleOpenEdit(b)} className="rounded-lg p-1.5 text-brand-500 hover:bg-brand-50 hover:text-brand-900" title="Edit details">
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => setBuyerToDelete(b.id)} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-750" title="Remove account">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 <div className="mt-4">

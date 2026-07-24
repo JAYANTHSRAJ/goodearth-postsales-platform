@@ -2,19 +2,10 @@ import React, { ComponentType, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Highlighter,
-  CreditCard,
-  Bell,
   User,
   Users,
   Building,
-  GitMerge,
-  Layers,
-  FileText,
-  FileSpreadsheet,
   Settings,
-  Shield,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
@@ -35,19 +26,9 @@ const clientNavItems: NavItem[] = [
 
 const crmNavItems: NavItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'KYC Management', path: '/admin/kyc-management', icon: ShieldCheck },
   { name: 'Buyers', path: '/buyers', icon: Users },
   { name: 'Projects', path: '/projects', icon: Building },
-  { name: 'Properties', path: '/properties', icon: Building },
-  { name: 'Workflow', path: '/workflows', icon: GitMerge },
-  { name: 'Construction', path: '/stages', icon: Layers },
-  { name: 'Design Reviews', path: '/annotations', icon: Highlighter },
-  { name: 'Documents', path: '/documents', icon: FileText },
-  { name: 'Finance', path: '/payments', icon: CreditCard },
-  { name: 'Notifications', path: '/notifications', icon: Bell },
-  { name: 'Reports', path: '/reports', icon: FileSpreadsheet },
   { name: 'Settings', path: '/settings', icon: Settings },
-  { name: 'Administration', path: '/admin', icon: Shield },
 ];
 
 export const Sidebar: React.FC = () => {
