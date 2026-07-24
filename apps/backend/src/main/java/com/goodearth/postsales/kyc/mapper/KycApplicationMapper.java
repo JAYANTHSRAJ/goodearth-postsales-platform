@@ -143,8 +143,8 @@ public class KycApplicationMapper {
                 .documentType(document.getDocumentType())
                 .applicantType(document.getApplicantType())
                 .isRequired(document.getIsRequired())
-                .status(document.getStatus() != null ? document.getStatus().name() : "PENDING")
-                .currentVersion(documentVersionMapper.toDto(activeVersion))
+                .status(activeVersion != null ? document.getStatus().name() : "PENDING")
+                .currentVersion(activeVersion != null ? documentVersionMapper.toDto(activeVersion) : null)
                 .build();
     }
 

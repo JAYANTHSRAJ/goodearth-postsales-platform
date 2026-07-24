@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, UUID> {
     Optional<Document> findByWorkDriveFileId(String workDriveFileId);
@@ -20,9 +23,15 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     Optional<Document> findFirstByWorkflowIdAndDocumentTypeOrderByVersionDesc(UUID workflowId, DocumentType documentType);
     Optional<Document> findByWorkflowIdAndDocumentTypeAndStatus(UUID workflowId, DocumentType documentType, DocumentStatus status);
 
-    List<Document> findByKycApplicationId(UUID kycApplicationId);
+    @Query("SELECT DISTINCT d FROM Document d LEFT JOIN FETCH d.versions WHERE d.kycApplication.id = :kycApplicationId")
+    List<Document> findByKycApplicationId(@Param("kycApplicationId") UUID kycApplicationId);
+
     List<Document> findByKycApplicationIdAndCategory(UUID kycApplicationId, DocumentCategory category);
+
+    @Query("SELECT DISTINCT d FROM Document d LEFT JOIN FETCH d.versions WHERE d.kycApplication.id = :kycApplicationId AND d.documentType = :documentType AND d.applicantType = :applicantType")
     Optional<Document> findByKycApplicationIdAndDocumentTypeAndApplicantType(
-            UUID kycApplicationId, DocumentType documentType, ApplicantType applicantType
+            @Param("kycApplicationId") UUID kycApplicationId,
+            @Param("documentType") DocumentType documentType,
+            @Param("applicantType") ApplicantType applicantType
     );
 }

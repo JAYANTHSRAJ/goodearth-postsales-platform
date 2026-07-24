@@ -16,10 +16,12 @@ import {
   ChevronDown,
   ChevronUp,
   Printer,
+  Download,
 } from 'lucide-react';
 import { KycApplicationResponseDto, DocumentSlotDto, ApplicantDto } from '../../types/kyc';
 import kycService from '../../services/kyc.service';
 import DocumentPreviewModal from '../documents/DocumentPreviewModal';
+import { formatDateTime, formatDate } from '../../../../utils/dateFormatter';
 
 interface AdminKycReviewConsoleProps {
   kycData: KycApplicationResponseDto;
@@ -205,9 +207,9 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
               <span>•</span>
               <span><strong>Unit:</strong> {kycData.bookingId}</span>
               <span>•</span>
-              <span><strong>Submitted:</strong> {kycData.submittedAt ? new Date(kycData.submittedAt).toLocaleDateString('en-IN') : 'Not Submitted'}</span>
+              <span><strong>Submitted:</strong> {formatDateTime(kycData.submittedAt)}</span>
               <span>•</span>
-              <span><strong>Last Saved:</strong> {kycData.lastSavedAt ? new Date(kycData.lastSavedAt).toLocaleDateString('en-IN') : 'N/A'}</span>
+              <span><strong>Last Saved:</strong> {formatDateTime(kycData.lastSavedAt)}</span>
             </div>
           </div>
         </div>
@@ -259,7 +261,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
         </div>
       )}
 
-      {/* SECTION 1: APPLICATION SUMMARY (COMPACT MATRIX TABLE - NO DUPLICATE DATA) */}
+      {/* SECTION 1: APPLICATION SUMMARY MATRIX */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
         <div
           onClick={() => toggleSection('summary')}
@@ -285,7 +287,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                   <td className="p-2.5 font-bold text-slate-500">Verified By:</td>
                   <td className="p-2.5 text-slate-900 dark:text-white">{kycData.verifiedBy || 'Pending Compliance Verification'}</td>
                   <td className="p-2.5 font-bold text-slate-500">Verification Timestamp:</td>
-                  <td className="p-2.5 font-mono text-slate-900 dark:text-white">{kycData.verifiedAt ? new Date(kycData.verifiedAt).toLocaleString('en-IN') : 'Pending'}</td>
+                  <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.verifiedAt)}</td>
                 </tr>
               </tbody>
             </table>
@@ -314,12 +316,13 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Title</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Full Name</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">DOB</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">PAN Number</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Aadhaar Number</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Mobile</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Gender</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">PAN</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Aadhaar</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Phone</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Email</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Occupation</th>
-                  <th className="p-2.5">Family Particulars</th>
+                  <th className="p-2.5">Relationship</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -328,7 +331,8 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                     <td className="p-2.5 font-bold text-brand-700 dark:text-brand-300 border-r border-slate-200 dark:border-slate-700">{item.typeLabel}</td>
                     <td className="p-2.5 font-medium border-r border-slate-200 dark:border-slate-700">{item.dto.salutation || 'N/A'}</td>
                     <td className="p-2.5 font-bold text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700">{item.dto.fullName}</td>
-                    <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">{item.dto.dateOfBirth || 'N/A'}</td>
+                    <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">{formatDate(item.dto.dateOfBirth)}</td>
+                    <td className="p-2.5 border-r border-slate-200 dark:border-slate-700">{item.dto.gender || 'N/A'}</td>
                     <td className="p-2.5 font-mono font-bold text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700">{item.dto.panNumber || 'N/A'}</td>
                     <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">{item.dto.maskedAadhaarNumber || item.dto.aadhaarNumber || 'N/A'}</td>
                     <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">{item.dto.phone || 'N/A'}</td>
@@ -337,7 +341,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                     <td className="p-2.5 text-[11px] text-slate-600 dark:text-slate-300">
                       {item.dto.guardianRelation && item.dto.guardianFirstName
                         ? `${item.dto.guardianRelation}: ${item.dto.guardianSalutation || ''} ${item.dto.guardianFirstName} ${item.dto.guardianLastName || ''}`
-                        : 'N/A'}
+                        : item.dto.relation || 'Self'}
                     </td>
                   </tr>
                 ))}
@@ -364,22 +368,37 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
             <table className="w-full text-left border border-slate-200 dark:border-slate-700 border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-700 text-[10px]">
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Document Name</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Upload Status</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Category</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Document Type</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Uploaded File Name</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Uploaded Date</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Version</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Verification Status</th>
-                  <th className="p-2.5 text-right print:hidden">Actions</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700">Status</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 print:hidden text-center">Preview</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 print:hidden text-center">Download</th>
+                  <th className="p-2.5">Verification Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {documentSlots.length > 0 ? (
                   documentSlots.map((slot) => {
                     const isUploaded = Boolean(slot.currentVersion);
+                    const fileName = isUploaded ? slot.currentVersion?.fileName : '—';
+                    const uploadedDate = isUploaded ? formatDate(slot.currentVersion?.uploadedAt) : '—';
+                    const versionStr = isUploaded ? `v${slot.currentVersion?.versionNumber}` : '—';
+
                     return (
                       <tr key={slot.documentId} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                         <td className="p-2.5 font-bold text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700">
-                          {slot.currentVersion?.fileName || slot.documentType}
+                          {slot.documentType} ({slot.applicantType})
+                        </td>
+                        <td className="p-2.5 font-mono text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700">
+                          {fileName}
+                        </td>
+                        <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">
+                          {uploadedDate}
+                        </td>
+                        <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">
+                          {versionStr}
                         </td>
                         <td className="p-2.5 font-semibold border-r border-slate-200 dark:border-slate-700">
                           {isUploaded ? (
@@ -388,11 +407,30 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                             <span className="text-slate-400 italic">Not Uploaded</span>
                           )}
                         </td>
-                        <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{slot.documentCategory}</td>
-                        <td className="p-2.5 font-mono border-r border-slate-200 dark:border-slate-700">
-                          {slot.currentVersion ? `v${slot.currentVersion.versionNumber}` : '—'}
+                        <td className="p-2.5 border-r border-slate-200 dark:border-slate-700 print:hidden text-center">
+                          {isUploaded ? (
+                            <button
+                              onClick={() => setPreviewSlot(slot)}
+                              className="px-2.5 py-1 bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300 rounded font-bold text-xs inline-flex items-center gap-1"
+                            >
+                              <Eye className="w-3 h-3" /> Preview
+                            </button>
+                          ) : null}
                         </td>
-                        <td className="p-2.5 border-r border-slate-200 dark:border-slate-700">
+                        <td className="p-2.5 border-r border-slate-200 dark:border-slate-700 print:hidden text-center">
+                          {isUploaded && slot.currentVersion ? (
+                            <a
+                              href={kycService.getFileUrl(slot.documentId, slot.currentVersion.versionNumber)}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={slot.currentVersion.fileName}
+                              className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 rounded font-bold text-xs inline-flex items-center gap-1"
+                            >
+                              <Download className="w-3 h-3" /> Download
+                            </a>
+                          ) : null}
+                        </td>
+                        <td className="p-2.5">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               slot.status === 'APPROVED'
@@ -402,27 +440,15 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                                 : 'bg-slate-100 text-slate-500'
                             }`}
                           >
-                            {slot.status || 'PENDING'}
+                            {isUploaded ? (slot.status || 'PENDING') : 'PENDING'}
                           </span>
-                        </td>
-                        <td className="p-2.5 text-right print:hidden">
-                          {isUploaded ? (
-                            <button
-                              onClick={() => setPreviewSlot(slot)}
-                              className="px-2.5 py-1 bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300 rounded font-bold text-xs inline-flex items-center gap-1"
-                            >
-                              <Eye className="w-3 h-3" /> Preview
-                            </button>
-                          ) : (
-                            <span className="text-slate-400 italic text-[11px]">Not Uploaded</span>
-                          )}
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-slate-400 italic">
+                    <td colSpan={8} className="p-4 text-center text-slate-400 italic">
                       No documents uploaded.
                     </td>
                   </tr>
@@ -462,7 +488,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
               </table>
             </div>
 
-            {/* Permanent / Secondary Address Table */}
+            {/* Permanent Address Table */}
             <div>
               <h4 className="font-bold text-brand-700 uppercase text-[11px] mb-1.5">Permanent / Secondary Address</h4>
               <table className="w-full text-left border border-slate-200 dark:border-slate-700 border-collapse">
@@ -540,7 +566,9 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 <tr>
                   <td className="p-2.5 font-bold text-slate-500 w-1/3 bg-slate-50 dark:bg-slate-800">Home Loan Requested:</td>
-                  <td className="p-2.5 font-bold text-slate-900 dark:text-white">{kycData.consideringHomeLoan || 'No'}</td>
+                  <td className="p-2.5 font-bold text-slate-900 dark:text-white">
+                    {kycData.consideringHomeLoan === 'Yes' ? 'Yes' : 'No Home Loan Requested.'}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -570,7 +598,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                 </tr>
                 <tr>
                   <td className="p-2.5 font-bold text-slate-500 bg-slate-50 dark:bg-slate-800">Submission Timestamp:</td>
-                  <td className="p-2.5 font-mono text-slate-900 dark:text-white">{kycData.submittedAt ? new Date(kycData.submittedAt).toLocaleString('en-IN') : 'Not Submitted'}</td>
+                  <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.submittedAt)}</td>
                 </tr>
               </tbody>
             </table>
@@ -596,14 +624,14 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
               <div className="relative pl-4">
                 <div className="absolute left-[-21px] top-1 h-3 w-3 rounded-full bg-brand-500" />
                 <span className="font-bold text-slate-900 dark:text-white">Draft Application Initialized</span>
-                <span className="text-[10px] text-slate-400 block font-mono">{kycData.applicationDate}</span>
+                <span className="text-[10px] text-slate-400 block font-mono">{formatDate(kycData.applicationDate)}</span>
               </div>
             )}
             {kycData.submittedAt && (
               <div className="relative pl-4">
                 <div className="absolute left-[-21px] top-1 h-3 w-3 rounded-full bg-indigo-600" />
                 <span className="font-bold text-slate-900 dark:text-white">Application Submitted by Buyer</span>
-                <span className="text-[10px] text-slate-400 block font-mono">{new Date(kycData.submittedAt).toLocaleString('en-IN')}</span>
+                <span className="text-[10px] text-slate-400 block font-mono">{formatDateTime(kycData.submittedAt)}</span>
               </div>
             )}
             {kycData.verifiedAt && (
@@ -611,7 +639,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                 <div className="absolute left-[-21px] top-1 h-3 w-3 rounded-full bg-emerald-600" />
                 <span className="font-bold text-emerald-700 dark:text-emerald-400">KYC Verified & Approved</span>
                 <span className="text-[10px] text-slate-400 block font-mono">
-                  {new Date(kycData.verifiedAt).toLocaleString('en-IN')} by {kycData.verifiedBy || 'Admin'}
+                  {formatDateTime(kycData.verifiedAt)} by {kycData.verifiedBy || 'Admin'}
                 </span>
               </div>
             )}
@@ -640,21 +668,21 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           <table className="w-full text-left border border-slate-200 dark:border-slate-700 border-collapse text-xs">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-700 text-[10px]">
-                <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Date / Time</th>
+                <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Date</th>
                 <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Author</th>
-                <th className="p-2.5">Note Content</th>
+                <th className="p-2.5">Note</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {kycData.internalNotes ? (
                 <tr>
-                  <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">Recorded</td>
+                  <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{formatDateTime(kycData.lastSavedAt)}</td>
                   <td className="p-2.5 font-bold text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700">Admin Staff</td>
                   <td className="p-2.5 whitespace-pre-wrap text-slate-800 dark:text-slate-200">{kycData.internalNotes}</td>
                 </tr>
               ) : (
                 <tr>
-                  <td colSpan={3} className="p-3 text-center text-slate-400 italic">No private notes recorded.</td>
+                  <td colSpan={3} className="p-3 text-center text-slate-400 italic">No admin notes available.</td>
                 </tr>
               )}
             </tbody>
@@ -662,14 +690,14 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
         </div>
       </div>
 
-      {/* SECTION 10: AUDIT HISTORY TABLE */}
+      {/* SECTION 10: AUDIT LOGS TABLE */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
         <div
           onClick={() => toggleSection('audit')}
           className="flex items-center justify-between cursor-pointer border-b border-slate-100 dark:border-slate-800 pb-2"
         >
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-brand-600" /> Section 10: System Audit Logs History
+            <Clock className="w-3.5 h-3.5 text-brand-600" /> Section 10: Audit Logs Table
           </h3>
           {openSections.audit ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
         </div>
@@ -681,14 +709,14 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                 <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-700 text-[10px]">
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Timestamp</th>
                   <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">User</th>
-                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Action Executed</th>
+                  <th className="p-2.5 border-r border-slate-200 dark:border-slate-700 w-1/4">Action</th>
                   <th className="p-2.5">Remarks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {kycData.submittedAt && (
                   <tr>
-                    <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{new Date(kycData.submittedAt).toLocaleString('en-IN')}</td>
+                    <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{formatDateTime(kycData.submittedAt)}</td>
                     <td className="p-2.5 font-bold border-r border-slate-200 dark:border-slate-700">{primary?.fullName || 'Buyer'}</td>
                     <td className="p-2.5 font-semibold text-indigo-700 border-r border-slate-200 dark:border-slate-700">KYC Submitted</td>
                     <td className="p-2.5 text-slate-600">Application submitted for admin review</td>
@@ -696,7 +724,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                 )}
                 {kycData.verifiedAt && (
                   <tr>
-                    <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{new Date(kycData.verifiedAt).toLocaleString('en-IN')}</td>
+                    <td className="p-2.5 font-mono text-[11px] border-r border-slate-200 dark:border-slate-700">{formatDateTime(kycData.verifiedAt)}</td>
                     <td className="p-2.5 font-bold border-r border-slate-200 dark:border-slate-700">{kycData.verifiedBy || 'Admin'}</td>
                     <td className="p-2.5 font-semibold text-emerald-700 border-r border-slate-200 dark:border-slate-700">KYC Approved</td>
                     <td className="p-2.5 text-slate-600">Full application verified and locked</td>
@@ -704,7 +732,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                 )}
                 {!kycData.submittedAt && !kycData.verifiedAt && (
                   <tr>
-                    <td colSpan={4} className="p-3 text-center text-slate-400 italic">No audit history recorded.</td>
+                    <td colSpan={4} className="p-3 text-center text-slate-400 italic">No audit logs available.</td>
                   </tr>
                 )}
               </tbody>
