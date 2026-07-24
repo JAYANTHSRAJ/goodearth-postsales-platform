@@ -28,7 +28,7 @@ const crmNavItems: NavItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Buyers', path: '/buyers', icon: Users },
   { name: 'Projects', path: '/projects', icon: Building },
-  { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Administration', path: '/admin', icon: Settings },
 ];
 
 export const Sidebar: React.FC = () => {

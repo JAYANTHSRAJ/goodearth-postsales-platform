@@ -23,18 +23,6 @@ interface SearchItem {
   subtitle: string;
 }
 
-const SEARCH_DATABASE: SearchItem[] = [
-  { id: 'b1', type: 'Buyer', title: 'Priyal Sharma', subtitle: 'Registrant of GoodEarth Malhar — Villa 14' },
-  { id: 'b2', type: 'Buyer', title: 'Amit Patel', subtitle: 'Registrant of Malhar Phase II — Villa 22' },
-  { id: 'b3', type: 'Buyer', title: 'Karan Singh', subtitle: 'Registrant of GoodEarth Malhar — Villa 05' },
-  { id: 'p1', type: 'Property', title: 'Villa 14', subtitle: 'GoodEarth Malhar — Plot No. 34' },
-  { id: 'p2', type: 'Property', title: 'Villa 22', subtitle: 'Malhar Phase II — Plot No. 12' },
-  { id: 'pj1', type: 'Project', title: 'GoodEarth Malhar', subtitle: 'Kengeri, Bengaluru' },
-  { id: 'pj2', type: 'Project', title: 'Malhar Phase II', subtitle: 'Kengeri, Bengaluru' },
-  { id: 'i1', type: 'Invoice', title: 'INV-2026-0045', subtitle: 'Overdue: ₹2,50,000 — Villa 14' },
-  { id: 'i2', type: 'Invoice', title: 'INV-2026-0046', subtitle: 'Pending: ₹12,15,000 — Villa 22' },
-];
-
 export const AdminDashboardView: React.FC = () => {
   const { data: stats, isLoading, error, refetch } = useAdminDashboard();
   const navigate = useNavigate();
@@ -56,14 +44,22 @@ export const AdminDashboardView: React.FC = () => {
       return;
     }
 
-    const filtered = SEARCH_DATABASE.filter(
-      (item) =>
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        item.subtitle.toLowerCase().includes(query.toLowerCase()) ||
-        item.type.toLowerCase().includes(query.toLowerCase())
-    );
-    setSearchResults(filtered);
-    setShowDropdown(true);
+    const results: SearchItem[] = [];
+    if (stats?.projectWorkloads) {
+      Object.keys(stats.projectWorkloads).forEach((proj, idx) => {
+        if (proj.toLowerCase().includes(query.toLowerCase())) {
+          results.push({
+            id: `proj-${idx}`,
+            type: 'Project',
+            title: proj,
+            subtitle: `${stats.projectWorkloads[proj]} Active Workflows`,
+          });
+        }
+      });
+    }
+
+    setSearchResults(results);
+    setShowDropdown(results.length > 0);
   };
 
   const handleSearchSelect = (item: SearchItem) => {
