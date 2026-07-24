@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.11-drop-file-bytes-column-from-document-versions
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        columnExists:
+          tableName: document_versions
+          columnName: file_bytes
+      changes:
+        - dropColumn:
+            tableName: document_versions
+            columnName: file_bytes

@@ -65,8 +65,4 @@ public class DocumentVersion extends BaseEntity {
 
     @Column(name = "is_current", nullable = false)
     private Boolean isCurrent = true;
-
-    @jakarta.persistence.Lob
-    @Column(name = "file_bytes")
-    private byte[] fileBytes;
 }

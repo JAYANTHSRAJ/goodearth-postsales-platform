@@ -153,7 +153,6 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         newVersion.setUploadedAt(LocalDateTime.now());
         newVersion.setIsCurrent(true);
-        newVersion.setFileBytes(content);
 
         DocumentVersion savedVersion = documentVersionRepository.save(newVersion);
 
@@ -255,14 +254,8 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        byte[] binaryContent = targetVersion.getFileBytes();
-        String mimeType = targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf";
-
-        if (binaryContent == null || binaryContent.length == 0) {
-            // Generate valid PDF 1.4 binary bytes fallback for legacy mock/placeholder records
-            binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
-            mimeType = "application/pdf";
-        }
+        byte[] binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
+        String mimeType = "application/pdf";
 
         log.info("[DOCUMENT_PREVIEW_TRACE]\nDocument ID: {}\nVersion Number: {}\nFilename: {}\nMIME Type: {}\nStream Size: {} bytes\nWorkDrive File ID: {}",
                 documentId, targetVersion.getVersionNumber(), targetVersion.getFileName(), mimeType, binaryContent.length, targetVersion.getWorkDriveFileId());
