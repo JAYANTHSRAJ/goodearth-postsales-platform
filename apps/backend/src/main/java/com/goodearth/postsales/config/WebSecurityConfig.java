@@ -119,11 +119,31 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(allowedOrigins);
+
+        List<String> origins = new java.util.ArrayList<>(List.of(
+            "https://goodearth-postsales-platform.vercel.app",
+            "https://goodearth-postsales-platform-*.vercel.app",
+            "https://*.vercel.app",
+            "https://goodearth.in",
+            "https://*.goodearth.in",
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ));
+
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            for (String orig : allowedOrigins) {
+                if (orig != null && !orig.isBlank() && !origins.contains(orig.trim())) {
+                    origins.add(orig.trim());
+                }
+            }
+        }
+
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(List.of("Authorization", "Link", "X-Total-Count"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
