@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Mail, ShieldCheck, MapPin } from 'lucide-react';
+import { User, ShieldCheck, MapPin, Users } from 'lucide-react';
 import KycInputField from './KycInputField';
 import KycAddressForm from './KycAddressForm';
 import KycDatePicker from '../common/KycDatePicker';
@@ -42,6 +42,18 @@ export const OCCUPATIONS = [
   'Business',
   'Artist',
   'Defense Sector',
+  'Other',
+];
+
+export const CO_APPLICANT_RELATIONS = [
+  'Husband',
+  'Wife',
+  'Son',
+  'Daughter',
+  'Father',
+  'Mother',
+  'Brother',
+  'Sister',
   'Other',
 ];
 
@@ -128,9 +140,8 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
 
   const fieldPrefix = applicantType.toLowerCase();
 
-  // Determine current relationship (Default: S/O)
-  const currentRelation = applicant.guardianRelation || 'S/O';
-  const isSpouseRelation = currentRelation === 'W/O' || currentRelation === 'W/o';
+  // Determine current relationship for Family Particulars (Default: S/O)
+  const currentGuardianRelation = applicant.guardianRelation || 'S/O';
 
   // Determine occupation dropdown state vs custom "Other" occupation text
   const currentOccupation = applicant.occupation || '';
@@ -156,9 +167,23 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
   const isPanValid = !!applicant.panNumber && PAN_REGEX.test(applicant.panNumber);
   const isAadhaarValid = !!applicant.aadhaarNumber && applicant.aadhaarNumber.length === 12;
 
+  // Auto calculate age if DOB is present
+  const calculatedAge = React.useMemo(() => {
+    if (!applicant.dateOfBirth) return '';
+    const parts = applicant.dateOfBirth.split('-');
+    if (parts.length === 3) {
+      const birthYear = parseInt(parts[2], 10);
+      const currentYear = new Date().getFullYear();
+      if (!isNaN(birthYear) && birthYear > 1900 && birthYear <= currentYear) {
+        return (currentYear - birthYear).toString();
+      }
+    }
+    return '';
+  }, [applicant.dateOfBirth]);
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-8">
-      {/* Header Badge */}
+      {/* Section Header */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
@@ -167,7 +192,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           <div>
             <h3 className="text-xl font-bold font-serif text-slate-900 dark:text-white">{title}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Personal information, contact particulars & identity document uploads
+              Personal information, identity uploads, family details & contact address
             </p>
           </div>
         </div>
@@ -189,7 +214,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           <User className="w-4 h-4 text-brand-500" /> 1. Personal Information
         </div>
 
-        {/* Applicant Name with Salutation */}
+        {/* Title, First Name, Last Name */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
           <div>
             <label htmlFor={`${fieldPrefix}-salutation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
@@ -197,16 +222,16 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             </label>
             <select
               id={`${fieldPrefix}-salutation`}
-              value={applicant.salutation || '-Select-'}
+              value={applicant.salutation || 'Mr.'}
               onChange={(e) => handleChange('salutation', e.target.value)}
               aria-required="true"
               className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
-              <option value="-Select-">-Select-</option>
               <option value="Mr.">Mr.</option>
               <option value="Mrs.">Mrs.</option>
               <option value="Ms.">Ms.</option>
               <option value="Dr.">Dr.</option>
+              <option value="Prof.">Prof.</option>
             </select>
           </div>
 
@@ -241,16 +266,73 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           </div>
         </div>
 
-        {/* Date of Birth & Occupation */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Gender, DOB, Age */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor={`${fieldPrefix}-gender`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Gender <span className="text-rose-500" aria-hidden="true">*</span>
+            </label>
+            <select
+              id={`${fieldPrefix}-gender`}
+              value={applicant.relation && ['Male', 'Female', 'Other'].includes(applicant.relation) ? applicant.relation : 'Male'}
+              onChange={(e) => handleChange('relation', e.target.value)}
+              className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
           <KycDatePicker
             id={`${fieldPrefix}-dob`}
-            label="Date of Birth"
+            label="DOB"
             isRequired
             value={applicant.dateOfBirth || ''}
             onChange={(val) => handleChange('dateOfBirth', val)}
             error={errors[`${applicantType}.dateOfBirth`]}
             helperText="Format: dd-MM-yyyy"
+          />
+
+          <div>
+            <label htmlFor={`${fieldPrefix}-age`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Age <span className="text-slate-400 font-normal">(Auto Calculated)</span>
+            </label>
+            <input
+              id={`${fieldPrefix}-age`}
+              type="text"
+              readOnly
+              placeholder="Age"
+              value={calculatedAge}
+              className="w-full h-10 px-3.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300 font-bold"
+            />
+          </div>
+        </div>
+
+        {/* Phone, Email, Occupation */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <KycPhoneInput
+            id={`${fieldPrefix}-phone`}
+            label="Phone"
+            name={`applicant_${applicantType}_phone`}
+            phoneCode={applicant.phoneCode || '+91'}
+            phone={applicant.phone || ''}
+            onPhoneCodeChange={(code) => handleChange('phoneCode', code)}
+            onPhoneChange={(phone) => handleChange('phone', phone)}
+            error={errors[`${applicantType}.phone`]}
+            isRequired
+          />
+
+          <KycInputField
+            id={`${fieldPrefix}-email`}
+            label="Email"
+            name={`applicant_${applicantType}_email`}
+            type="email"
+            value={applicant.email || ''}
+            onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="email@example.com"
+            error={errors[`${applicantType}.email`]}
+            isRequired
           />
 
           <div className="space-y-1">
@@ -289,230 +371,36 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             )}
           </div>
         </div>
-      </div>
 
-      {/* Group 2: Contact Particulars & Family Particulars */}
-      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-          <Mail className="w-4 h-4 text-brand-500" /> 2. Contact & Family Particulars
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <KycInputField
-            id={`${fieldPrefix}-email`}
-            label={`${applicantPrefix} Email`}
-            name={`applicant_${applicantType}_email`}
-            type="email"
-            value={applicant.email || ''}
-            onChange={(e) => handleChange('email', e.target.value)}
-            placeholder="email@example.com"
-            error={errors[`${applicantType}.email`]}
-            isRequired
-          />
-
-          <KycPhoneInput
-            id={`${fieldPrefix}-phone`}
-            label={`${applicantPrefix} Phone`}
-            name={`applicant_${applicantType}_phone`}
-            phoneCode={applicant.phoneCode || '+91'}
-            phone={applicant.phone || ''}
-            onPhoneCodeChange={(code) => handleChange('phoneCode', code)}
-            onPhoneChange={(phone) => handleChange('phone', phone)}
-            error={errors[`${applicantType}.phone`]}
-            isRequired
-          />
-        </div>
-
-        {/* Family Particulars (Relationship, Father/Spouse First & Last Name) */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-          <div>
-            <label htmlFor={`${fieldPrefix}-relationship`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Relationship <span className="text-rose-500" aria-hidden="true">*</span>
-            </label>
-            <select
-              id={`${fieldPrefix}-relationship`}
-              value={currentRelation}
-              onChange={(e) => handleChange('guardianRelation', e.target.value)}
-              aria-required="true"
-              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-            >
-              <option value="S/O">S/O</option>
-              <option value="D/O">D/O</option>
-              <option value="W/O">W/O</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Relationship with Primary Applicant (only for Co-Applicant / Third Applicant) */}
+        {applicantType !== 'PRIMARY' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
-              <label htmlFor={`${fieldPrefix}-guardianSalutation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Title
+              <label htmlFor={`${fieldPrefix}-relationWithPrimary`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Relationship with Primary Applicant <span className="text-rose-500" aria-hidden="true">*</span>
               </label>
               <select
-                id={`${fieldPrefix}-guardianSalutation`}
-                value={applicant.guardianSalutation || '-Select-'}
-                onChange={(e) => handleChange('guardianSalutation', e.target.value)}
-                className="w-full h-10 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                id={`${fieldPrefix}-relationWithPrimary`}
+                value={applicant.relation || 'Husband'}
+                onChange={(e) => handleChange('relation', e.target.value)}
+                aria-required="true"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
               >
-                <option value="-Select-">-Select-</option>
-                <option value="Mr.">Mr.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Dr.">Dr.</option>
+                {CO_APPLICANT_RELATIONS.map((rel) => (
+                  <option key={rel} value={rel}>
+                    {rel}
+                  </option>
+                ))}
               </select>
             </div>
-
-            <div>
-              <label htmlFor={`${fieldPrefix}-guardianFirstName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {isSpouseRelation ? `${applicantPrefix} Spouse First Name` : `${applicantPrefix} Father's First Name`}{' '}
-                <span className="text-rose-500" aria-hidden="true">*</span>
-              </label>
-              <input
-                id={`${fieldPrefix}-guardianFirstName`}
-                type="text"
-                placeholder="First Name"
-                value={applicant.guardianFirstName || ''}
-                onChange={(e) => handleChange('guardianFirstName', e.target.value)}
-                aria-required="true"
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label htmlFor={`${fieldPrefix}-guardianLastName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {isSpouseRelation ? `${applicantPrefix} Spouse Last Name` : `${applicantPrefix} Father's Last Name`}{' '}
-                <span className="text-rose-500" aria-hidden="true">*</span>
-              </label>
-              <input
-                id={`${fieldPrefix}-guardianLastName`}
-                type="text"
-                placeholder="Last Name"
-                value={applicant.guardianLastName || ''}
-                onChange={(e) => handleChange('guardianLastName', e.target.value)}
-                aria-required="true"
-                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Address Segmented Toggles for Co-Applicant and Third Applicant */}
-      {applicantType === 'JOINT_1' && (
-        <div className="p-4 bg-brand-50/40 dark:bg-slate-800/50 border border-brand-200/60 dark:border-slate-700 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold text-slate-900 dark:text-white">
-              Address Same as Primary Applicant?
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsPrimary(true)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  applicant.addressSameAsPrimary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsPrimary(false)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  !applicant.addressSameAsPrimary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {applicantType === 'JOINT_2' && (
-        <div className="p-4 bg-brand-50/40 dark:bg-slate-800/50 border border-brand-200/60 dark:border-slate-700 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold text-slate-900 dark:text-white">
-              Same Address as Primary Applicant?
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsPrimary(true)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  applicant.addressSameAsPrimary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsPrimary(false)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  !applicant.addressSameAsPrimary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/60 pt-3">
-            <label className="block text-xs font-bold text-slate-900 dark:text-white">
-              Same Address as Second Applicant?
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsSecondary(true)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  applicant.addressSameAsSecondary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddressSameAsSecondary(false)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  !applicant.addressSameAsSecondary
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Group 3: Address Particulars */}
-      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-          <MapPin className="w-4 h-4 text-brand-500" /> 3. Address Particulars
-        </div>
-
-        <KycAddressForm
-          address={applicant.address || {}}
-          onChange={(newAddress) => handleChange('address', newAddress)}
-          errors={errors}
-          prefix={`${applicantType}.address`}
-        />
-      </div>
-
-      {/* Group 4: Tax & Government Identity Verification with Direct Document Uploads */}
+      {/* Group 2: Identity Verification & Document Uploads */}
       <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-          <ShieldCheck className="w-4 h-4 text-brand-500" /> 4. Government Identity & Tax Verification
+          <ShieldCheck className="w-4 h-4 text-brand-500" /> 2. Identity Verification & Document Uploads
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -596,6 +484,200 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Group 3: Family Particulars (Simplified uniform structure for all applicants) */}
+      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+          <Users className="w-4 h-4 text-brand-500" /> 3. Family Particulars
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+          <div>
+            <label htmlFor={`${fieldPrefix}-relationship`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Relationship <span className="text-rose-500" aria-hidden="true">*</span>
+            </label>
+            <select
+              id={`${fieldPrefix}-relationship`}
+              value={currentGuardianRelation}
+              onChange={(e) => handleChange('guardianRelation', e.target.value)}
+              aria-required="true"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+            >
+              <option value="S/O">S/O</option>
+              <option value="D/O">D/O</option>
+              <option value="W/O">W/O</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${fieldPrefix}-guardianSalutation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Title <span className="text-rose-500" aria-hidden="true">*</span>
+            </label>
+            <select
+              id={`${fieldPrefix}-guardianSalutation`}
+              value={applicant.guardianSalutation || 'Mr.'}
+              onChange={(e) => handleChange('guardianSalutation', e.target.value)}
+              aria-required="true"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+            >
+              <option value="Mr.">Mr.</option>
+              <option value="Mrs.">Mrs.</option>
+              <option value="Ms.">Ms.</option>
+              <option value="Dr.">Dr.</option>
+              <option value="Prof.">Prof.</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor={`${fieldPrefix}-guardianFirstName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              First Name <span className="text-rose-500" aria-hidden="true">*</span>
+            </label>
+            <input
+              id={`${fieldPrefix}-guardianFirstName`}
+              type="text"
+              placeholder="First Name"
+              value={applicant.guardianFirstName || ''}
+              onChange={(e) => handleChange('guardianFirstName', e.target.value)}
+              aria-required="true"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+            />
+          </div>
+
+          <div>
+            <label htmlFor={`${fieldPrefix}-guardianLastName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Last Name <span className="text-rose-500" aria-hidden="true">*</span>
+            </label>
+            <input
+              id={`${fieldPrefix}-guardianLastName`}
+              type="text"
+              placeholder="Last Name"
+              value={applicant.guardianLastName || ''}
+              onChange={(e) => handleChange('guardianLastName', e.target.value)}
+              aria-required="true"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Group 4: Address Particulars & Segmented Same Address Toggles */}
+      <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+          <MapPin className="w-4 h-4 text-brand-500" /> 4. Address Particulars
+        </div>
+
+        {/* Address Same as Primary Applicant toggle for Co-Applicant */}
+        {applicantType === 'JOINT_1' && (
+          <div className="p-4 bg-brand-50/40 dark:bg-slate-800/50 border border-brand-200/60 dark:border-slate-700 rounded-2xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Is this the same address as the Primary Applicant?
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Select Yes to copy Primary Applicant address details or No to specify a different address.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsPrimary-${applicantType}`}
+                    value="Yes"
+                    checked={applicant.addressSameAsPrimary !== false}
+                    onChange={() => handleAddressSameAsPrimary(true)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>(•) Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsPrimary-${applicantType}`}
+                    value="No"
+                    checked={applicant.addressSameAsPrimary === false}
+                    onChange={() => handleAddressSameAsPrimary(false)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>( ) No</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Address Same as Primary / Secondary toggle for Third Applicant */}
+        {applicantType === 'JOINT_2' && (
+          <div className="p-4 bg-brand-50/40 dark:bg-slate-800/50 border border-brand-200/60 dark:border-slate-700 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-900 dark:text-white">
+                Same Address as Primary Applicant?
+              </label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsPrimary-${applicantType}`}
+                    value="Yes"
+                    checked={applicant.addressSameAsPrimary === true}
+                    onChange={() => handleAddressSameAsPrimary(true)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>(•) Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsPrimary-${applicantType}`}
+                    value="No"
+                    checked={applicant.addressSameAsPrimary === false}
+                    onChange={() => handleAddressSameAsPrimary(false)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>( ) No</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/60 pt-3">
+              <label className="block text-xs font-bold text-slate-900 dark:text-white">
+                Same Address as Co-Applicant?
+              </label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsSecondary-${applicantType}`}
+                    value="Yes"
+                    checked={applicant.addressSameAsSecondary === true}
+                    onChange={() => handleAddressSameAsSecondary(true)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>(•) Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name={`addressSameAsSecondary-${applicantType}`}
+                    value="No"
+                    checked={applicant.addressSameAsSecondary === false}
+                    onChange={() => handleAddressSameAsSecondary(false)}
+                    className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                  />
+                  <span>( ) No</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <KycAddressForm
+          address={applicant.address || {}}
+          onChange={(newAddress) => handleChange('address', newAddress)}
+          errors={errors}
+          prefix={`${applicantType}.address`}
+        />
       </div>
     </div>
   );
