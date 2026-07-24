@@ -195,7 +195,7 @@ export const useKycAutosave = (
           applicantOccupation: primaryApplicant.occupation,
           applicantPan: primaryApplicant.panNumber,
           applicantAadhar: primaryApplicant.aadhaarNumber,
-          soDoWoA: primaryApplicant.guardianRelation,
+          soDoWoA: primaryApplicant.guardianRelation || 'S/O',
           applicantFatherSalutation: primaryApplicant.guardianSalutation,
           applicantFatherFirstName: primaryApplicant.guardianFirstName,
           applicantFatherLastName: primaryApplicant.guardianLastName,

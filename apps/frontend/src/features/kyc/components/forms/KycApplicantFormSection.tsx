@@ -1,7 +1,8 @@
 import React from 'react';
-import { User, Mail, ShieldCheck, MapPin, Calendar } from 'lucide-react';
+import { User, Mail, ShieldCheck, MapPin } from 'lucide-react';
 import KycInputField from './KycInputField';
 import KycAddressForm from './KycAddressForm';
+import KycDatePicker from '../common/KycDatePicker';
 import { ApplicantDto, ApplicantType } from '../../types/kyc';
 
 interface KycApplicantFormSectionProps {
@@ -16,7 +17,7 @@ interface KycApplicantFormSectionProps {
   secondaryApplicantAddress?: any;
 }
 
-const OCCUPATIONS = [
+export const OCCUPATIONS = [
   'Retired',
   'Student',
   'Homemaker',
@@ -32,7 +33,8 @@ const OCCUPATIONS = [
   'Lawyer',
   'Business',
   'Artist',
-  'Defense sector',
+  'Defense Sector',
+  'Other',
 ];
 
 export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = ({
@@ -102,7 +104,30 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
     onChange(updated);
   };
 
-  const applicantPrefix = applicantType === 'PRIMARY' ? 'Primary Applicant' : applicantType === 'JOINT_1' ? 'Co-Applicant' : 'Third Applicant';
+  const applicantPrefix =
+    applicantType === 'PRIMARY'
+      ? 'Primary Applicant'
+      : applicantType === 'JOINT_1'
+      ? 'Co-Applicant'
+      : 'Third Applicant';
+
+  // Determine current relationship (Default: S/O)
+  const currentRelation = applicant.guardianRelation || 'S/O';
+  const isSpouseRelation = currentRelation === 'W/O' || currentRelation === 'W/o';
+
+  // Determine occupation dropdown state vs custom "Other" occupation text
+  const currentOccupation = applicant.occupation || '';
+  const isPredefinedOcc = OCCUPATIONS.filter((o) => o !== 'Other').includes(currentOccupation);
+  const selectedOccDropdown = isPredefinedOcc ? currentOccupation : (currentOccupation ? 'Other' : '');
+
+  const handleOccupationDropdownChange = (selectedVal: string) => {
+    if (selectedVal === 'Other') {
+      // If user chooses Other and previous occupation was a predefined option, reset to empty for custom typing
+      handleChange('occupation', isPredefinedOcc ? 'Other' : currentOccupation || 'Other');
+    } else {
+      handleChange('occupation', selectedVal);
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-8">
@@ -114,7 +139,9 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           </div>
           <div>
             <h3 className="text-xl font-bold font-serif text-slate-900 dark:text-white">{title}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Personal information, contact particulars & identity documents</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Personal information, contact particulars & identity documents
+            </p>
           </div>
         </div>
 
@@ -144,7 +171,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             <select
               value={applicant.salutation || '-Select-'}
               onChange={(e) => handleChange('salutation', e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
               <option value="-Select-">-Select-</option>
               <option value="Mr.">Mr.</option>
@@ -163,7 +190,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
               placeholder="First Name"
               value={applicant.firstName || ''}
               onChange={(e) => handleChange('firstName', e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             />
           </div>
 
@@ -176,38 +203,30 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
               placeholder="Last Name"
               value={applicant.lastName || ''}
               onChange={(e) => handleChange('lastName', e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             />
           </div>
         </div>
 
         {/* Date of Birth & Occupation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-              Date of Birth <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="dd-MM-yyyy"
-                value={applicant.dateOfBirth || ''}
-                onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
-              />
-              <Calendar className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
-            </div>
-            <span className="text-[10px] text-slate-400 block">Format: dd-MM-yyyy</span>
-          </div>
+          <KycDatePicker
+            label="Date of Birth"
+            isRequired
+            value={applicant.dateOfBirth || ''}
+            onChange={(val) => handleChange('dateOfBirth', val)}
+            error={errors[`${applicantType}.dateOfBirth`]}
+            helperText="Format: dd-MM-yyyy"
+          />
 
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
               Occupation <span className="text-rose-500">*</span>
             </label>
             <select
-              value={applicant.occupation || '-Select-'}
-              onChange={(e) => handleChange('occupation', e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
+              value={selectedOccDropdown || '-Select-'}
+              onChange={(e) => handleOccupationDropdownChange(e.target.value)}
+              className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
               <option value="-Select-">-Select-</option>
               {OCCUPATIONS.map((occ) => (
@@ -216,14 +235,29 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
                 </option>
               ))}
             </select>
+
+            {/* Custom Occupation Text Input when 'Other' is selected */}
+            {selectedOccDropdown === 'Other' && (
+              <div className="pt-2">
+                <KycInputField
+                  label="Occupation"
+                  name={`applicant_${applicantType}_custom_occupation`}
+                  value={applicant.occupation === 'Other' ? '' : applicant.occupation || ''}
+                  onChange={(e) => handleChange('occupation', e.target.value || 'Other')}
+                  placeholder="Specify Occupation"
+                  isRequired
+                  error={errors[`${applicantType}.occupation`]}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Group 2: Contact Particulars & Guardian Details */}
+      {/* Group 2: Contact Particulars & Family Particulars */}
       <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-          <Mail className="w-4 h-4 text-brand-500" /> 2. Contact & Guardian Particulars
+          <Mail className="w-4 h-4 text-brand-500" /> 2. Contact & Family Particulars
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -248,7 +282,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
                 placeholder="+91"
                 value={applicant.phoneCode || '+91'}
                 onChange={(e) => handleChange('phoneCode', e.target.value)}
-                className="col-span-1 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="col-span-1 h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
               <input
                 type="tel"
@@ -256,39 +290,38 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
                 maxLength={10}
                 value={applicant.phone || ''}
                 onChange={(e) => handleChange('phone', e.target.value)}
-                className="col-span-2 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="col-span-2 h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
         </div>
 
-        {/* S/o D/o W/o & Guardian Name */}
+        {/* Family Particulars (Relationship, Father/Spouse First & Last Name) */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Relationship <span className="text-rose-500">*</span>
             </label>
             <select
-              value={applicant.guardianRelation || '-Select-'}
+              value={currentRelation}
               onChange={(e) => handleChange('guardianRelation', e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+              className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
             >
-              <option value="-Select-">-Select-</option>
-              <option value="S/o">S/o (Son of)</option>
-              <option value="W/o">W/o (Wife of)</option>
-              <option value="D/o">D/o (Daughter of)</option>
+              <option value="S/O">S/O</option>
+              <option value="D/O">D/O</option>
+              <option value="W/O">W/O</option>
             </select>
           </div>
 
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Father / Husband / Spouse Name <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                Title
+              </label>
               <select
                 value={applicant.guardianSalutation || '-Select-'}
                 onChange={(e) => handleChange('guardianSalutation', e.target.value)}
-                className="px-2.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               >
                 <option value="-Select-">-Select-</option>
                 <option value="Mr.">Mr.</option>
@@ -296,19 +329,33 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
                 <option value="Ms.">Ms.</option>
                 <option value="Dr.">Dr.</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {isSpouseRelation ? `${applicantPrefix} Spouse First Name` : `${applicantPrefix} Father's First Name`}{' '}
+                <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="text"
                 placeholder="First Name"
                 value={applicant.guardianFirstName || ''}
                 onChange={(e) => handleChange('guardianFirstName', e.target.value)}
-                className="px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {isSpouseRelation ? `${applicantPrefix} Spouse Last Name` : `${applicantPrefix} Father's Last Name`}{' '}
+                <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="text"
                 placeholder="Last Name"
                 value={applicant.guardianLastName || ''}
                 onChange={(e) => handleChange('guardianLastName', e.target.value)}
-                className="col-span-2 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>

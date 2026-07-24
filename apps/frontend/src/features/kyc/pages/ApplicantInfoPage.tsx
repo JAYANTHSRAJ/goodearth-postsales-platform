@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { User, ShieldCheck, Users, Briefcase, Calendar, Save, CheckCircle2, Sparkles } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { User, ShieldCheck, Users, Briefcase, Calendar, Save, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
 import kycService from '../services/kyc.service';
 import { useUnitStore } from '../../../store/unitStore';
+import KycDatePicker from '../components/common/KycDatePicker';
+import { OCCUPATIONS } from '../components/forms/KycApplicantFormSection';
 
 export const ApplicantInfoPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { activeUnit } = useUnitStore();
 
-  const targetDealName = searchParams.get('dealName') || activeUnit?.zohoDealName || activeUnit?.projectName || searchParams.get('bookingId') || activeUnit?.unitName || 'motif16-280726';
+  const targetDealName =
+    searchParams.get('dealName') ||
+    activeUnit?.zohoDealName ||
+    activeUnit?.projectName ||
+    searchParams.get('bookingId') ||
+    activeUnit?.unitName ||
+    'motif16-280726';
   const targetDealId = activeUnit?.zohoDealId || undefined;
 
   const [form, setForm] = useState({
@@ -27,24 +36,19 @@ export const ApplicantInfoPage: React.FC = () => {
     // Identity
     applicantPan: '',
     applicantAadhar: '',
-    newApplicantAadhar: '',
-    // Family
+    // Family Particulars
+    relationship: 'S/O',
+    applicantFatherSalutation: 'Mr.',
     applicantFatherFirstName: '',
     applicantFatherLastName: '',
-    // Professional
+    // Professional Details
     applicantOccupation: 'Engineer',
-    applicantDesignation: '',
-    applicantOrganizationName: '',
-    industry: 'Technology',
-    applicantCitizenshipStatus: 'Resident Indian',
+    customOccupation: '',
     // Application
     applicationDate: new Date().toISOString().split('T')[0],
     consideringHomeLoan: 'No',
-    // Co-Applicant
-    soDoWoA: 'S/o',
-    titleA: 'Mr.',
-    firstNameA: '',
-    lastNameA: '',
+    // Co-Applicant Entry
+    hasCoApplicant: 'No',
   });
 
   const [saving, setSaving] = useState<boolean>(false);
@@ -64,14 +68,39 @@ export const ApplicantInfoPage: React.FC = () => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const isSpouse = form.relationship === 'W/O' || form.relationship === 'W/o';
+  const isPredefinedOcc = OCCUPATIONS.filter((o) => o !== 'Other').includes(form.applicantOccupation);
+  const selectedOccDropdown = isPredefinedOcc ? form.applicantOccupation : (form.applicantOccupation ? 'Other' : '');
+
+  const handleOccupationDropdownChange = (selectedVal: string) => {
+    if (selectedVal === 'Other') {
+      handleChange('applicantOccupation', 'Other');
+    } else {
+      handleChange('applicantOccupation', selectedVal);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation check for Occupation when 'Other' is selected
+    if (selectedOccDropdown === 'Other' && !form.customOccupation.trim() && form.applicantOccupation === 'Other') {
+      setErrorMsg('Please specify your occupation.');
+      return;
+    }
+
     setSaving(true);
     setSuccessMsg(null);
     setErrorMsg(null);
 
+    const submitPayload: any = {
+      ...form,
+      soDoWoA: form.relationship,
+      applicantOccupation: selectedOccDropdown === 'Other' ? form.customOccupation.trim() || 'Other' : form.applicantOccupation,
+    };
+
     try {
-      await kycService.submitApplicantInfo(form);
+      await kycService.submitApplicantInfo(submitPayload);
       setSuccessMsg(`Successfully updated Zoho CRM Deal for booking reference '${form.bookingId}'!`);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to update applicant information in Zoho CRM');
@@ -87,7 +116,7 @@ export const ApplicantInfoPage: React.FC = () => {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5" /> GoodEarth Buyer Portal
         </div>
-        <h1 className="text-3xl font-bold font-serif tracking-tight text-white">Applicant Information</h1>
+        <h1 className="text-3xl font-bold font-serif tracking-tight text-white">Primary Applicant Information</h1>
         <p className="text-sm text-slate-300 max-w-2xl">
           Please provide your applicant details below. All fields will be synchronized directly to your official property booking in Zoho CRM.
         </p>
@@ -125,7 +154,7 @@ export const ApplicantInfoPage: React.FC = () => {
               <select
                 value={form.applicantTitle}
                 onChange={(e) => handleChange('applicantTitle', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               >
                 <option value="Mr.">Mr.</option>
                 <option value="Mrs.">Mrs.</option>
@@ -142,7 +171,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 placeholder="First Name"
                 value={form.applicantFirstName}
                 onChange={(e) => handleChange('applicantFirstName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
 
@@ -154,7 +183,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 placeholder="Last Name"
                 value={form.applicantLastName}
                 onChange={(e) => handleChange('applicantLastName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -165,7 +194,7 @@ export const ApplicantInfoPage: React.FC = () => {
               <select
                 value={form.applicantGender}
                 onChange={(e) => handleChange('applicantGender', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -173,16 +202,12 @@ export const ApplicantInfoPage: React.FC = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant DOB (dd-MM-yyyy)</label>
-              <input
-                type="text"
-                placeholder="dd-MM-yyyy"
-                value={form.applicantDob}
-                onChange={(e) => handleChange('applicantDob', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
+            <KycDatePicker
+              label="Applicant DOB"
+              value={form.applicantDob}
+              onChange={(val) => handleChange('applicantDob', val)}
+              helperText="Format: dd-MM-yyyy"
+            />
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Age</label>
@@ -191,7 +216,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 placeholder="Age"
                 value={form.applicantAge}
                 onChange={(e) => handleChange('applicantAge', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -205,7 +230,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 placeholder="+91 9876543210"
                 value={form.applicantPhone}
                 onChange={(e) => handleChange('applicantPhone', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
 
@@ -217,7 +242,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 placeholder="email@example.com"
                 value={form.applicantEmail}
                 onChange={(e) => handleChange('applicantEmail', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -235,7 +260,7 @@ export const ApplicantInfoPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant PAN *</label>
               <input
@@ -245,7 +270,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 maxLength={10}
                 value={form.applicantPan}
                 onChange={(e) => handleChange('applicantPan', e.target.value.toUpperCase())}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm uppercase"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm uppercase"
               />
             </div>
 
@@ -258,19 +283,7 @@ export const ApplicantInfoPage: React.FC = () => {
                 maxLength={12}
                 value={form.applicantAadhar}
                 onChange={(e) => handleChange('applicantAadhar', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">New Applicant Aadhar</label>
-              <input
-                type="text"
-                placeholder="123400009876"
-                maxLength={12}
-                value={form.newApplicantAadhar}
-                onChange={(e) => handleChange('newApplicantAadhar', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -284,30 +297,47 @@ export const ApplicantInfoPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Family Particulars</h2>
-              <p className="text-xs text-slate-500">Father / Spouse details</p>
+              <p className="text-xs text-slate-500">Father / Spouse relationship & details</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Father First Name</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Relationship</label>
+              <select
+                value={form.relationship}
+                onChange={(e) => handleChange('relationship', e.target.value)}
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+              >
+                <option value="S/O">S/O</option>
+                <option value="D/O">D/O</option>
+                <option value="W/O">W/O</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {isSpouse ? "Applicant Spouse First Name" : "Applicant Father's First Name"}
+              </label>
               <input
                 type="text"
-                placeholder="Father First Name"
+                placeholder="First Name"
                 value={form.applicantFatherFirstName}
                 onChange={(e) => handleChange('applicantFatherFirstName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Father Last Name</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {isSpouse ? "Applicant Spouse Last Name" : "Applicant Father's Last Name"}
+              </label>
               <input
                 type="text"
-                placeholder="Father Last Name"
+                placeholder="Last Name"
                 value={form.applicantFatherLastName}
                 onChange={(e) => handleChange('applicantFatherLastName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
           </div>
@@ -321,67 +351,42 @@ export const ApplicantInfoPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Professional Details</h2>
-              <p className="text-xs text-slate-500">Occupation, organization & citizenship</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Occupation</label>
-              <input
-                type="text"
-                placeholder="Occupation"
-                value={form.applicantOccupation}
-                onChange={(e) => handleChange('applicantOccupation', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Designation</label>
-              <input
-                type="text"
-                placeholder="Designation"
-                value={form.applicantDesignation}
-                onChange={(e) => handleChange('applicantDesignation', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Organization Name</label>
-              <input
-                type="text"
-                placeholder="Organization Name"
-                value={form.applicantOrganizationName}
-                onChange={(e) => handleChange('applicantOrganizationName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
+              <p className="text-xs text-slate-500">Applicant occupation classification</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Industry</label>
-              <input
-                type="text"
-                placeholder="Industry"
-                value={form.industry}
-                onChange={(e) => handleChange('industry', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Occupation</label>
+              <select
+                value={selectedOccDropdown || '-Select-'}
+                onChange={(e) => handleOccupationDropdownChange(e.target.value)}
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+              >
+                <option value="-Select-">-Select-</option>
+                {OCCUPATIONS.map((occ) => (
+                  <option key={occ} value={occ}>
+                    {occ}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Applicant Citizenship Status</label>
-              <input
-                type="text"
-                placeholder="e.g. Resident Indian / NRI"
-                value={form.applicantCitizenshipStatus}
-                onChange={(e) => handleChange('applicantCitizenshipStatus', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
+            {selectedOccDropdown === 'Other' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  Occupation <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Specify Occupation"
+                  value={form.customOccupation}
+                  onChange={(e) => handleChange('customOccupation', e.target.value)}
+                  className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -398,23 +403,19 @@ export const ApplicantInfoPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Application Date (dd-MM-yyyy)</label>
-              <input
-                type="text"
-                placeholder="dd-MM-yyyy"
-                value={form.applicationDate}
-                onChange={(e) => handleChange('applicationDate', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
+            <KycDatePicker
+              label="Application Date"
+              value={form.applicationDate}
+              onChange={(val) => handleChange('applicationDate', val)}
+              helperText="Format: dd-MM-yyyy"
+            />
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Are you considering a home loan?</label>
               <select
                 value={form.consideringHomeLoan}
                 onChange={(e) => handleChange('consideringHomeLoan', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               >
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
@@ -423,67 +424,43 @@ export const ApplicantInfoPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 6. Co-Applicant Particulars */}
+        {/* 6. Co-Applicant Entry */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
             <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Co-Applicant Particulars</h2>
-              <p className="text-xs text-slate-500">Co-applicant basic information</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Co-Applicant Entry</h2>
+              <p className="text-xs text-slate-500">Indicate whether a co-applicant or joint owner will be included</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">S/o D/o W/o (A)</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Do you have a Co-Applicant?</label>
               <select
-                value={form.soDoWoA}
-                onChange={(e) => handleChange('soDoWoA', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                value={form.hasCoApplicant}
+                onChange={(e) => handleChange('hasCoApplicant', e.target.value)}
+                className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               >
-                <option value="S/o">S/o</option>
-                <option value="W/o">W/o</option>
-                <option value="D/o">D/o</option>
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Title (A)</label>
-              <select
-                value={form.titleA}
-                onChange={(e) => handleChange('titleA', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                <option value="Mr.">Mr.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Dr.">Dr.</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">First Name (A)</label>
-              <input
-                type="text"
-                placeholder="First Name"
-                value={form.firstNameA}
-                onChange={(e) => handleChange('firstNameA', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Last Name (A)</label>
-              <input
-                type="text"
-                placeholder="Last Name"
-                value={form.lastNameA}
-                onChange={(e) => handleChange('lastNameA', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
+            {form.hasCoApplicant === 'Yes' && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/client/kyc/applicants?bookingId=${form.bookingId}`)}
+                  className="w-full h-10 px-4 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-brand-100 transition-all"
+                >
+                  <span>Continue to Dedicated Co-Applicant Section</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
