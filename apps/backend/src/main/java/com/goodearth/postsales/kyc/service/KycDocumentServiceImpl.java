@@ -21,6 +21,7 @@ import com.goodearth.postsales.kyc.entity.KycAuditEventType;
 import com.goodearth.postsales.kyc.exception.KycInvalidStateTransitionException;
 import com.goodearth.postsales.kyc.exception.KycNotFoundException;
 import com.goodearth.postsales.kyc.exception.KycValidationException;
+import java.util.ArrayList;
 import com.goodearth.postsales.kyc.repository.KycApplicantRepository;
 import com.goodearth.postsales.kyc.repository.KycApplicationRepository;
 import com.goodearth.postsales.workdrive.entity.WorkDriveFolder;
@@ -155,6 +156,12 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setIsCurrent(true);
 
         DocumentVersion savedVersion = documentVersionRepository.save(newVersion);
+
+        // Synchronize in-memory JPA collection for immediate DTO mapping
+        if (document.getVersions() == null) {
+            document.setVersions(new ArrayList<>());
+        }
+        document.getVersions().add(savedVersion);
 
         // Update header document metadata
         document.setVersion(nextVersionNumber);
