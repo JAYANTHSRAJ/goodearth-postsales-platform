@@ -23,8 +23,11 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.springframework.test.context.TestPropertySource;
+
 @SpringBootTest
-@ActiveProfiles("test")
+@ActiveProfiles(value = "test", inheritProfiles = false)
+@org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 @Transactional
 public class AccountActivationIntegrationTest {
 
@@ -39,6 +42,9 @@ public class AccountActivationIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.goodearth.postsales.notification.service.EmailService emailService;
 
     @Autowired
     private AuthService authService;

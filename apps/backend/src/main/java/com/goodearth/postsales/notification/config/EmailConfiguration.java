@@ -29,7 +29,10 @@ public class EmailConfiguration {
             return new Smtp2GoApiEmailService(apiKey, fromEmail);
         } else {
             JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-            return new SmtpEmailServiceImpl(mailSender, fromEmail, mailHost, mailPort, requireTls, sslSecure);
+            if (mailSender != null) {
+                return new SmtpEmailServiceImpl(mailSender, fromEmail, mailHost, mailPort, requireTls, sslSecure);
+            }
+            return (toEmail, subject, body) -> {};
         }
     }
 }

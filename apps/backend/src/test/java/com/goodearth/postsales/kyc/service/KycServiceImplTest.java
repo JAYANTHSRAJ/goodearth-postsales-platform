@@ -50,6 +50,8 @@ public class KycServiceImplTest {
     private com.goodearth.postsales.buyer.repository.BuyerRepository buyerRepository;
     @Mock
     private com.goodearth.postsales.workflow.repository.WorkflowRepository workflowRepository;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private KycServiceImpl kycService;
 
@@ -66,7 +68,8 @@ public class KycServiceImplTest {
                 auditService,
                 zohoKycSyncService,
                 buyerRepository,
-                workflowRepository
+                workflowRepository,
+                eventPublisher
         );
     }
 
