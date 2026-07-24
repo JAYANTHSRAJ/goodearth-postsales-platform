@@ -49,6 +49,8 @@ export interface ApplicantDto {
   guardianLastName?: string;
   guardianName?: string;
   dateOfBirth?: string;
+  gender?: string;
+  age?: string;
   occupation?: string;
   addressSameAsPrimary?: boolean;
   addressSameAsSecondary?: boolean;

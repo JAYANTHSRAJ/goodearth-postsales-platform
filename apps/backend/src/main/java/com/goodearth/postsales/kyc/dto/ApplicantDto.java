@@ -38,6 +38,8 @@ public class ApplicantDto {
     private String guardianName;
 
     private String dateOfBirth;
+    private String gender;
+    private String age;
     private String occupation;
 
     private Boolean addressSameAsPrimary;

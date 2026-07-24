@@ -55,7 +55,7 @@ export const KycDashboard: React.FC<KycDashboardProps> = ({ kycData, loading }) 
         </div>
 
         <button
-          onClick={() => navigate(kycData?.status === 'APPROVED' ? '/client/kyc/review' : '/client/kyc/property')}
+          onClick={() => navigate('/client/kyc')}
           className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all shadow-md shadow-brand-500/20"
         >
           {kycData?.status === 'APPROVED' ? 'View Approved Application' : 'Continue KYC Form'}

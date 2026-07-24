@@ -49,11 +49,7 @@ const ClientSupportPage = withSuspense(() => import('../features/dashboard/pages
 const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages/ClientProfilePage'), 'ClientProfilePage');
 
 // KYC Module Lazy Routes
-const ApplicantInfoPage = withSuspense(() => import('../features/kyc/pages/ApplicantInfoPage'), 'ApplicantInfoPage');
-const KycPropertyPage = withSuspense(() => import('../features/kyc/pages/KycPropertyPage'), 'KycPropertyPage');
-const KycApplicantsPage = withSuspense(() => import('../features/kyc/pages/KycApplicantsPage'), 'KycApplicantsPage');
-const KycDocumentsPage = withSuspense(() => import('../features/kyc/pages/KycDocumentsPage'), 'KycDocumentsPage');
-const KycReviewPage = withSuspense(() => import('../features/kyc/pages/KycReviewPage'), 'KycReviewPage');
+const SingleKycPage = withSuspense(() => import('../features/kyc/pages/SingleKycPage'), 'SingleKycPage');
 
 const Unauthorized = withSuspense(() => import('../pages/Unauthorized'), 'Unauthorized');
 const NotFound = withSuspense(() => import('../pages/NotFound'), 'NotFound');
@@ -163,31 +159,31 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: '/client/applicant-info',
-                element: <ApplicantInfoPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/my-home',
-                element: <ApplicantInfoPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/client/kyc',
-                element: <ApplicantInfoPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/client/kyc/property',
-                element: <KycPropertyPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/client/kyc/applicants',
-                element: <KycApplicantsPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/client/kyc/documents',
-                element: <KycDocumentsPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/client/kyc/review',
-                element: <KycReviewPage />,
+                element: <SingleKycPage />,
               },
               {
                 path: '/design-studio',

@@ -58,6 +58,12 @@ public class KycApplicant extends BaseEntity {
     @Column(name = "date_of_birth", length = 50)
     private String dateOfBirth;
 
+    @Column(name = "gender", length = 20)
+    private String gender;
+
+    @Column(name = "age", length = 10)
+    private String age;
+
     @Column(name = "occupation", length = 100)
     private String occupation;
 

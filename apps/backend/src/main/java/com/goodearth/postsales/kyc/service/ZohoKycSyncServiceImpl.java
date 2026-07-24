@@ -234,69 +234,152 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             if (application.getApplicants() != null) {
                 for (com.goodearth.postsales.kyc.entity.KycApplicant app : application.getApplicants()) {
                     if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.PRIMARY) {
-                        if (app.getSalutation() != null) dealFields.put("Title_A", app.getSalutation());
-                        if (app.getFirstName() != null) dealFields.put("First_Name_A", app.getFirstName());
-                        if (app.getLastName() != null) dealFields.put("Last_Name_A", app.getLastName());
+                        if (app.getSalutation() != null) {
+                            dealFields.put("Title_A", app.getSalutation());
+                            dealFields.put("Applicant_Title", app.getSalutation());
+                        }
+                        if (app.getFirstName() != null) {
+                            dealFields.put("First_Name_A", app.getFirstName());
+                            dealFields.put("Applicant_First_Name", app.getFirstName());
+                        }
+                        if (app.getLastName() != null) {
+                            dealFields.put("Last_Name_A", app.getLastName());
+                            dealFields.put("Applicant_Last_Name", app.getLastName());
+                        }
                         if (app.getFullName() != null) {
                             dealFields.put("First_Applicant", app.getFullName());
                             dealFields.put("Applicant_Name", app.getFullName());
                         }
-                        if (app.getEmail() != null) dealFields.put("Email", app.getEmail());
+                        if (app.getGender() != null) {
+                            dealFields.put("Gender", app.getGender());
+                            dealFields.put("Applicant_Gender", app.getGender());
+                        }
+                        if (app.getDateOfBirth() != null) {
+                            dealFields.put("Applicant_Date_of_Birth", app.getDateOfBirth());
+                            dealFields.put("DOB", app.getDateOfBirth());
+                        }
+                        if (app.getAge() != null) {
+                            try {
+                                int ageInt = Integer.parseInt(app.getAge().trim());
+                                dealFields.put("Applicant_Age", ageInt);
+                                dealFields.put("Age", ageInt);
+                            } catch (Exception e) {
+                                dealFields.put("Applicant_Age", app.getAge());
+                                dealFields.put("Age", app.getAge());
+                            }
+                        }
+                        if (app.getEmail() != null) {
+                            dealFields.put("Email", app.getEmail());
+                            dealFields.put("Applicant_Email", app.getEmail());
+                        }
                         if (app.getPhone() != null) {
                             dealFields.put("Applicant_Phone_number", app.getPhone());
                             dealFields.put("Phone", app.getPhone());
+                            dealFields.put("Applicant_Phone", app.getPhone());
                         }
                         if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_A", app.getGuardianRelation());
                         if (app.getGuardianSalutation() != null) dealFields.put("Applicant_Title", app.getGuardianSalutation());
-                        if (app.getGuardianFirstName() != null) dealFields.put("Applicant_Spouse_Father_First_Name", app.getGuardianFirstName());
-                        if (app.getGuardianLastName() != null) dealFields.put("Applicant_Spouse_Father_Last_Name", app.getGuardianLastName());
-                        if (app.getDateOfBirth() != null) dealFields.put("Applicant_Date_of_Birth", app.getDateOfBirth());
+                        if (app.getGuardianFirstName() != null) {
+                            dealFields.put("Applicant_Spouse_Father_First_Name", app.getGuardianFirstName());
+                            dealFields.put("Applicant_Father_First_Name", app.getGuardianFirstName());
+                        }
+                        if (app.getGuardianLastName() != null) {
+                            dealFields.put("Applicant_Spouse_Father_Last_Name", app.getGuardianLastName());
+                            dealFields.put("Applicant_Father_Last_Name", app.getGuardianLastName());
+                        }
                         if (app.getOccupation() != null) dealFields.put("Applicant_Occupation", app.getOccupation());
-                        if (app.getPanNumber() != null) dealFields.put("Applicant_PAN", app.getPanNumber().toUpperCase());
+                        if (app.getPanNumber() != null) {
+                            dealFields.put("Applicant_PAN", app.getPanNumber().toUpperCase());
+                            dealFields.put("PAN_Number", app.getPanNumber().toUpperCase());
+                        }
                         if (app.getAadhaarNumber() != null) {
                             dealFields.put("New_Applicant_Aadhar", app.getAadhaarNumber());
                             dealFields.put("Applicant_Aadhar", app.getAadhaarNumber());
                         }
-                        if (app.getAddressStreet() != null) dealFields.put("Street_Address", app.getAddressStreet());
+                        if (app.getAddressStreet() != null) {
+                            dealFields.put("Street_Address", app.getAddressStreet());
+                            dealFields.put("Address_Line_1", app.getAddressStreet());
+                        }
+                        if (app.getAddressLine2() != null) dealFields.put("Address_Line_2", app.getAddressLine2());
                         if (app.getAddressCity() != null) dealFields.put("City", app.getAddressCity());
                         if (app.getAddressState() != null) dealFields.put("State_Region_Province", app.getAddressState());
                         if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_Code_2", app.getAddressPincode());
                         if (app.getAddressCountry() != null) dealFields.put("Country", app.getAddressCountry());
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_1) {
-                        if (app.getSalutation() != null) dealFields.put("Title_C", app.getSalutation());
-                        if (app.getFirstName() != null) dealFields.put("First_Name_C", app.getFirstName());
-                        if (app.getLastName() != null) dealFields.put("Last_Name_C", app.getLastName());
+                        if (app.getSalutation() != null) {
+                            dealFields.put("Title_C", app.getSalutation());
+                            dealFields.put("CoApplicant_Title", app.getSalutation());
+                        }
+                        if (app.getFirstName() != null) {
+                            dealFields.put("First_Name_C", app.getFirstName());
+                            dealFields.put("Co_applicant_First_Name", app.getFirstName());
+                        }
+                        if (app.getLastName() != null) {
+                            dealFields.put("Last_Name_C", app.getLastName());
+                            dealFields.put("Co_applicant_Last_Name", app.getLastName());
+                        }
                         if (app.getFullName() != null) {
                             dealFields.put("Co_applicant_Name", app.getFullName());
                             dealFields.put("Second_Applicant", app.getFullName());
                         }
+                        if (app.getGender() != null) dealFields.put("Co_applicant_Gender", app.getGender());
+                        if (app.getAge() != null) {
+                            try {
+                                dealFields.put("CoApplicant_Age", Integer.parseInt(app.getAge().trim()));
+                            } catch (Exception e) {
+                                dealFields.put("CoApplicant_Age", app.getAge());
+                            }
+                        }
                         if (app.getEmail() != null) dealFields.put("Co_applicant_Email", app.getEmail());
                         if (app.getPhone() != null) dealFields.put("Co_applicant_Phone", app.getPhone());
+                        if (app.getRelation() != null) dealFields.put("Relationship_with_Primary_applicant", app.getRelation());
                         if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_C", app.getGuardianRelation());
                         if (app.getGuardianFirstName() != null) dealFields.put("Co_applicant_Father_First_Name", app.getGuardianFirstName());
                         if (app.getGuardianLastName() != null) dealFields.put("Co_applicant_Father_Last_Name", app.getGuardianLastName());
                         if (app.getDateOfBirth() != null) dealFields.put("Co_applicant_DOB", app.getDateOfBirth());
                         if (app.getOccupation() != null) dealFields.put("Co_Applicant_Occupation", app.getOccupation());
-                        if (app.getPanNumber() != null) dealFields.put("Co_applicant_PAN_Number", app.getPanNumber().toUpperCase());
+                        if (app.getPanNumber() != null) {
+                            dealFields.put("Co_applicant_PAN_Number", app.getPanNumber().toUpperCase());
+                            dealFields.put("Co_applicant_PAN", app.getPanNumber().toUpperCase());
+                        }
                         if (app.getAadhaarNumber() != null) {
-                            dealFields.put("New_CoApplicant_Aadhar", app.getAadhaarNumber());
                             dealFields.put("CoApplicant_Aadhar", app.getAadhaarNumber());
                         }
                         if (app.getAddressSameAsPrimary() != null) {
                             dealFields.put("Is_it_the_same_address_as_the_first_applicant_s", app.getAddressSameAsPrimary() ? "Yes" : "No");
                         }
-                        if (app.getAddressStreet() != null) dealFields.put("Street_Address_C", app.getAddressStreet());
+                        if (app.getAddressStreet() != null) {
+                            dealFields.put("Street_Address_C", app.getAddressStreet());
+                            dealFields.put("Address_Line_C", app.getAddressStreet());
+                        }
                         if (app.getAddressCity() != null) dealFields.put("City_C", app.getAddressCity());
                         if (app.getAddressState() != null) dealFields.put("State_C", app.getAddressState());
                         if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_code_C", app.getAddressPincode());
                         if (app.getAddressCountry() != null) dealFields.put("Country_C", app.getAddressCountry());
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_2) {
-                        if (app.getSalutation() != null) dealFields.put("Title_S", app.getSalutation());
-                        if (app.getFirstName() != null) dealFields.put("First_Name_S", app.getFirstName());
-                        if (app.getLastName() != null) dealFields.put("Last_Name_S", app.getLastName());
+                        if (app.getSalutation() != null) {
+                            dealFields.put("Title_S", app.getSalutation());
+                            dealFields.put("Third_Applicant_Title", app.getSalutation());
+                        }
+                        if (app.getFirstName() != null) {
+                            dealFields.put("First_Name_S", app.getFirstName());
+                            dealFields.put("Third_Applicant_First_Name", app.getFirstName());
+                        }
+                        if (app.getLastName() != null) {
+                            dealFields.put("Last_Name_S", app.getLastName());
+                            dealFields.put("Third_Applicant_Last_Name", app.getLastName());
+                        }
                         if (app.getFullName() != null) dealFields.put("Third_Applicant", app.getFullName());
+                        if (app.getGender() != null) dealFields.put("Third_Applicant_Gender", app.getGender());
+                        if (app.getAge() != null) {
+                            try {
+                                dealFields.put("Third_applicant_age", Integer.parseInt(app.getAge().trim()));
+                            } catch (Exception e) {
+                                dealFields.put("Third_applicant_age", app.getAge());
+                            }
+                        }
                         if (app.getEmail() != null) dealFields.put("Third_Applicant_Email", app.getEmail());
                         if (app.getPhone() != null) dealFields.put("Third_Applicant_Phone", app.getPhone());
                         if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_S", app.getGuardianRelation());
@@ -304,7 +387,6 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         if (app.getOccupation() != null) dealFields.put("Third_Applicant_Occupation", app.getOccupation());
                         if (app.getPanNumber() != null) dealFields.put("Third_Applicant_PAN", app.getPanNumber().toUpperCase());
                         if (app.getAadhaarNumber() != null) {
-                            dealFields.put("New_Third_Applicant_Aadhar", app.getAadhaarNumber());
                             dealFields.put("Third_Applicant_Aadhar", app.getAadhaarNumber());
                         }
                         if (app.getAddressSameAsPrimary() != null) {
@@ -313,7 +395,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         if (app.getAddressSameAsSecondary() != null) {
                             dealFields.put("Is_it_the_same_address_as_the_second_applicant_s", app.getAddressSameAsSecondary() ? "Yes" : "No");
                         }
-                        if (app.getAddressStreet() != null) dealFields.put("Street_Address_T", app.getAddressStreet());
+                        if (app.getAddressStreet() != null) {
+                            dealFields.put("Street_Address_T", app.getAddressStreet());
+                            dealFields.put("Address_Line_T", app.getAddressStreet());
+                        }
                         if (app.getAddressCity() != null) dealFields.put("City_T", app.getAddressCity());
                         if (app.getAddressState() != null) dealFields.put("State_T", app.getAddressState());
                         if (app.getAddressPincode() != null) dealFields.put("Postal_Zip_Code_T", app.getAddressPincode());

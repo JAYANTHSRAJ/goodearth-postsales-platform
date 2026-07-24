@@ -1,19 +1,16 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { KycApplicationResponseDto, KycValidationSummaryResponseDto } from '../../types/kyc';
 
 interface KycValidationChecklistProps {
   kycData: KycApplicationResponseDto | null;
   validationSummary: KycValidationSummaryResponseDto | null;
-  bookingId: string;
+  bookingId?: string;
 }
 
 export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
   kycData,
   validationSummary,
-  bookingId,
 }) => {
-  const navigate = useNavigate();
 
   const overallValid = validationSummary?.overallValid ?? false;
   const primaryComplete = validationSummary?.primaryApplicantComplete ?? false;
@@ -44,7 +41,7 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
       <ul className="space-y-3 text-sm">
         {/* Primary Applicant */}
         <li
-          onClick={() => !primaryComplete && navigate(`/client/kyc/applicants?bookingId=${bookingId}`)}
+          onClick={() => !primaryComplete && window.scrollTo({ top: 400, behavior: 'smooth' })}
           className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
             primaryComplete ? 'bg-slate-50 dark:bg-slate-800/40' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200'
           }`}
@@ -59,14 +56,14 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
             </div>
           </div>
           <span className={`text-xs font-semibold ${primaryComplete ? 'text-emerald-600' : 'text-amber-700 underline'}`}>
-            {primaryComplete ? 'Completed' : 'Fix Missing Info →'}
+            {primaryComplete ? 'Completed' : 'Fix Missing Info ↑'}
           </span>
         </li>
 
         {/* Co-Applicant */}
         {kycData?.hasCoApplicant === 'Yes' && (
           <li
-            onClick={() => !coComplete && navigate(`/client/kyc/applicants?bookingId=${bookingId}`)}
+            onClick={() => !coComplete && window.scrollTo({ top: 800, behavior: 'smooth' })}
             className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
               coComplete ? 'bg-slate-50 dark:bg-slate-800/40' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200'
             }`}
@@ -81,7 +78,7 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
               </div>
             </div>
             <span className={`text-xs font-semibold ${coComplete ? 'text-emerald-600' : 'text-amber-700 underline'}`}>
-              {coComplete ? 'Completed' : 'Fix Missing Info →'}
+              {coComplete ? 'Completed' : 'Fix Missing Info ↑'}
             </span>
           </li>
         )}
@@ -89,7 +86,7 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
         {/* Third Applicant */}
         {kycData?.hasCoApplicant === 'Yes' && kycData?.hasThirdApplicant === 'Yes' && (
           <li
-            onClick={() => !thirdComplete && navigate(`/client/kyc/applicants?bookingId=${bookingId}`)}
+            onClick={() => !thirdComplete && window.scrollTo({ top: 1200, behavior: 'smooth' })}
             className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
               thirdComplete ? 'bg-slate-50 dark:bg-slate-800/40' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200'
             }`}
@@ -104,14 +101,14 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
               </div>
             </div>
             <span className={`text-xs font-semibold ${thirdComplete ? 'text-emerald-600' : 'text-amber-700 underline'}`}>
-              {thirdComplete ? 'Completed' : 'Fix Missing Info →'}
+              {thirdComplete ? 'Completed' : 'Fix Missing Info ↑'}
             </span>
           </li>
         )}
 
         {/* Mandatory Documents */}
         <li
-          onClick={() => !docsComplete && navigate(`/client/kyc/documents?bookingId=${bookingId}`)}
+          onClick={() => !docsComplete && window.scrollTo({ top: 600, behavior: 'smooth' })}
           className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
             docsComplete ? 'bg-slate-50 dark:bg-slate-800/40' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200'
           }`}
@@ -126,7 +123,7 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
             </div>
           </div>
           <span className={`text-xs font-semibold ${docsComplete ? 'text-emerald-600' : 'text-amber-700 underline'}`}>
-            {docsComplete ? 'All Uploaded' : 'Upload Documents →'}
+            {docsComplete ? 'All Uploaded' : 'Upload Documents ↑'}
           </span>
         </li>
       </ul>
@@ -142,16 +139,12 @@ export const KycValidationChecklist: React.FC<KycValidationChecklistProps> = ({
               <div
                 key={idx}
                 onClick={() => {
-                  if (item.section === 'DOCUMENTS') {
-                    navigate(`/client/kyc/documents?bookingId=${bookingId}`);
-                  } else {
-                    navigate(`/client/kyc/applicants?bookingId=${bookingId}`);
-                  }
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
                 }}
                 className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center justify-between text-xs cursor-pointer hover:border-amber-400"
               >
                 <span className="text-slate-800 dark:text-slate-200 font-medium">{item.requirement}</span>
-                <span className="text-brand-600 font-semibold underline shrink-0 ml-2">Jump to Section →</span>
+                <span className="text-brand-600 font-semibold underline shrink-0 ml-2">Jump to Section ↑</span>
               </div>
             ))}
           </div>

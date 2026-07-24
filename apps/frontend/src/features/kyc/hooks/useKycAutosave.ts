@@ -188,6 +188,8 @@ export const useKycAutosave = (
           applicantTitle: primaryApplicant.salutation,
           applicantFirstName: primaryApplicant.firstName,
           applicantLastName: primaryApplicant.lastName,
+          applicantGender: primaryApplicant.gender,
+          applicantAge: primaryApplicant.age,
           applicantEmail: primaryApplicant.email,
           applicantPhone: primaryApplicant.phone,
           applicantPhoneCountryCode: primaryApplicant.phoneCode,
@@ -211,6 +213,9 @@ export const useKycAutosave = (
           submitPayload.titleA = coApp.salutation;
           submitPayload.firstNameA = coApp.firstName;
           submitPayload.lastNameA = coApp.lastName;
+          submitPayload.coApplicantGender = coApp.gender;
+          submitPayload.coApplicantAge = coApp.age;
+          submitPayload.coApplicantRelation = coApp.relation;
           submitPayload.coApplicantEmail = coApp.email;
           submitPayload.coApplicantPhone = coApp.phone;
           submitPayload.coApplicantPhoneCode = coApp.phoneCode;
@@ -225,6 +230,8 @@ export const useKycAutosave = (
           submitPayload.coApplicantAddressSameAsPrimary = coApp.addressSameAsPrimary;
           submitPayload.coApplicantAddressStreet = coApp.address?.street;
           submitPayload.coApplicantAddressLine2 = coApp.address?.addressLine2;
+          submitPayload.coApplicantAddressCity = coApp.address?.city;
+          submitPayload.coApplicantAddressState = coApp.address?.state;
           submitPayload.coApplicantAddressPincode = coApp.address?.pincode;
           submitPayload.coApplicantAddressCountry = coApp.address?.country;
         }
@@ -236,6 +243,8 @@ export const useKycAutosave = (
             submitPayload.thirdApplicantTitle = thirdApp.salutation;
             submitPayload.thirdApplicantFirstName = thirdApp.firstName;
             submitPayload.thirdApplicantLastName = thirdApp.lastName;
+            submitPayload.thirdApplicantGender = thirdApp.gender;
+            submitPayload.thirdApplicantAge = thirdApp.age;
             submitPayload.thirdApplicantEmail = thirdApp.email;
             submitPayload.thirdApplicantPhone = thirdApp.phone;
             submitPayload.thirdApplicantPhoneCode = thirdApp.phoneCode;

@@ -60,9 +60,12 @@ public class ApplicantInfoSubmitRequestDto {
     // Co-Applicant
     private String hasCoApplicant;       // Yes/No
     private String soDoWoA;             // S_o_D_o_W_o_A / S_o_D_o_W_o_C
-    private String titleA;              // Title_C
-    private String firstNameA;          // First_Name_C
-    private String lastNameA;           // Last_Name_C
+    private String titleA;              // Title_C / CoApplicant_Title
+    private String firstNameA;          // First_Name_C / Co_applicant_First_Name
+    private String lastNameA;           // Last_Name_C / Co_applicant_Last_Name
+    private String coApplicantGender;   // Co_applicant_Gender
+    private String coApplicantAge;      // CoApplicant_Age
+    private String coApplicantRelation; // Relationship_with_Primary_applicant
     private String coApplicantEmail;    // Email_C / Co_Applicant_Email
     private String coApplicantPhone;    // Phone_C / Co_Applicant_Phone
     private String coApplicantPhoneCode;
@@ -82,9 +85,11 @@ public class ApplicantInfoSubmitRequestDto {
     private String coApplicantAddressCountry;
     // Third Applicant
     private String hasThirdApplicant;    // Yes/No
-    private String thirdApplicantTitle;  // Title_T
-    private String thirdApplicantFirstName;// First_Name_T
-    private String thirdApplicantLastName; // Last_Name_T
+    private String thirdApplicantTitle;  // Title_T / Third_Applicant_Title
+    private String thirdApplicantFirstName;// First_Name_T / Third_Applicant_First_Name
+    private String thirdApplicantLastName; // Last_Name_T / Third_Applicant_Last_Name
+    private String thirdApplicantGender;  // Third_Applicant_Gender
+    private String thirdApplicantAge;     // Third_applicant_age
     private String thirdApplicantEmail;  // Email_T / Third_Applicant_Email
     private String thirdApplicantPhone;  // Phone_T / Third_Applicant_Phone
     private String thirdApplicantPhoneCode;

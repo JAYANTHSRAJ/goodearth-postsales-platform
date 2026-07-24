@@ -100,6 +100,8 @@ public class KycApplicationMapper {
                 .guardianLastName(applicant.getGuardianLastName())
                 .guardianName(applicant.getGuardianName())
                 .dateOfBirth(applicant.getDateOfBirth())
+                .gender(applicant.getGender())
+                .age(applicant.getAge())
                 .occupation(applicant.getOccupation())
                 .addressSameAsPrimary(applicant.getAddressSameAsPrimary())
                 .addressSameAsSecondary(applicant.getAddressSameAsSecondary())

@@ -274,8 +274,8 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             </label>
             <select
               id={`${fieldPrefix}-gender`}
-              value={applicant.relation && ['Male', 'Female', 'Other'].includes(applicant.relation) ? applicant.relation : 'Male'}
-              onChange={(e) => handleChange('relation', e.target.value)}
+              value={applicant.gender || 'Male'}
+              onChange={(e) => handleChange('gender', e.target.value)}
               className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
               <option value="Male">Male</option>

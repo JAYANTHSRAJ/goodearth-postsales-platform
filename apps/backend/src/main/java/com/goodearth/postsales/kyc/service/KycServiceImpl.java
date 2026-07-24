@@ -300,62 +300,113 @@ public class KycServiceImpl implements KycService {
 
         // Co-Applicant
         if (dto.getHasCoApplicant() != null) {
+            dealFields.put("Do_you_have_coapplicant", dto.getHasCoApplicant());
             dealFields.put("Co_applicant", dto.getHasCoApplicant());
             dealFields.put("Has_Co_Applicant", dto.getHasCoApplicant());
         }
         if (dto.getSoDoWoA() != null) dealFields.put("S_o_D_o_W_o_A", dto.getSoDoWoA());
-        if (dto.getTitleA() != null) dealFields.put("Title_C", dto.getTitleA());
-        if (dto.getFirstNameA() != null) dealFields.put("First_Name_C", dto.getFirstNameA());
-        if (dto.getLastNameA() != null) dealFields.put("Last_Name_C", dto.getLastNameA());
+        if (dto.getTitleA() != null) {
+            dealFields.put("Title_C", dto.getTitleA());
+            dealFields.put("CoApplicant_Title", dto.getTitleA());
+        }
+        if (dto.getFirstNameA() != null) {
+            dealFields.put("First_Name_C", dto.getFirstNameA());
+            dealFields.put("Co_applicant_First_Name", dto.getFirstNameA());
+        }
+        if (dto.getLastNameA() != null) {
+            dealFields.put("Last_Name_C", dto.getLastNameA());
+            dealFields.put("Co_applicant_Last_Name", dto.getLastNameA());
+        }
+        if (dto.getCoApplicantGender() != null) {
+            dealFields.put("Co_applicant_Gender", dto.getCoApplicantGender());
+        }
+        if (dto.getCoApplicantAge() != null) {
+            try {
+                dealFields.put("CoApplicant_Age", Integer.parseInt(dto.getCoApplicantAge().trim()));
+            } catch (Exception e) {
+                dealFields.put("CoApplicant_Age", dto.getCoApplicantAge());
+            }
+        }
+        if (dto.getCoApplicantRelation() != null) {
+            dealFields.put("Relationship_with_Primary_applicant", dto.getCoApplicantRelation());
+        }
 
         String coApplicantFullName = ((dto.getFirstNameA() != null ? dto.getFirstNameA().trim() : "") + " " +
                 (dto.getLastNameA() != null ? dto.getLastNameA().trim() : "")).trim();
         if (!coApplicantFullName.isEmpty()) {
             dealFields.put("Co_Applicant_Name", coApplicantFullName);
+            dealFields.put("Second_Applicant", coApplicantFullName);
         }
 
         if (dto.getCoApplicantEmail() != null) {
             dealFields.put("Email_C", dto.getCoApplicantEmail());
-            dealFields.put("Co_Applicant_Email", dto.getCoApplicantEmail());
+            dealFields.put("Co_applicant_Email", dto.getCoApplicantEmail());
         }
         if (dto.getCoApplicantPhone() != null) {
             dealFields.put("Phone_C", dto.getCoApplicantPhone());
-            dealFields.put("Co_Applicant_Phone", dto.getCoApplicantPhone());
+            dealFields.put("Co_applicant_Phone", dto.getCoApplicantPhone());
         }
         if (dto.getCoApplicantDob() != null) {
             String formattedCoDob = formatDateForZoho(dto.getCoApplicantDob());
             dealFields.put("DOB_C", formattedCoDob);
-            dealFields.put("Co_Applicant_Date_of_Birth", formattedCoDob);
+            dealFields.put("Co_applicant_DOB", formattedCoDob);
         }
         if (dto.getCoApplicantOccupation() != null) {
             dealFields.put("Co_Applicant_Occupation", dto.getCoApplicantOccupation());
         }
         if (dto.getCoApplicantPan() != null) {
-            dealFields.put("Co_Applicant_PAN", dto.getCoApplicantPan().toUpperCase());
+            dealFields.put("Co_applicant_PAN_Number", dto.getCoApplicantPan().toUpperCase());
+            dealFields.put("Co_applicant_PAN", dto.getCoApplicantPan().toUpperCase());
         }
         if (dto.getCoApplicantAadhar() != null) {
-            dealFields.put("Co_Applicant_Aadhar", dto.getCoApplicantAadhar());
+            dealFields.put("CoApplicant_Aadhar", dto.getCoApplicantAadhar());
         }
         if (dto.getCoApplicantFatherFirstName() != null) {
-            dealFields.put("Co_Applicant_Father_First_Name", dto.getCoApplicantFatherFirstName());
+            dealFields.put("Co_applicant_Father_First_Name", dto.getCoApplicantFatherFirstName());
         }
         if (dto.getCoApplicantFatherLastName() != null) {
-            dealFields.put("Co_Applicant_Father_Last_Name", dto.getCoApplicantFatherLastName());
+            dealFields.put("Co_applicant_Father_Last_Name", dto.getCoApplicantFatherLastName());
         }
-        if (dto.getCoApplicantAddressStreet() != null) dealFields.put("Street_Address_C", dto.getCoApplicantAddressStreet());
+        if (dto.getCoApplicantAddressStreet() != null) {
+            dealFields.put("Street_Address_C", dto.getCoApplicantAddressStreet());
+            dealFields.put("Address_Line_C", dto.getCoApplicantAddressStreet());
+        }
         if (dto.getCoApplicantAddressCity() != null) dealFields.put("City_C", dto.getCoApplicantAddressCity());
         if (dto.getCoApplicantAddressState() != null) dealFields.put("State_C", dto.getCoApplicantAddressState());
-        if (dto.getCoApplicantAddressPincode() != null) dealFields.put("Zip_C", dto.getCoApplicantAddressPincode());
+        if (dto.getCoApplicantAddressPincode() != null) {
+            dealFields.put("Postal_Zip_code_C", dto.getCoApplicantAddressPincode());
+            dealFields.put("Zip_C", dto.getCoApplicantAddressPincode());
+        }
         if (dto.getCoApplicantAddressCountry() != null) dealFields.put("Country_C", dto.getCoApplicantAddressCountry());
 
         // Third Applicant
         if (dto.getHasThirdApplicant() != null) {
+            dealFields.put("Do_you_have_third_applicant", dto.getHasThirdApplicant());
             dealFields.put("Third_Applicant", dto.getHasThirdApplicant());
             dealFields.put("Has_Third_Applicant", dto.getHasThirdApplicant());
         }
-        if (dto.getThirdApplicantTitle() != null) dealFields.put("Title_T", dto.getThirdApplicantTitle());
-        if (dto.getThirdApplicantFirstName() != null) dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
-        if (dto.getThirdApplicantLastName() != null) dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
+        if (dto.getThirdApplicantTitle() != null) {
+            dealFields.put("Title_T", dto.getThirdApplicantTitle());
+            dealFields.put("Third_Applicant_Title", dto.getThirdApplicantTitle());
+        }
+        if (dto.getThirdApplicantFirstName() != null) {
+            dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
+            dealFields.put("Third_Applicant_First_Name", dto.getThirdApplicantFirstName());
+        }
+        if (dto.getThirdApplicantLastName() != null) {
+            dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
+            dealFields.put("Third_Applicant_Last_Name", dto.getThirdApplicantLastName());
+        }
+        if (dto.getThirdApplicantGender() != null) {
+            dealFields.put("Third_Applicant_Gender", dto.getThirdApplicantGender());
+        }
+        if (dto.getThirdApplicantAge() != null) {
+            try {
+                dealFields.put("Third_applicant_age", Integer.parseInt(dto.getThirdApplicantAge().trim()));
+            } catch (Exception e) {
+                dealFields.put("Third_applicant_age", dto.getThirdApplicantAge());
+            }
+        }
 
         String thirdApplicantFullName = ((dto.getThirdApplicantFirstName() != null ? dto.getThirdApplicantFirstName().trim() : "") + " " +
                 (dto.getThirdApplicantLastName() != null ? dto.getThirdApplicantLastName().trim() : "")).trim();
@@ -385,17 +436,23 @@ public class KycServiceImpl implements KycService {
         if (dto.getThirdApplicantAadhar() != null) {
             dealFields.put("Third_Applicant_Aadhar", dto.getThirdApplicantAadhar());
         }
-        if (dto.getThirdApplicantSoDoWo() != null) dealFields.put("S_o_D_o_W_o_T", dto.getThirdApplicantSoDoWo());
+        if (dto.getThirdApplicantSoDoWo() != null) dealFields.put("S_o_D_o_W_o_S", dto.getThirdApplicantSoDoWo());
         if (dto.getThirdApplicantFatherFirstName() != null) {
             dealFields.put("Third_Applicant_Father_First_Name", dto.getThirdApplicantFatherFirstName());
         }
         if (dto.getThirdApplicantFatherLastName() != null) {
             dealFields.put("Third_Applicant_Father_Last_Name", dto.getThirdApplicantFatherLastName());
         }
-        if (dto.getThirdApplicantAddressStreet() != null) dealFields.put("Street_Address_T", dto.getThirdApplicantAddressStreet());
+        if (dto.getThirdApplicantAddressStreet() != null) {
+            dealFields.put("Street_Address_T", dto.getThirdApplicantAddressStreet());
+            dealFields.put("Address_Line_T", dto.getThirdApplicantAddressStreet());
+        }
         if (dto.getThirdApplicantAddressCity() != null) dealFields.put("City_T", dto.getThirdApplicantAddressCity());
         if (dto.getThirdApplicantAddressState() != null) dealFields.put("State_T", dto.getThirdApplicantAddressState());
-        if (dto.getThirdApplicantAddressPincode() != null) dealFields.put("Zip_T", dto.getThirdApplicantAddressPincode());
+        if (dto.getThirdApplicantAddressPincode() != null) {
+            dealFields.put("Postal_Zip_Code_T", dto.getThirdApplicantAddressPincode());
+            dealFields.put("Zip_T", dto.getThirdApplicantAddressPincode());
+        }
         if (dto.getThirdApplicantAddressCountry() != null) dealFields.put("Country_T", dto.getThirdApplicantAddressCountry());
 
         // Sync directly to Zoho CRM Deal
@@ -1166,6 +1223,8 @@ public class KycServiceImpl implements KycService {
         if (dto.getGuardianLastName() != null) applicant.setGuardianLastName(dto.getGuardianLastName());
         if (dto.getGuardianName() != null) applicant.setGuardianName(dto.getGuardianName());
         if (dto.getDateOfBirth() != null) applicant.setDateOfBirth(dto.getDateOfBirth());
+        if (dto.getGender() != null) applicant.setGender(dto.getGender());
+        if (dto.getAge() != null) applicant.setAge(dto.getAge());
         if (dto.getOccupation() != null) applicant.setOccupation(dto.getOccupation());
         if (dto.getAddressSameAsPrimary() != null) applicant.setAddressSameAsPrimary(dto.getAddressSameAsPrimary());
         if (dto.getAddressSameAsSecondary() != null) applicant.setAddressSameAsSecondary(dto.getAddressSameAsSecondary());
