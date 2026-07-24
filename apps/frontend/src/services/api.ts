@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/authStore';
 import { useUnitStore } from '../store/unitStore';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+export const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
 
 class ApiClient {
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {

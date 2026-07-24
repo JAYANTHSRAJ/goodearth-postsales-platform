@@ -80,7 +80,7 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
   };
 
   const previewUrl = isUploaded
-    ? `/api/v1/kyc/documents/${slot.documentId}/file?version=${currentVer.versionNumber}`
+    ? kycService.getFileUrl(slot.documentId, currentVer?.versionNumber)
     : '#';
 
   return (

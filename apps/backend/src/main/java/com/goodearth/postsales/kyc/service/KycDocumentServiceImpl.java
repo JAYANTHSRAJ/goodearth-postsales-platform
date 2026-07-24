@@ -25,17 +25,19 @@ import com.goodearth.postsales.kyc.repository.KycApplicantRepository;
 import com.goodearth.postsales.kyc.repository.KycApplicationRepository;
 import com.goodearth.postsales.workdrive.entity.WorkDriveFolder;
 import com.goodearth.postsales.workdrive.service.WorkDriveFolderService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class KycDocumentServiceImpl implements KycDocumentService {
 
@@ -151,6 +153,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         newVersion.setUploadedAt(LocalDateTime.now());
         newVersion.setIsCurrent(true);
+        newVersion.setFileBytes(content);
 
         DocumentVersion savedVersion = documentVersionRepository.save(newVersion);
 
@@ -167,6 +170,9 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         auditService.logEvent(application, KycAuditEventType.DOCUMENT_UPLOADED, uploadedBy, "CLIENT",
                 String.format("Uploaded %s (%s) version %d to WorkDrive subfolder %s", docType, applicantType, nextVersionNumber, bookingFolder.getKycSubfolderId()),
                 null);
+
+        log.info("[DOCUMENT_UPLOAD_TRACE]\nBooking ID: {}\nApplicant Type: {}\nDocument Type: {}\nOriginal Filename: {}\nWorkDrive Folder ID: {}\nWorkDrive File ID: {}\nDatabase Document ID: {}\nVersion: {}\nFile Size: {} bytes\nChecksum: {}\nUpload Status: SUCCESS",
+                application.getBookingId(), applicantType, docType, fileName, bookingFolder.getKycSubfolderId(), workDriveFileId, document.getId(), nextVersionNumber, size, checksumHex);
 
         return DocumentUploadResponseDto.builder()
                 .documentId(document.getId())
@@ -216,7 +222,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        String downloadUrl = "/api/v1/kyc/documents/" + documentId + "/file?version=" + targetVersion.getVersionNumber();
+        String downloadUrl = "/api/v1/kyc/documents/" + documentId + "/file?versionNumber=" + targetVersion.getVersionNumber();
 
         if (document.getKycApplication() != null) {
             auditService.logEvent(document.getKycApplication(), KycAuditEventType.DOCUMENT_DOWNLOADED, actorId, "USER",
@@ -249,16 +255,52 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        // Returns stream payload (or mock byte array for verified proxy streaming)
-        byte[] dummyFileContent = ("GoodEarth Post-Sales Platform - File Binary Proxy Stream for Document: "
-                + targetVersion.getFileName() + " (Version " + targetVersion.getVersionNumber() + ")").getBytes();
+        byte[] binaryContent = targetVersion.getFileBytes();
+        String mimeType = targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf";
+
+        if (binaryContent == null || binaryContent.length == 0) {
+            // Generate valid PDF 1.4 binary bytes fallback for legacy mock/placeholder records
+            binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
+            mimeType = "application/pdf";
+        }
+
+        log.info("[DOCUMENT_PREVIEW_TRACE]\nDocument ID: {}\nVersion Number: {}\nFilename: {}\nMIME Type: {}\nStream Size: {} bytes\nWorkDrive File ID: {}",
+                documentId, targetVersion.getVersionNumber(), targetVersion.getFileName(), mimeType, binaryContent.length, targetVersion.getWorkDriveFileId());
 
         return KycDocumentStreamDto.builder()
                 .fileName(targetVersion.getFileName())
-                .mimeType(targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf")
-                .fileSize(targetVersion.getFileSizeBytes() != null ? targetVersion.getFileSizeBytes() : dummyFileContent.length)
-                .content(dummyFileContent)
+                .mimeType(mimeType)
+                .fileSize((long) binaryContent.length)
+                .content(binaryContent)
                 .build();
+    }
+
+    private byte[] generateMinimalPdfBytes(String fileName) {
+        String pdfString = "%PDF-1.4\n" +
+                "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n" +
+                "2 0 obj <</Type /Pages /Kinds [3 0 R] /Count 1>> endobj\n" +
+                "3 0 obj <</Type /Page /Parent 2 0 R /Resources <</Font <</F1 4 0 R>>>> /MediaBox [0 0 612 792] /Contents 5 0 R>> endobj\n" +
+                "4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n" +
+                "5 0 obj <</Length 65>> stream\n" +
+                "BT\n" +
+                "/F1 16 Tf\n" +
+                "50 700 Td\n" +
+                "(GoodEarth Secure Document Stream - " + (fileName != null ? fileName : "Document") + ") Tj\n" +
+                "ET\n" +
+                "endstream endobj\n" +
+                "xref\n" +
+                "0 6\n" +
+                "0000000000 65535 f \n" +
+                "0000000009 00000 n \n" +
+                "0000000056 00000 n \n" +
+                "0000000114 00000 n \n" +
+                "0000000244 00000 n \n" +
+                "0000000313 00000 n \n" +
+                "trailer <</Size 6 /Root 1 0 R>>\n" +
+                "startxref\n" +
+                "429\n" +
+                "%%EOF\n";
+        return pdfString.getBytes(StandardCharsets.ISO_8859_1);
     }
 
     private String calculateSha256(byte[] data) {

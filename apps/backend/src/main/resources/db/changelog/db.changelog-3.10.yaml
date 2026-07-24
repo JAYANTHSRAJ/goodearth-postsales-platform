@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.10-add-file-bytes-to-document-versions
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: document_versions
+            columnName: file_bytes
+      changes:
+        - addColumn:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: file_bytes
+                  type: BYTEA

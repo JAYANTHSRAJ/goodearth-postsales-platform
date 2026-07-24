@@ -70,6 +70,14 @@ export const kycService = {
     const query = versionNumber ? `?versionNumber=${versionNumber}` : '';
     return api.get<DocumentDownloadResponseDto>(`/kyc/documents/${documentId}/download${query}`);
   },
+
+  getFileUrl: (documentId: string, versionNumber?: number): string => {
+    const query = versionNumber ? `?versionNumber=${versionNumber}` : '';
+    const path = `/kyc/documents/${documentId}/file${query}`;
+    const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    return `${baseUrl}${path}`;
+  },
 };
 
 export default kycService;
