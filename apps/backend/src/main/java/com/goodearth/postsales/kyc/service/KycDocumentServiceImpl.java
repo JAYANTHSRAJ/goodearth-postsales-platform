@@ -214,6 +214,9 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             auditService.logEvent(application, KycAuditEventType.DOCUMENT_DELETED, actorId, "CLIENT",
                     String.format("Deleted document %s (%s)", document.getDocumentType(), document.getApplicantType()),
                     null);
+
+            // Sync document deletion status to Zoho CRM Deal
+            zohoKycSyncService.syncDocumentToCrm(application, document.getDocumentType().name(), document.getApplicantType().name(), null, null, "DELETED");
         }
 
         return true;
