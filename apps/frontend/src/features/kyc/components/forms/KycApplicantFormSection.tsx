@@ -3,6 +3,9 @@ import { User, Mail, ShieldCheck, MapPin } from 'lucide-react';
 import KycInputField from './KycInputField';
 import KycAddressForm from './KycAddressForm';
 import KycDatePicker from '../common/KycDatePicker';
+import KycAadhaarInput from './KycAadhaarInput';
+import KycPanInput from './KycPanInput';
+import KycPhoneInput from './KycPhoneInput';
 import { ApplicantDto, ApplicantType } from '../../types/kyc';
 
 interface KycApplicantFormSectionProps {
@@ -55,6 +58,9 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
     }
     if (field === 'aadhaarNumber' && typeof value === 'string') {
       formattedValue = value.replace(/\D/g, '').slice(0, 12);
+    }
+    if (field === 'phone' && typeof value === 'string') {
+      formattedValue = value.replace(/\D/g, '');
     }
 
     const updated = {
@@ -111,6 +117,8 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
       ? 'Co-Applicant'
       : 'Third Applicant';
 
+  const fieldPrefix = applicantType.toLowerCase();
+
   // Determine current relationship (Default: S/O)
   const currentRelation = applicant.guardianRelation || 'S/O';
   const isSpouseRelation = currentRelation === 'W/O' || currentRelation === 'W/o';
@@ -122,7 +130,6 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
 
   const handleOccupationDropdownChange = (selectedVal: string) => {
     if (selectedVal === 'Other') {
-      // If user chooses Other and previous occupation was a predefined option, reset to empty for custom typing
       handleChange('occupation', isPredefinedOcc ? 'Other' : currentOccupation || 'Other');
     } else {
       handleChange('occupation', selectedVal);
@@ -165,12 +172,14 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
         {/* Applicant Name with Salutation */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Title <span className="text-rose-500">*</span>
+            <label htmlFor={`${fieldPrefix}-salutation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Title <span className="text-rose-500" aria-hidden="true">*</span>
             </label>
             <select
+              id={`${fieldPrefix}-salutation`}
               value={applicant.salutation || '-Select-'}
               onChange={(e) => handleChange('salutation', e.target.value)}
+              aria-required="true"
               className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
               <option value="-Select-">-Select-</option>
@@ -182,27 +191,31 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           </div>
 
           <div className="sm:col-span-1">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              First Name <span className="text-rose-500">*</span>
+            <label htmlFor={`${fieldPrefix}-firstName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              First Name <span className="text-rose-500" aria-hidden="true">*</span>
             </label>
             <input
+              id={`${fieldPrefix}-firstName`}
               type="text"
               placeholder="First Name"
               value={applicant.firstName || ''}
               onChange={(e) => handleChange('firstName', e.target.value)}
+              aria-required="true"
               className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Last Name <span className="text-rose-500">*</span>
+            <label htmlFor={`${fieldPrefix}-lastName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Last Name <span className="text-rose-500" aria-hidden="true">*</span>
             </label>
             <input
+              id={`${fieldPrefix}-lastName`}
               type="text"
               placeholder="Last Name"
               value={applicant.lastName || ''}
               onChange={(e) => handleChange('lastName', e.target.value)}
+              aria-required="true"
               className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             />
           </div>
@@ -211,6 +224,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
         {/* Date of Birth & Occupation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <KycDatePicker
+            id={`${fieldPrefix}-dob`}
             label="Date of Birth"
             isRequired
             value={applicant.dateOfBirth || ''}
@@ -220,12 +234,14 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-              Occupation <span className="text-rose-500">*</span>
+            <label htmlFor={`${fieldPrefix}-occupation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+              Occupation <span className="text-rose-500" aria-hidden="true">*</span>
             </label>
             <select
+              id={`${fieldPrefix}-occupation`}
               value={selectedOccDropdown || '-Select-'}
               onChange={(e) => handleOccupationDropdownChange(e.target.value)}
+              aria-required="true"
               className="w-full h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 transition-all"
             >
               <option value="-Select-">-Select-</option>
@@ -240,7 +256,8 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             {selectedOccDropdown === 'Other' && (
               <div className="pt-2">
                 <KycInputField
-                  label="Occupation"
+                  id={`${fieldPrefix}-custom-occupation`}
+                  label="Specify Occupation"
                   name={`applicant_${applicantType}_custom_occupation`}
                   value={applicant.occupation === 'Other' ? '' : applicant.occupation || ''}
                   onChange={(e) => handleChange('occupation', e.target.value || 'Other')}
@@ -262,6 +279,7 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <KycInputField
+            id={`${fieldPrefix}-email`}
             label={`${applicantPrefix} Email`}
             name={`applicant_${applicantType}_email`}
             type="email"
@@ -272,39 +290,30 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             isRequired
           />
 
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-              {applicantPrefix} Phone <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              <input
-                type="text"
-                placeholder="+91"
-                value={applicant.phoneCode || '+91'}
-                onChange={(e) => handleChange('phoneCode', e.target.value)}
-                className="col-span-1 h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-              <input
-                type="tel"
-                placeholder="10-digit phone"
-                maxLength={10}
-                value={applicant.phone || ''}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className="col-span-2 h-10 px-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              />
-            </div>
-          </div>
+          <KycPhoneInput
+            id={`${fieldPrefix}-phone`}
+            label={`${applicantPrefix} Phone`}
+            name={`applicant_${applicantType}_phone`}
+            phoneCode={applicant.phoneCode || '+91'}
+            phone={applicant.phone || ''}
+            onPhoneCodeChange={(code) => handleChange('phoneCode', code)}
+            onPhoneChange={(phone) => handleChange('phone', phone)}
+            error={errors[`${applicantType}.phone`]}
+            isRequired
+          />
         </div>
 
         {/* Family Particulars (Relationship, Father/Spouse First & Last Name) */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Relationship <span className="text-rose-500">*</span>
+            <label htmlFor={`${fieldPrefix}-relationship`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Relationship <span className="text-rose-500" aria-hidden="true">*</span>
             </label>
             <select
+              id={`${fieldPrefix}-relationship`}
               value={currentRelation}
               onChange={(e) => handleChange('guardianRelation', e.target.value)}
+              aria-required="true"
               className="w-full h-10 px-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
             >
               <option value="S/O">S/O</option>
@@ -315,10 +324,11 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
 
           <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              <label htmlFor={`${fieldPrefix}-guardianSalutation`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                 Title
               </label>
               <select
+                id={`${fieldPrefix}-guardianSalutation`}
                 value={applicant.guardianSalutation || '-Select-'}
                 onChange={(e) => handleChange('guardianSalutation', e.target.value)}
                 className="w-full h-10 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
@@ -332,29 +342,33 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              <label htmlFor={`${fieldPrefix}-guardianFirstName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                 {isSpouseRelation ? `${applicantPrefix} Spouse First Name` : `${applicantPrefix} Father's First Name`}{' '}
-                <span className="text-rose-500">*</span>
+                <span className="text-rose-500" aria-hidden="true">*</span>
               </label>
               <input
+                id={`${fieldPrefix}-guardianFirstName`}
                 type="text"
                 placeholder="First Name"
                 value={applicant.guardianFirstName || ''}
                 onChange={(e) => handleChange('guardianFirstName', e.target.value)}
+                aria-required="true"
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              <label htmlFor={`${fieldPrefix}-guardianLastName`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                 {isSpouseRelation ? `${applicantPrefix} Spouse Last Name` : `${applicantPrefix} Father's Last Name`}{' '}
-                <span className="text-rose-500">*</span>
+                <span className="text-rose-500" aria-hidden="true">*</span>
               </label>
               <input
+                id={`${fieldPrefix}-guardianLastName`}
                 type="text"
                 placeholder="Last Name"
                 value={applicant.guardianLastName || ''}
                 onChange={(e) => handleChange('guardianLastName', e.target.value)}
+                aria-required="true"
                 className="w-full h-10 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
               />
             </div>
@@ -482,26 +496,22 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-          <KycInputField
-            label={`${applicantPrefix} Aadhaar Number`}
+          <KycAadhaarInput
+            id={`${fieldPrefix}-aadhaar`}
+            label={`${applicantPrefix} Aadhaar`}
             name={`applicant_${applicantType}_aadhaar`}
             value={applicant.aadhaarNumber || ''}
-            onChange={(e) => handleChange('aadhaarNumber', e.target.value)}
-            placeholder="123400009876"
-            maxLength={12}
-            helperText="12-digit Aadhaar number without spaces"
+            onChange={(rawDigits) => handleChange('aadhaarNumber', rawDigits)}
             error={errors[`${applicantType}.aadhaarNumber`]}
             isRequired
           />
 
-          <KycInputField
+          <KycPanInput
+            id={`${fieldPrefix}-pan`}
             label={`${applicantPrefix} PAN Card`}
             name={`applicant_${applicantType}_pan`}
             value={applicant.panNumber || ''}
-            onChange={(e) => handleChange('panNumber', e.target.value)}
-            placeholder="ABCDE1234F"
-            maxLength={10}
-            helperText="10-character uppercase PAN"
+            onChange={(val) => handleChange('panNumber', val)}
             error={errors[`${applicantType}.panNumber`]}
             isRequired
           />
