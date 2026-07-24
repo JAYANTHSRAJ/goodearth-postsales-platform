@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.9-add-workdrive-folder-subfolder-columns
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: agreements_subfolder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: booking_id
+                  type: VARCHAR(255)
+              - column:
+                  name: project_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: booking_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: kyc_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: agreements_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: payments_subfolder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: handover_subfolder_id
+                  type: VARCHAR(255)
+        - dropNotNullConstraint:
+            tableName: workdrive_folders
+            columnName: workflow_id
+            columnDataType: UUID
+        - dropNotNullConstraint:
+            tableName: workdrive_folders
+            columnName: folder_id
+            columnDataType: VARCHAR(255)
+        - dropNotNullConstraint:
+            tableName: workdrive_folders
+            columnName: folder_name
+            columnDataType: VARCHAR(255)
