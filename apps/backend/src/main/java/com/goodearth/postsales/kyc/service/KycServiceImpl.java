@@ -1113,25 +1113,6 @@ public class KycServiceImpl implements KycService {
 
     @Override
     @Transactional
-    public KycApplicationResponseDto assignReviewer(com.goodearth.postsales.kyc.dto.KycAssignReviewerRequestDto dto, String actorId) {
-        KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
-                .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
-
-        application.setAssignedTo(dto.getReviewerId());
-        application.setAssignedAt(LocalDateTime.now());
-        if (dto.getPriority() != null) application.setPriority(dto.getPriority());
-        application.setUpdatedAt(LocalDateTime.now());
-        KycApplication savedApp = kycApplicationRepository.save(application);
-
-        auditService.logEvent(savedApp, KycAuditEventType.REVIEW_STARTED, actorId, "ADMIN",
-                "Assigned KYC application review to: " + dto.getReviewerId(), null);
-
-        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
-        return kycApplicationMapper.toResponseDto(savedApp, documents);
-    }
-
-    @Override
-    @Transactional
     public KycApplicationResponseDto addInternalNote(com.goodearth.postsales.kyc.dto.KycInternalNoteRequestDto dto, String actorId) {
         KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
                 .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));

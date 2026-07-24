@@ -104,8 +104,6 @@ export interface KycApplicationResponseDto {
   verifiedAt?: string;
   verifiedBy?: string;
   lastSavedAt?: string;
-  assignedTo?: string;
-  assignedAt?: string;
   rejectionReason?: string;
   editReason?: string;
   internalNotes?: string;
@@ -175,12 +173,6 @@ export interface KycSubmitRequestDto {
 export interface KycGrantEditRequestDto {
   kycApplicationId: string;
   reason: string;
-}
-
-export interface KycAssignReviewerRequestDto {
-  kycApplicationId: string;
-  reviewerId: string;
-  priority?: string;
 }
 
 export interface KycInternalNoteRequestDto {

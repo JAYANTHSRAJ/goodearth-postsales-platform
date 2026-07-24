@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.14-remove-reviewer-assignment-columns-from-kyc-applications
+      author: antigravity
+      changes:
+        - dropColumn:
+            tableName: kyc_applications
+            columnName: assigned_to
+        - dropColumn:
+            tableName: kyc_applications
+            columnName: assigned_at

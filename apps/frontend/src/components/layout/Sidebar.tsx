@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   Settings,
   Shield,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
@@ -34,6 +35,7 @@ const clientNavItems: NavItem[] = [
 
 const crmNavItems: NavItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { name: 'KYC Management', path: '/admin/kyc-management', icon: ShieldCheck },
   { name: 'Buyers', path: '/buyers', icon: Users },
   { name: 'Projects', path: '/projects', icon: Building },
   { name: 'Properties', path: '/properties', icon: Building },

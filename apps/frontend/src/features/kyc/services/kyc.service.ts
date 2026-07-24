@@ -53,10 +53,6 @@ export const kycService = {
     return api.post<KycApplicationResponseDto>('/kyc/grant-edit', dto);
   },
 
-  assignReviewer: (dto: { kycApplicationId: string; reviewerId: string; priority?: string }): Promise<KycApplicationResponseDto> => {
-    return api.post<KycApplicationResponseDto>('/kyc/assign', dto);
-  },
-
   addInternalNote: (dto: { kycApplicationId: string; note: string }): Promise<KycApplicationResponseDto> => {
     return api.post<KycApplicationResponseDto>('/kyc/internal-note', dto);
   },

@@ -514,7 +514,7 @@ public class NotificationEventListener {
             try {
                 String subject = "GoodEarth Post-Sales | KYC Application " + event.status();
                 String emailBody = String.format(
-                        "Dear %s,\n\nYour KYC application for booking reference %s has updated to status: %s.\n%s\n\nPlease log in to your GoodEarth portal to view details.\n\nWarm regards,\nGoodEarth Post-Sales Compliance Team",
+                        "Dear %s,\n\nYour KYC application for booking reference %s has updated to status: %s.\n%s\n\nPlease log in to your GoodEarth portal to view details.\n\nWarm regards,\nGoodEarth Post-Sales Admin Team",
                         event.buyerName() != null ? event.buyerName() : "Homebuyer",
                         event.bookingId(),
                         event.status(),

@@ -255,7 +255,7 @@ export const SingleKycPage: React.FC = () => {
           </div>
           <div className="space-y-2 flex-1">
             <h3 className="text-base font-bold text-orange-950 dark:text-orange-200">
-              Action Required: Edit Access Granted by Compliance Team
+              Action Required: Edit Access Granted by GoodEarth Admin
             </h3>
             {initialData?.editReason && (
               <p className="text-xs text-orange-800 dark:text-orange-300 font-medium">
@@ -263,7 +263,7 @@ export const SingleKycPage: React.FC = () => {
               </p>
             )}
             <p className="text-xs text-orange-700 dark:text-orange-400 leading-relaxed">
-              Our compliance team has unlocked your application. Please review the details, make the required updates, and click <span className="font-bold">Resubmit KYC Application</span> when ready.
+              Our GoodEarth Admin team has unlocked your application. Please review the details, make the required updates, and click <span className="font-bold">Resubmit KYC Application</span> when ready.
             </p>
           </div>
         </div>
@@ -282,8 +282,8 @@ export const SingleKycPage: React.FC = () => {
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               {currentStatus === 'APPROVED'
-                ? 'Your KYC application has been verified and approved by the GoodEarth compliance team.'
-                : 'Thank you for submitting your KYC. Our Post-Sales Compliance Team is reviewing your application. You will receive updates by email and inside the portal. No further action is required.'}
+                ? 'Your KYC application has been verified and approved by GoodEarth Admin.'
+                : 'Thank you for submitting your KYC. Our GoodEarth Admin Team is reviewing your application. You will receive updates by email and inside the portal. No further action is required.'}
             </p>
           </div>
 
@@ -313,7 +313,6 @@ export const SingleKycPage: React.FC = () => {
       <KycWorkflowTimeline
         status={currentStatus}
         submittedAt={initialData?.submittedAt}
-        assignedTo={initialData?.assignedTo}
         verifiedAt={initialData?.verifiedAt}
         verifiedBy={initialData?.verifiedBy}
       />

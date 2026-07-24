@@ -1,11 +1,10 @@
 import React from 'react';
 import { KycApplicationStatus } from '../types/kyc';
-import { CheckCircle2, Clock, FileEdit, AlertCircle, Send, ShieldCheck, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, FileEdit, AlertCircle, Send, ShieldCheck } from 'lucide-react';
 
 interface KycWorkflowTimelineProps {
   status: KycApplicationStatus;
   submittedAt?: string;
-  assignedTo?: string;
   verifiedAt?: string;
   verifiedBy?: string;
 }
@@ -13,7 +12,6 @@ interface KycWorkflowTimelineProps {
 export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
   status,
   submittedAt,
-  assignedTo,
   verifiedAt,
   verifiedBy,
 }) => {
@@ -35,17 +33,9 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
       isCurrent: status === 'SUBMITTED',
     },
     {
-      id: 'ASSIGNED',
-      label: 'Assigned',
-      description: assignedTo ? `Reviewer: ${assignedTo}` : 'Assigned to compliance officer',
-      icon: UserCheck,
-      isCompleted: ['UNDER_REVIEW', 'EDIT_ENABLED', 'RESUBMITTED', 'APPROVED', 'REJECTED'].includes(status),
-      isCurrent: false,
-    },
-    {
       id: 'UNDER_REVIEW',
       label: 'Under Review',
-      description: 'Post-sales compliance audit in progress',
+      description: 'GoodEarth Admin review in progress',
       icon: Clock,
       isCompleted: ['APPROVED'].includes(status),
       isCurrent: status === 'UNDER_REVIEW' || status === 'SUBMITTED',
@@ -55,7 +45,7 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
           {
             id: 'EDIT_REQUIRED',
             label: 'Action Required',
-            description: status === 'RESUBMITTED' ? 'Changes resubmitted by buyer' : 'Edit access granted by compliance',
+            description: status === 'RESUBMITTED' ? 'Changes resubmitted by buyer' : 'Edit access granted by GoodEarth Admin',
             icon: AlertCircle,
             isCompleted: status === 'RESUBMITTED',
             isCurrent: status === 'EDIT_ENABLED' || status === 'ACTION_REQUIRED',
@@ -67,7 +57,7 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
       label: 'Approved',
       description: verifiedAt
         ? `Approved on ${new Date(verifiedAt).toLocaleDateString()}${verifiedBy ? ` by ${verifiedBy}` : ''}`
-        : 'Final verification & CRM approval',
+        : 'Final verification & GoodEarth Admin approval',
       icon: ShieldCheck,
       isCompleted: status === 'APPROVED',
       isCurrent: status === 'APPROVED',
@@ -78,7 +68,7 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
     <div className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 rounded-3xl p-6 space-y-4">
       <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-3">
         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-brand-500" /> Compliance Progress & Timeline
+          <Clock className="w-4 h-4 text-brand-500" /> Admin Workflow Timeline
         </h4>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
           Status: {status}

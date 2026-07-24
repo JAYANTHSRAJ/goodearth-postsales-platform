@@ -58,12 +58,6 @@ public class KycApplication extends BaseEntity {
     @Column(name = "has_third_applicant", length = 10)
     private String hasThirdApplicant;
 
-    @Column(name = "assigned_to", length = 255)
-    private String assignedTo;
-
-    @Column(name = "assigned_at")
-    private LocalDateTime assignedAt;
-
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 

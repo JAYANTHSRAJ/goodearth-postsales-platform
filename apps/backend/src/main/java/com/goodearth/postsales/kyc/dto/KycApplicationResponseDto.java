@@ -31,8 +31,6 @@ public class KycApplicationResponseDto {
     private String verifiedBy;
     private LocalDateTime lastSavedAt;
 
-    private String assignedTo;
-    private LocalDateTime assignedAt;
     private String rejectionReason;
     private String editReason;
     private String internalNotes;

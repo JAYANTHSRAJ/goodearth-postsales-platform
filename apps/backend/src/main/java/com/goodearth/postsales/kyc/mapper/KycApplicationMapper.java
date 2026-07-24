@@ -69,8 +69,6 @@ public class KycApplicationMapper {
                 .verifiedAt(application.getVerifiedAt())
                 .verifiedBy(application.getVerifiedBy())
                 .lastSavedAt(application.getUpdatedAt())
-                .assignedTo(application.getAssignedTo())
-                .assignedAt(application.getAssignedAt())
                 .rejectionReason(application.getRejectionReason())
                 .editReason(application.getEditReason())
                 .internalNotes(application.getInternalNotes())

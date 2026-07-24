@@ -26,8 +26,8 @@ export const KycStatusCard: React.FC<KycStatusCardProps> = ({ kycData }) => {
       case 'UNDER_REVIEW':
       case 'SUBMITTED':
         return {
-          title: 'KYC Under Compliance Review',
-          description: 'Our compliance team is auditing your submitted documents.',
+          title: 'KYC Under Admin Review',
+          description: 'Our GoodEarth Admin team is auditing your submitted documents.',
           badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
           icon: Clock,
           btnText: 'View Submitted KYC',
@@ -46,7 +46,7 @@ export const KycStatusCard: React.FC<KycStatusCardProps> = ({ kycData }) => {
       case 'RESUBMITTED':
         return {
           title: 'Resubmitted for Review',
-          description: 'Your updated KYC details have been resubmitted to compliance.',
+          description: 'Your updated KYC details have been resubmitted to GoodEarth Admin.',
           badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
           icon: Clock,
           btnText: 'View Resubmission',
@@ -97,9 +97,9 @@ export const KycStatusCard: React.FC<KycStatusCardProps> = ({ kycData }) => {
           </div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-slate-400 font-semibold uppercase text-[10px]">Assigned Reviewer</div>
+          <div className="text-slate-400 font-semibold uppercase text-[10px]">Reviewing Authority</div>
           <div className="font-bold text-slate-900 dark:text-white">
-            {kycData?.assignedTo || 'Compliance Desk'}
+            GoodEarth Admin
           </div>
         </div>
         <div className="space-y-0.5">

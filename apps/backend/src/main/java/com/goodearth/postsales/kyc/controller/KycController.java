@@ -145,13 +145,13 @@ public class KycController {
     }
 
     @PostMapping("/review/start")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
     @Operation(summary = "Initiate KYC review", description = "Locks submission for verification and transitions state to UNDER_REVIEW")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> startReview(
             @Valid @RequestBody KycReviewStartRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+        String reviewerId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.startReview(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
@@ -161,13 +161,13 @@ public class KycController {
     }
 
     @PostMapping("/review/approve")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
     @Operation(summary = "Approve document or full KYC", description = "Approves single document or entire KYC application")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> approveKyc(
             @Valid @RequestBody KycApproveRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+        String reviewerId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.approveKyc(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
@@ -177,13 +177,13 @@ public class KycController {
     }
 
     @PostMapping("/review/reject")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
-    @Operation(summary = "Reject document or KYC application", description = "Rejects submission with mandatory reason code and transitions to ACTION_REQUIRED")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
+    @Operation(summary = "Reject document or KYC application", description = "Rejects submission with mandatory reason code and transitions to REJECTED")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> rejectKyc(
             @Valid @RequestBody KycRejectRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+        String reviewerId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.rejectKyc(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
@@ -193,13 +193,13 @@ public class KycController {
     }
 
     @PostMapping("/review/request-changes")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
     @Operation(summary = "Request specific document corrections", description = "Dispatches change requests to homebuyer and transitions state to ACTION_REQUIRED")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> requestChanges(
             @Valid @RequestBody KycRequestChangesRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+        String reviewerId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.requestChanges(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
@@ -207,7 +207,7 @@ public class KycController {
     }
 
     @PostMapping("/resubmit")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Resubmit KYC application after editing", description = "Resubmits updated KYC and transitions state to UNDER_REVIEW")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> resubmitKyc(
             @Valid @RequestBody KycSubmitRequestDto requestDto,
@@ -223,13 +223,13 @@ public class KycController {
     }
 
     @PostMapping("/grant-edit")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
     @Operation(summary = "Grant edit access to homebuyer", description = "Unlocks buyer KYC form with mandatory reason and transitions state to EDIT_ENABLED")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> grantEditAccess(
             @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycGrantEditRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+        String reviewerId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.grantEditAccess(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
@@ -238,30 +238,14 @@ public class KycController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
-    @PostMapping("/assign")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
-    @Operation(summary = "Assign KYC review to CRM executive", description = "Assigns pending KYC application to a specific reviewer")
-    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> assignReviewer(
-            @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycAssignReviewerRequestDto requestDto,
-            Authentication authentication) {
-        long startTime = System.currentTimeMillis();
-        String actorId = authentication != null ? authentication.getName() : "ADMIN";
-
-        KycApplicationResponseDto response = kycService.assignReviewer(requestDto, actorId);
-        long duration = System.currentTimeMillis() - startTime;
-        log.info("Endpoint: POST /api/v1/kyc/assign, Execution Time: {}ms", duration);
-
-        return ResponseEntity.ok(new ApiResponse<>(response));
-    }
-
     @PostMapping("/internal-note")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
-    @Operation(summary = "Add private internal note to KYC", description = "Adds a staff-only private note not visible to buyers")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
+    @Operation(summary = "Add private internal note to KYC", description = "Adds an admin-only private note not visible to buyers")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> addInternalNote(
             @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycInternalNoteRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        String actorId = authentication != null ? authentication.getName() : "CRM_STAFF";
+        String actorId = authentication != null ? authentication.getName() : "ADMIN";
 
         KycApplicationResponseDto response = kycService.addInternalNote(requestDto, actorId);
         long duration = System.currentTimeMillis() - startTime;
@@ -271,7 +255,7 @@ public class KycController {
     }
 
     @GetMapping("/{bookingId}/timeline")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Fetch KYC audit timeline", description = "Returns chronological activity history and status transitions")
     public ResponseEntity<ApiResponse<KycTimelineResponseDto>> getTimeline(@PathVariable String bookingId) {
         long startTime = System.currentTimeMillis();
@@ -283,7 +267,7 @@ public class KycController {
     }
 
     @GetMapping("/{bookingId}/progress")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Fetch KYC completion progress", description = "Returns completion metrics, required counts, and slot statuses")
     public ResponseEntity<ApiResponse<KycProgressResponseDto>> getProgress(@PathVariable String bookingId) {
         long startTime = System.currentTimeMillis();
@@ -295,7 +279,7 @@ public class KycController {
     }
 
     @GetMapping("/dashboard/summary")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'CRM')")
     @Operation(summary = "Fetch dashboard operational summary", description = "Returns review queue metrics and paginated application summaries")
     public ResponseEntity<ApiResponse<KycDashboardSummaryResponseDto>> getDashboardSummary(
             @RequestParam(required = false) String projectId,
