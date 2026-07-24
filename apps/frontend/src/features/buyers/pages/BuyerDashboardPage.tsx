@@ -10,7 +10,6 @@ import {
   Sparkles,
   MessageSquare,
   Clock,
-  CheckCircle2,
   Edit3,
   XCircle,
   Phone,
@@ -22,6 +21,7 @@ import kycService from '../../kyc/services/kyc.service';
 import { KycApplicationResponseDto, DocumentSlotDto } from '../../kyc/types/kyc';
 import { KycWorkflowTimeline } from '../../kyc/components/KycWorkflowTimeline';
 import DocumentPreviewModal from '../../kyc/components/documents/DocumentPreviewModal';
+import { AdminKycReviewConsole } from '../../kyc/components/review/AdminKycReviewConsole';
 
 type DashboardTab =
   | 'overview'
@@ -88,29 +88,7 @@ export const BuyerDashboardPage: React.FC = () => {
     }
   };
 
-  const handleApproveKyc = async () => {
-    if (!kycData) return;
-    setActionError(null);
-    try {
-      const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-      const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${baseUrl}/kyc/review/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-        body: JSON.stringify({ kycApplicationId: kycData.kycApplicationId, approvalScope: 'FULL_APPLICATION' }),
-      });
-      if (!res.ok) throw new Error('Failed to approve KYC application');
 
-      setActionSuccess('KYC Application Approved. Form is locked permanently.');
-      fetchKycData();
-    } catch (err: any) {
-      setActionError(err?.message || 'Failed to approve application.');
-    }
-  };
 
   const handleRejectKyc = async () => {
     if (!kycData || !modalReason.trim()) return;
@@ -307,110 +285,8 @@ export const BuyerDashboardPage: React.FC = () => {
       {/* 2. KYC TAB */}
       {activeTab === 'kyc' && (
         <div className="space-y-6">
-          {/* Admin KYC Action Bar */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Admin KYC Review & Control Desk
-              </h3>
-              <p className="text-xs text-slate-500">
-                Review submitted applicant details, inspect identity documents, and update state. Admin cannot edit buyer data directly.
-              </p>
-            </div>
-            {kycData && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleApproveKyc}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Approve KYC
-                </button>
-                <button
-                  onClick={() => setActiveModal('GRANT_EDIT')}
-                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
-                >
-                  <Edit3 className="w-4 h-4" /> Grant Edit Access
-                </button>
-                <button
-                  onClick={() => setActiveModal('REJECT')}
-                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
-                >
-                  <XCircle className="w-4 h-4" /> Reject KYC
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Workflow Timeline */}
           {kycData ? (
-            <KycWorkflowTimeline
-              status={kycData.status}
-              submittedAt={kycData.submittedAt}
-              verifiedAt={kycData.verifiedAt}
-              verifiedBy={kycData.verifiedBy}
-            />
-          ) : (
-            <div className="p-8 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-3xl text-center text-xs font-semibold text-slate-500">
-              KYC Not Submitted
-            </div>
-          )}
-
-          {/* KYC Applicants Particulars */}
-          {kycData ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
-                Submitted Applicants (Read-Only)
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-                {kycData.primaryApplicant && (
-                  <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] text-brand-600">
-                      Primary Applicant
-                    </div>
-                    <div className="space-y-1 text-slate-700 dark:text-slate-300">
-                      <div><span className="text-slate-400">Full Name:</span> {kycData.primaryApplicant.fullName}</div>
-                      <div><span className="text-slate-400">PAN:</span> <span className="font-mono font-bold">{kycData.primaryApplicant.panNumber || 'N/A'}</span></div>
-                      <div><span className="text-slate-400">Aadhaar:</span> <span className="font-mono font-bold">{kycData.primaryApplicant.maskedAadhaarNumber || kycData.primaryApplicant.aadhaarNumber || 'N/A'}</span></div>
-                      <div><span className="text-slate-400">Email:</span> {kycData.primaryApplicant.email || 'N/A'}</div>
-                      <div><span className="text-slate-400">Phone:</span> {kycData.primaryApplicant.phone || 'N/A'}</div>
-                    </div>
-                  </div>
-                )}
-
-                {kycData.jointApplicants && kycData.jointApplicants.map((joint, idx) => (
-                  <div key={joint.id || idx} className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] text-brand-600">
-                      Joint Applicant {idx + 1} ({joint.applicantType})
-                    </div>
-                    <div className="space-y-1 text-slate-700 dark:text-slate-300">
-                      <div><span className="text-slate-400">Full Name:</span> {joint.fullName}</div>
-                      <div><span className="text-slate-400">PAN:</span> <span className="font-mono font-bold">{joint.panNumber || 'N/A'}</span></div>
-                      <div><span className="text-slate-400">Aadhaar:</span> <span className="font-mono font-bold">{joint.maskedAadhaarNumber || joint.aadhaarNumber || 'N/A'}</span></div>
-                      <div><span className="text-slate-400">Email:</span> {joint.email || 'N/A'}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Internal Notes */}
-              <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl space-y-3 border border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-amber-500" /> Private Admin Notes
-                  </h4>
-                  <button
-                    onClick={() => setActiveModal('NOTE')}
-                    className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold hover:bg-amber-200"
-                  >
-                    + Add Admin Note
-                  </button>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
-                  {kycData.internalNotes || 'No internal notes recorded yet.'}
-                </p>
-              </div>
-            </div>
+            <AdminKycReviewConsole kycData={kycData} onRefresh={fetchKycData} />
           ) : (
             <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center text-xs font-semibold text-slate-500">
               KYC Not Submitted
