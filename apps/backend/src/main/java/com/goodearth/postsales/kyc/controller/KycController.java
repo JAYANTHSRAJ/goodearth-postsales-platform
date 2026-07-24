@@ -203,7 +203,69 @@ public class KycController {
 
         KycApplicationResponseDto response = kycService.requestChanges(requestDto, reviewerId);
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Endpoint: POST /api/v1/kyc/review/request-changes, Execution Time: {}ms", duration);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("/resubmit")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Resubmit KYC application after editing", description = "Resubmits updated KYC and transitions state to UNDER_REVIEW")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> resubmitKyc(
+            @Valid @RequestBody KycSubmitRequestDto requestDto,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String actorId = authentication != null ? authentication.getName() : "CLIENT";
+
+        KycApplicationResponseDto response = kycService.resubmitKyc(requestDto, actorId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: POST /api/v1/kyc/resubmit, Execution Time: {}ms, KycApplicationId: {}", duration, requestDto.getKycApplicationId());
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("/grant-edit")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @Operation(summary = "Grant edit access to homebuyer", description = "Unlocks buyer KYC form with mandatory reason and transitions state to EDIT_ENABLED")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> grantEditAccess(
+            @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycGrantEditRequestDto requestDto,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String reviewerId = authentication != null ? authentication.getName() : "CRM_EXECUTIVE";
+
+        KycApplicationResponseDto response = kycService.grantEditAccess(requestDto, reviewerId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: POST /api/v1/kyc/grant-edit, Execution Time: {}ms", duration);
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("/assign")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @Operation(summary = "Assign KYC review to CRM executive", description = "Assigns pending KYC application to a specific reviewer")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> assignReviewer(
+            @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycAssignReviewerRequestDto requestDto,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String actorId = authentication != null ? authentication.getName() : "ADMIN";
+
+        KycApplicationResponseDto response = kycService.assignReviewer(requestDto, actorId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: POST /api/v1/kyc/assign, Execution Time: {}ms", duration);
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("/internal-note")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @Operation(summary = "Add private internal note to KYC", description = "Adds a staff-only private note not visible to buyers")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> addInternalNote(
+            @Valid @RequestBody com.goodearth.postsales.kyc.dto.KycInternalNoteRequestDto requestDto,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String actorId = authentication != null ? authentication.getName() : "CRM_STAFF";
+
+        KycApplicationResponseDto response = kycService.addInternalNote(requestDto, actorId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: POST /api/v1/kyc/internal-note, Execution Time: {}ms", duration);
 
         return ResponseEntity.ok(new ApiResponse<>(response));
     }

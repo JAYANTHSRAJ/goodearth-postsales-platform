@@ -885,8 +885,10 @@ public class KycServiceImpl implements KycService {
         KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
                 .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
 
-        // Allowed transitions: DRAFT -> SUBMITTED or ACTION_REQUIRED -> SUBMITTED
-        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        // Allowed transitions: DRAFT -> UNDER_REVIEW, ACTION_REQUIRED -> UNDER_REVIEW, EDIT_ENABLED -> UNDER_REVIEW
+        if (application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Submit KYC");
         }
 
@@ -899,7 +901,7 @@ public class KycServiceImpl implements KycService {
             throw new KycValidationException("Cannot submit KYC application: " + missingMsg);
         }
 
-        application.setStatus(KycApplicationStatus.SUBMITTED);
+        application.setStatus(KycApplicationStatus.UNDER_REVIEW);
         application.setSubmittedAt(LocalDateTime.now());
         if (dto.getClientNotes() != null) {
             application.setClientNotes(dto.getClientNotes());
@@ -908,10 +910,11 @@ public class KycServiceImpl implements KycService {
 
         KycApplication savedApp = kycApplicationRepository.save(application);
 
-        auditService.logEvent(savedApp, KycAuditEventType.KYC_SUBMITTED, actorId, "CLIENT", "KYC application submitted for verification", null);
+        auditService.logEvent(savedApp, KycAuditEventType.KYC_SUBMITTED, actorId, "CLIENT", "KYC application submitted for compliance verification", null);
+        auditService.logEvent(savedApp, KycAuditEventType.REVIEW_STARTED, "SYSTEM", "COMPLIANCE_TEAM", "Under Compliance Review", null);
 
         // Synchronize milestone with Zoho CRM
-        zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Submitted", "Homebuyer submitted complete KYC application.");
+        zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Submitted - Under Review", "Homebuyer submitted complete KYC application.");
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);
@@ -1055,6 +1058,104 @@ public class KycServiceImpl implements KycService {
 
         // Synchronize milestone with Zoho CRM
         zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Action Required", "Homebuyer requested to correct submitted document slots.");
+
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto grantEditAccess(com.goodearth.postsales.kyc.dto.KycGrantEditRequestDto dto, String reviewerId) {
+        KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
+                .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
+
+        application.setStatus(KycApplicationStatus.EDIT_ENABLED);
+        application.setEditReason(dto.getReason());
+        application.setUpdatedAt(LocalDateTime.now());
+        KycApplication savedApp = kycApplicationRepository.save(application);
+
+        auditService.logEvent(savedApp, KycAuditEventType.CHANGES_REQUESTED, reviewerId, "CRM_EXECUTIVE",
+                "Granted edit access to buyer: " + dto.getReason(), dto.getReason());
+
+        zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Edit Access Granted", "Compliance team granted edit access: " + dto.getReason());
+
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto assignReviewer(com.goodearth.postsales.kyc.dto.KycAssignReviewerRequestDto dto, String actorId) {
+        KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
+                .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
+
+        application.setAssignedTo(dto.getReviewerId());
+        application.setAssignedAt(LocalDateTime.now());
+        if (dto.getPriority() != null) application.setPriority(dto.getPriority());
+        application.setUpdatedAt(LocalDateTime.now());
+        KycApplication savedApp = kycApplicationRepository.save(application);
+
+        auditService.logEvent(savedApp, KycAuditEventType.REVIEW_STARTED, actorId, "ADMIN",
+                "Assigned KYC application review to: " + dto.getReviewerId(), null);
+
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto addInternalNote(com.goodearth.postsales.kyc.dto.KycInternalNoteRequestDto dto, String actorId) {
+        KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
+                .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
+
+        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String newNote = String.format("[%s by %s]: %s", timestamp, actorId, dto.getNote());
+
+        String existingNotes = application.getInternalNotes();
+        if (existingNotes != null && !existingNotes.trim().isEmpty()) {
+            application.setInternalNotes(existingNotes + "\n" + newNote);
+        } else {
+            application.setInternalNotes(newNote);
+        }
+        application.setUpdatedAt(LocalDateTime.now());
+        KycApplication savedApp = kycApplicationRepository.save(application);
+
+        auditService.logEvent(savedApp, KycAuditEventType.DRAFT_SAVED, actorId, "CRM_STAFF",
+                "Added private internal note", dto.getNote());
+
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto resubmitKyc(KycSubmitRequestDto dto, String actorId) {
+        KycApplication application = kycApplicationRepository.findById(dto.getKycApplicationId())
+                .orElseThrow(() -> new KycNotFoundException("KYC Application", dto.getKycApplicationId().toString()));
+
+        if (application.getStatus() != KycApplicationStatus.EDIT_ENABLED &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.DRAFT) {
+            throw new KycInvalidStateTransitionException(application.getStatus().name(), "Resubmit KYC");
+        }
+
+        KycValidationSummaryResponseDto valSummary = validateKyc(application.getBookingId());
+        if (!valSummary.isOverallValid()) {
+            String missingMsg = valSummary.getMissingItems() != null && !valSummary.getMissingItems().isEmpty()
+                    ? valSummary.getMissingItems().get(0).getRequirement()
+                    : "Mandatory KYC requirements or uploads are incomplete.";
+            throw new KycValidationException("Cannot resubmit KYC application: " + missingMsg);
+        }
+
+        application.setStatus(KycApplicationStatus.UNDER_REVIEW);
+        application.setSubmittedAt(LocalDateTime.now());
+        application.setUpdatedAt(LocalDateTime.now());
+        KycApplication savedApp = kycApplicationRepository.save(application);
+
+        auditService.logEvent(savedApp, KycAuditEventType.KYC_SUBMITTED, actorId, "CLIENT",
+                "Buyer resubmitted updated KYC application for review", null);
+
+        zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Resubmitted", "Buyer updated and resubmitted KYC application.");
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);

@@ -50,6 +50,7 @@ const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages
 
 // KYC Module Lazy Routes
 const SingleKycPage = withSuspense(() => import('../features/kyc/pages/SingleKycPage'), 'SingleKycPage');
+const KycCrmQueuePage = withSuspense(() => import('../features/kyc/pages/KycCrmQueuePage'), 'KycCrmQueuePage');
 
 const Unauthorized = withSuspense(() => import('../pages/Unauthorized'), 'Unauthorized');
 const NotFound = withSuspense(() => import('../pages/NotFound'), 'NotFound');
@@ -126,6 +127,10 @@ export const router = createBrowserRouter([
               {
                 path: '/workflows',
                 element: <WorkflowsPage />,
+              },
+              {
+                path: '/crm/kyc-queue',
+                element: <KycCrmQueuePage />,
               },
               {
                 path: '/stages',

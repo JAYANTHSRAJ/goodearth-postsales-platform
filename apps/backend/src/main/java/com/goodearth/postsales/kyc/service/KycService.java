@@ -38,6 +38,14 @@ public interface KycService {
 
     KycApplicationResponseDto requestChanges(KycRequestChangesRequestDto dto, String reviewerId);
 
+    KycApplicationResponseDto grantEditAccess(com.goodearth.postsales.kyc.dto.KycGrantEditRequestDto dto, String reviewerId);
+
+    KycApplicationResponseDto assignReviewer(com.goodearth.postsales.kyc.dto.KycAssignReviewerRequestDto dto, String actorId);
+
+    KycApplicationResponseDto addInternalNote(com.goodearth.postsales.kyc.dto.KycInternalNoteRequestDto dto, String actorId);
+
+    KycApplicationResponseDto resubmitKyc(KycSubmitRequestDto dto, String actorId);
+
     KycProgressResponseDto getKycProgress(String bookingId);
 
     KycDashboardSummaryResponseDto getDashboardSummary(String projectId, KycApplicationStatus status, int page, int limit);

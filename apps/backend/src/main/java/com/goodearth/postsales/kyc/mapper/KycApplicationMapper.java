@@ -51,6 +51,10 @@ public class KycApplicationMapper {
                     .collect(Collectors.toList());
         }
 
+        boolean canBuyerEdit = application.getStatus() == com.goodearth.postsales.kyc.entity.KycApplicationStatus.DRAFT ||
+                application.getStatus() == com.goodearth.postsales.kyc.entity.KycApplicationStatus.ACTION_REQUIRED ||
+                application.getStatus() == com.goodearth.postsales.kyc.entity.KycApplicationStatus.EDIT_ENABLED;
+
         return KycApplicationResponseDto.builder()
                 .kycApplicationId(application.getId())
                 .bookingId(application.getBookingId())
@@ -65,6 +69,13 @@ public class KycApplicationMapper {
                 .verifiedAt(application.getVerifiedAt())
                 .verifiedBy(application.getVerifiedBy())
                 .lastSavedAt(application.getUpdatedAt())
+                .assignedTo(application.getAssignedTo())
+                .assignedAt(application.getAssignedAt())
+                .rejectionReason(application.getRejectionReason())
+                .editReason(application.getEditReason())
+                .internalNotes(application.getInternalNotes())
+                .priority(application.getPriority())
+                .canBuyerEdit(canBuyerEdit)
                 .primaryApplicant(primaryDto)
                 .jointApplicants(jointDtos)
                 .documentSlots(slotDtos)

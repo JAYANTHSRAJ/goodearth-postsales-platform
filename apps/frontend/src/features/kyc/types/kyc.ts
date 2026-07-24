@@ -3,6 +3,8 @@ export type KycApplicationStatus =
   | 'SUBMITTED'
   | 'UNDER_REVIEW'
   | 'ACTION_REQUIRED'
+  | 'EDIT_ENABLED'
+  | 'RESUBMITTED'
   | 'APPROVED'
   | 'REJECTED';
 
@@ -102,6 +104,13 @@ export interface KycApplicationResponseDto {
   verifiedAt?: string;
   verifiedBy?: string;
   lastSavedAt?: string;
+  assignedTo?: string;
+  assignedAt?: string;
+  rejectionReason?: string;
+  editReason?: string;
+  internalNotes?: string;
+  priority?: string;
+  canBuyerEdit?: boolean;
   primaryApplicant?: ApplicantDto;
   jointApplicants?: ApplicantDto[];
   documentSlots?: DocumentSlotDto[];
@@ -161,6 +170,22 @@ export interface KycSubmitRequestDto {
   kycApplicationId: string;
   declarationAccepted: boolean;
   clientNotes?: string;
+}
+
+export interface KycGrantEditRequestDto {
+  kycApplicationId: string;
+  reason: string;
+}
+
+export interface KycAssignReviewerRequestDto {
+  kycApplicationId: string;
+  reviewerId: string;
+  priority?: string;
+}
+
+export interface KycInternalNoteRequestDto {
+  kycApplicationId: string;
+  note: string;
 }
 
 export interface DocumentUploadResponseDto {

@@ -31,6 +31,14 @@ public class KycApplicationResponseDto {
     private String verifiedBy;
     private LocalDateTime lastSavedAt;
 
+    private String assignedTo;
+    private LocalDateTime assignedAt;
+    private String rejectionReason;
+    private String editReason;
+    private String internalNotes;
+    private String priority;
+    private Boolean canBuyerEdit;
+
     private ApplicantDto primaryApplicant;
     private List<ApplicantDto> jointApplicants;
     private List<DocumentSlotDto> documentSlots;

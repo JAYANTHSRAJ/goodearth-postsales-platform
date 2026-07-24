@@ -58,6 +58,24 @@ public class KycApplication extends BaseEntity {
     @Column(name = "has_third_applicant", length = 10)
     private String hasThirdApplicant;
 
+    @Column(name = "assigned_to", length = 255)
+    private String assignedTo;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "edit_reason", columnDefinition = "TEXT")
+    private String editReason;
+
+    @Column(name = "internal_notes", columnDefinition = "TEXT")
+    private String internalNotes;
+
+    @Column(name = "priority", length = 20)
+    private String priority = "NORMAL";
+
     @OneToMany(mappedBy = "kycApplication", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<KycApplicant> applicants = new ArrayList<>();
 }

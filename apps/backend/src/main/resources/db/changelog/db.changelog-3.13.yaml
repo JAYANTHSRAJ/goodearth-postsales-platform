@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.13-add-crm-workflow-columns-to-kyc-applications
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        tableExists:
+          tableName: kyc_applications
+        not:
+          columnExists:
+            tableName: kyc_applications
+            columnName: assigned_to
+      changes:
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: assigned_to
+                  type: VARCHAR(255)
+              - column:
+                  name: assigned_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: rejection_reason
+                  type: TEXT
+              - column:
+                  name: edit_reason
+                  type: TEXT
+              - column:
+                  name: internal_notes
+                  type: TEXT
+              - column:
+                  name: priority
+                  type: VARCHAR(20)
+                  defaultValue: "NORMAL"

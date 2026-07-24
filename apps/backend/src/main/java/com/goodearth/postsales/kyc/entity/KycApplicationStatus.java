@@ -5,6 +5,8 @@ public enum KycApplicationStatus {
     SUBMITTED,
     UNDER_REVIEW,
     ACTION_REQUIRED,
+    EDIT_ENABLED,
+    RESUBMITTED,
     APPROVED,
     REJECTED
 }
