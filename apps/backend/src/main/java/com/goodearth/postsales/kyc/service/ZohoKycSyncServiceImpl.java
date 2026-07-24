@@ -24,6 +24,7 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
     private final ZohoApiClient apiClient;
     private final ZohoProperties properties;
     private final KycAuditService auditService;
+    private final com.goodearth.postsales.kyc.repository.KycApplicationRepository kycApplicationRepository;
 
     // Request-scoped cache to avoid duplicate Search API calls within a single thread/request
     private static final ThreadLocal<Map<String, String>> REQUEST_DEAL_CACHE =
@@ -32,10 +33,12 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
     public ZohoKycSyncServiceImpl(
             ZohoApiClient apiClient,
             ZohoProperties properties,
-            KycAuditService auditService) {
+            KycAuditService auditService,
+            com.goodearth.postsales.kyc.repository.KycApplicationRepository kycApplicationRepository) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.auditService = auditService;
+        this.kycApplicationRepository = kycApplicationRepository;
     }
 
     /**
@@ -193,6 +196,13 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
         if (application == null || application.getBookingId() == null) {
             log.warn("Cannot sync KYC status to Zoho CRM: Missing application or booking ID");
             return false;
+        }
+
+        // Always sync latest Deal fields payload (PUT /Deals/{id}) to Zoho CRM
+        try {
+            syncKycDealFieldsToCrm(application);
+        } catch (Exception ex) {
+            log.warn("[ZOHO_DEAL_FIELDS_SYNC_WARN] Failed to sync deal fields during milestone status update: {}", ex.getMessage());
         }
 
         String bookingId = application.getBookingId();
@@ -450,6 +460,12 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
                 log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: SUCCESS\nHTTP Status: 200\nResponse Payload: {}",
                         bookingId, bookingId, targetRecordId, response);
+
+                application.setZohoDealRecordId(targetRecordId);
+                application.setZohoSyncStatus("SUCCESS");
+                application.setZohoLastSyncedAt(java.time.LocalDateTime.now());
+                application.setZohoSyncError(null);
+                kycApplicationRepository.save(application);
             } catch (Exception apiEx) {
                 String errorMsg = apiEx.getMessage();
                 int statusCode = 500;
@@ -460,6 +476,10 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 }
                 log.error("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: FAILED\nHTTP Status: {}\nZoho Error Message: {}",
                         bookingId, bookingId, targetRecordId, statusCode, errorMsg);
+
+                application.setZohoSyncStatus("FAILED");
+                application.setZohoSyncError(errorMsg);
+                kycApplicationRepository.save(application);
             }
 
             return true;
