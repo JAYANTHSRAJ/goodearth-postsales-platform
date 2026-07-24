@@ -29,11 +29,27 @@ export const useKycAutosave = (
     initialData?.hasThirdApplicant || (initialData?.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No')
   );
 
+  const ensureDefaultApplicantFields = (app?: ApplicantDto | null, defaultType: 'PRIMARY' | 'JOINT_1' | 'JOINT_2' = 'PRIMARY'): ApplicantDto => {
+    const base: ApplicantDto = app || { applicantType: defaultType };
+    return {
+      ...base,
+      applicantType: base.applicantType || defaultType,
+      salutation: base.salutation || 'Mr.',
+      gender: base.gender || 'Male',
+      guardianRelation: base.guardianRelation || 'S/O',
+      guardianSalutation: base.guardianSalutation || 'Mr.',
+      address: {
+        ...base.address,
+        country: base.address?.country || 'India',
+      },
+    };
+  };
+
   const [primaryApplicant, setPrimaryApplicant] = useState<ApplicantDto>(
-    initialData?.primaryApplicant || { applicantType: 'PRIMARY', address: {} }
+    ensureDefaultApplicantFields(initialData?.primaryApplicant, 'PRIMARY')
   );
   const [jointApplicants, setJointApplicants] = useState<ApplicantDto[]>(
-    initialData?.jointApplicants || []
+    (initialData?.jointApplicants || []).map((app) => ensureDefaultApplicantFields(app, app.applicantType || 'JOINT_1'))
   );
 
   const [status, setStatus] = useState<AutosaveStatus>('idle');
@@ -64,10 +80,12 @@ export const useKycAutosave = (
       if (initialData.hasThirdApplicant) setHasThirdApplicant(initialData.hasThirdApplicant);
 
       if (initialData.primaryApplicant) {
-        setPrimaryApplicant(initialData.primaryApplicant);
+        setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
       }
       if (initialData.jointApplicants) {
-        setJointApplicants(initialData.jointApplicants);
+        setJointApplicants(
+          initialData.jointApplicants.map((app) => ensureDefaultApplicantFields(app, app.applicantType || 'JOINT_1'))
+        );
       }
       if (initialData.lastSavedAt) {
         setLastSavedAt(initialData.lastSavedAt);

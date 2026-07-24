@@ -64,74 +64,112 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return cleanDealName;
         }
 
-        String rawCriteria = "(Deal_Name:equals:" + cleanDealName + ")";
+        // 3. Search Tier 1: Multi-field exact criteria ((Deal_Name:equals:X) or (Subject:equals:X) or (Booking_ID:equals:X))
+        String rawCriteriaTier1 = String.format("((Deal_Name:equals:%s) or (Subject:equals:%s) or (Booking_ID:equals:%s))",
+                cleanDealName, cleanDealName, cleanDealName);
+        String resolvedId = executeZohoDealSearch(rawCriteriaTier1, cleanDealName, false);
+        if (resolvedId != null) {
+            cache.put(cleanDealName, resolvedId);
+            return resolvedId;
+        }
+
+        // 4. Search Tier 2: Prefix criteria (Deal_Name:starts_with:X)
+        String rawCriteriaTier2 = String.format("(Deal_Name:starts_with:%s)", cleanDealName);
+        resolvedId = executeZohoDealSearch(rawCriteriaTier2, cleanDealName, true);
+        if (resolvedId != null) {
+            cache.put(cleanDealName, resolvedId);
+            return resolvedId;
+        }
+
+        // 5. Search Tier 3: Word Search API (/Deals/search?word=X)
+        resolvedId = executeZohoDealWordSearch(cleanDealName);
+        if (resolvedId != null) {
+            cache.put(cleanDealName, resolvedId);
+            return resolvedId;
+        }
+
+        log.error("[KYC_SYNC] Search Status: FAILED | Reason: 0 Deals matched all search tiers for Booking ID / Deal Name: {}", cleanDealName);
+        return null;
+    }
+
+    private String executeZohoDealSearch(String rawCriteria, String cleanDealName, boolean allowPartialMatch) {
         String encodedCriteria = URLEncoder.encode(rawCriteria, StandardCharsets.UTF_8);
         String searchUrlStr = properties.getCrmApiUrl() + "/Deals/search?criteria=" + encodedCriteria;
         java.net.URI searchUri = java.net.URI.create(searchUrlStr);
 
-        log.info("[KYC_SYNC] Booking ID: {}", cleanDealName);
-        log.info("[KYC_SYNC] Generated criteria string before encoding: {}", rawCriteria);
-        log.info("[KYC_SYNC] Final request URL: {}", searchUri);
-
+        log.info("[KYC_SYNC] Executing criteria search URL: {}", searchUri);
         try {
             Map<?, ?> response = apiClient.get(searchUri, Map.class);
-            log.info("[KYC_SYNC] Zoho response body: {}", response);
+            return parseDealSearchResult(response, cleanDealName, allowPartialMatch);
+        } catch (Exception ex) {
+            log.warn("[KYC_SYNC] Criteria search failed for {}: {}", rawCriteria, ex.getMessage());
+            return null;
+        }
+    }
 
-            if (response == null || !response.containsKey("data")) {
-                log.error("[KYC_SYNC] Search Status: FAILED | Reason: Zero records returned from Search API for criteria: {}", rawCriteria);
-                return null;
-            }
+    private String executeZohoDealWordSearch(String cleanDealName) {
+        String encodedWord = URLEncoder.encode(cleanDealName, StandardCharsets.UTF_8);
+        String searchUrlStr = properties.getCrmApiUrl() + "/Deals/search?word=" + encodedWord;
+        java.net.URI searchUri = java.net.URI.create(searchUrlStr);
 
-            Object dataObj = response.get("data");
-            if (!(dataObj instanceof List)) {
-                log.error("[KYC_SYNC] Search Status: FAILED | Reason: Unexpected response data type for criteria: {}", rawCriteria);
-                return null;
-            }
+        log.info("[KYC_SYNC] Executing word search URL: {}", searchUri);
+        try {
+            Map<?, ?> response = apiClient.get(searchUri, Map.class);
+            return parseDealSearchResult(response, cleanDealName, true);
+        } catch (Exception ex) {
+            log.warn("[KYC_SYNC] Word search failed for word '{}': {}", cleanDealName, ex.getMessage());
+            return null;
+        }
+    }
 
-            List<?> dealList = (List<?>) dataObj;
-            if (dealList.isEmpty()) {
-                log.error("[KYC_SYNC] Search Status: FAILED | Reason: 0 Deals matched criteria: {}", rawCriteria);
-                return null;
-            }
+    private String parseDealSearchResult(Map<?, ?> response, String cleanDealName, boolean allowPartialMatch) {
+        if (response == null || !response.containsKey("data")) {
+            return null;
+        }
 
-            if (dealList.size() > 1) {
-                log.error("[KYC_SYNC] Search Status: CRITICAL_ERROR | Reason: Multiple ({}) Deals returned for unique Deal Name criteria: {}", dealList.size(), rawCriteria);
-                return null;
-            }
+        Object dataObj = response.get("data");
+        if (!(dataObj instanceof List)) {
+            return null;
+        }
 
-            Object firstItem = dealList.get(0);
-            if (firstItem instanceof Map) {
-                Map<?, ?> dealMap = (Map<?, ?>) firstItem;
+        List<?> dealList = (List<?>) dataObj;
+        if (dealList.isEmpty()) {
+            return null;
+        }
+
+        for (Object item : dealList) {
+            if (item instanceof Map) {
+                Map<?, ?> dealMap = (Map<?, ?>) item;
                 Object returnedDealName = dealMap.get("Deal_Name");
+                Object returnedBookingId = dealMap.get("Booking_ID");
+                Object returnedSubject = dealMap.get("Subject");
                 Object recordIdObj = dealMap.get("id");
 
-                if (returnedDealName != null && !cleanDealName.equalsIgnoreCase(returnedDealName.toString().trim())) {
-                    log.error("[KYC_SYNC] Search Status: FAILED | Reason: Deal Name mismatch validation failed (Expected: {}, Got: {})",
-                            cleanDealName, returnedDealName);
-                    return null;
+                if (recordIdObj == null) continue;
+
+                String recordId = recordIdObj.toString();
+                String strName = returnedDealName != null ? returnedDealName.toString().trim() : "";
+                String strBkg = returnedBookingId != null ? returnedBookingId.toString().trim() : "";
+                String strSub = returnedSubject != null ? returnedSubject.toString().trim() : "";
+
+                boolean matches = cleanDealName.equalsIgnoreCase(strName) ||
+                        cleanDealName.equalsIgnoreCase(strBkg) ||
+                        cleanDealName.equalsIgnoreCase(strSub);
+
+                if (!matches && allowPartialMatch) {
+                    matches = strName.toLowerCase().contains(cleanDealName.toLowerCase()) ||
+                            strBkg.toLowerCase().contains(cleanDealName.toLowerCase()) ||
+                            strSub.toLowerCase().contains(cleanDealName.toLowerCase());
                 }
 
-                if (recordIdObj != null) {
-                    String recordId = recordIdObj.toString();
-                    cache.put(cleanDealName, recordId);
-                    log.info("[KYC_SYNC] Resolved Deal Record ID = {}", recordId);
+                if (matches) {
+                    log.info("[KYC_SYNC] Resolved Deal Record ID = {} (Deal_Name: {}, Booking_ID: {})", recordId, strName, strBkg);
                     return recordId;
                 }
             }
-
-            log.error("[KYC_SYNC] Search Status: FAILED | Reason: Missing 'id' field in search response for Deal Name: {}", cleanDealName);
-            return null;
-        } catch (Exception ex) {
-            String errorMsg = ex.getMessage();
-            int statusCode = 500;
-            if (ex.getCause() instanceof RestClientResponseException) {
-                RestClientResponseException rce = (RestClientResponseException) ex.getCause();
-                statusCode = rce.getStatusCode().value();
-                errorMsg = rce.getResponseBodyAsString();
-            }
-            log.error("[KYC_SYNC] Search Status: ERROR | HTTP Status: {} | Zoho Error Message: {}", statusCode, errorMsg);
-            return null;
         }
+
+        return null;
     }
 
     @Override

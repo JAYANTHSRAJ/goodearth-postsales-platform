@@ -1214,16 +1214,16 @@ public class KycServiceImpl implements KycService {
             applicant.setFullName(type == ApplicantType.PRIMARY ? "Primary Applicant" : (type == ApplicantType.JOINT_1 ? "Co-Applicant" : "Third Applicant"));
         }
 
-        if (dto.getSalutation() != null) applicant.setSalutation(dto.getSalutation());
+        applicant.setSalutation(dto.getSalutation() != null && !dto.getSalutation().trim().isEmpty() ? dto.getSalutation() : (applicant.getSalutation() != null ? applicant.getSalutation() : "Mr."));
         if (dto.getFirstName() != null) applicant.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) applicant.setLastName(dto.getLastName());
-        if (dto.getGuardianRelation() != null) applicant.setGuardianRelation(dto.getGuardianRelation());
-        if (dto.getGuardianSalutation() != null) applicant.setGuardianSalutation(dto.getGuardianSalutation());
+        applicant.setGuardianRelation(dto.getGuardianRelation() != null && !dto.getGuardianRelation().trim().isEmpty() ? dto.getGuardianRelation() : (applicant.getGuardianRelation() != null ? applicant.getGuardianRelation() : "S/O"));
+        applicant.setGuardianSalutation(dto.getGuardianSalutation() != null && !dto.getGuardianSalutation().trim().isEmpty() ? dto.getGuardianSalutation() : (applicant.getGuardianSalutation() != null ? applicant.getGuardianSalutation() : "Mr."));
         if (dto.getGuardianFirstName() != null) applicant.setGuardianFirstName(dto.getGuardianFirstName());
         if (dto.getGuardianLastName() != null) applicant.setGuardianLastName(dto.getGuardianLastName());
         if (dto.getGuardianName() != null) applicant.setGuardianName(dto.getGuardianName());
         if (dto.getDateOfBirth() != null) applicant.setDateOfBirth(dto.getDateOfBirth());
-        if (dto.getGender() != null) applicant.setGender(dto.getGender());
+        applicant.setGender(dto.getGender() != null && !dto.getGender().trim().isEmpty() ? dto.getGender() : (applicant.getGender() != null ? applicant.getGender() : "Male"));
         if (dto.getAge() != null) applicant.setAge(dto.getAge());
         if (dto.getOccupation() != null) applicant.setOccupation(dto.getOccupation());
         if (dto.getAddressSameAsPrimary() != null) applicant.setAddressSameAsPrimary(dto.getAddressSameAsPrimary());
@@ -1241,7 +1241,9 @@ public class KycServiceImpl implements KycService {
             if (dto.getAddress().getCity() != null) applicant.setAddressCity(dto.getAddress().getCity());
             if (dto.getAddress().getState() != null) applicant.setAddressState(dto.getAddress().getState());
             if (dto.getAddress().getPincode() != null) applicant.setAddressPincode(dto.getAddress().getPincode());
-            if (dto.getAddress().getCountry() != null) applicant.setAddressCountry(dto.getAddress().getCountry());
+            applicant.setAddressCountry(dto.getAddress().getCountry() != null && !dto.getAddress().getCountry().trim().isEmpty() ? dto.getAddress().getCountry() : (applicant.getAddressCountry() != null ? applicant.getAddressCountry() : "India"));
+        } else if (applicant.getAddressCountry() == null || applicant.getAddressCountry().trim().isEmpty()) {
+            applicant.setAddressCountry("India");
         }
 
         kycApplicantRepository.save(applicant);
