@@ -83,7 +83,7 @@ public class WebSecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/actuator/**").permitAll()
+                auth.requestMatchers("/actuator/**", "/health", "/api/v1/health").permitAll()
                     .requestMatchers(
                         "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/activation/**", "/api/v1/auth/password-reset/**",
                         "/api/v1/auth/activate", "/api/v1/auth/resend-activation",
