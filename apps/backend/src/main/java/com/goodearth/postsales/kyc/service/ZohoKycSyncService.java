@@ -10,5 +10,7 @@ public interface ZohoKycSyncService {
 
     boolean syncApplicantMapToCrm(String bookingId, java.util.Map<String, Object> dealFields);
 
+    boolean syncDocumentToCrm(KycApplication application, String docType, String applicantType, String fileId, String permalink, String status);
+
     boolean verifyDealExists(String dealIdOrBookingId);
 }

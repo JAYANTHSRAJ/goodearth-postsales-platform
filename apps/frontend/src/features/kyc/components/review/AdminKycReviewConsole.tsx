@@ -289,6 +289,24 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                   <td className="p-2.5 font-bold text-slate-500">Verification Timestamp:</td>
                   <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.verifiedAt)}</td>
                 </tr>
+                <tr className="bg-slate-50/50 dark:bg-slate-800/40">
+                  <td className="p-2.5 font-bold text-slate-500">Zoho CRM Sync Status:</td>
+                  <td className="p-2.5">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        kycData.zohoSyncStatus === 'SUCCESS'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : kycData.zohoSyncStatus === 'FAILED'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {kycData.zohoSyncStatus || 'SUCCESS'}
+                    </span>
+                  </td>
+                  <td className="p-2.5 font-bold text-slate-500">Zoho Last Synced:</td>
+                  <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.zohoLastSyncedAt || kycData.lastSavedAt)}</td>
+                </tr>
               </tbody>
             </table>
           </div>

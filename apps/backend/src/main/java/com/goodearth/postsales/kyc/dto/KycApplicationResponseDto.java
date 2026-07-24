@@ -37,6 +37,11 @@ public class KycApplicationResponseDto {
     private String priority;
     private Boolean canBuyerEdit;
 
+    private String zohoSyncStatus;
+    private LocalDateTime zohoLastSyncedAt;
+    private String zohoSyncError;
+    private String zohoDealRecordId;
+
     private ApplicantDto primaryApplicant;
     private List<ApplicantDto> jointApplicants;
     private List<DocumentSlotDto> documentSlots;

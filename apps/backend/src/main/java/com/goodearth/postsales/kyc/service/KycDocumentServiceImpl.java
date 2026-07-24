@@ -49,6 +49,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
     private final DocumentVersionMapper documentVersionMapper;
     private final KycAuditService auditService;
     private final WorkDriveFolderService workDriveFolderService;
+    private final ZohoKycSyncService zohoKycSyncService;
 
     public KycDocumentServiceImpl(
             KycApplicationRepository kycApplicationRepository,
@@ -57,7 +58,8 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             DocumentVersionRepository documentVersionRepository,
             DocumentVersionMapper documentVersionMapper,
             KycAuditService auditService,
-            WorkDriveFolderService workDriveFolderService) {
+            WorkDriveFolderService workDriveFolderService,
+            ZohoKycSyncService zohoKycSyncService) {
         this.kycApplicationRepository = kycApplicationRepository;
         this.kycApplicantRepository = kycApplicantRepository;
         this.documentRepository = documentRepository;
@@ -65,6 +67,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         this.documentVersionMapper = documentVersionMapper;
         this.auditService = auditService;
         this.workDriveFolderService = workDriveFolderService;
+        this.zohoKycSyncService = zohoKycSyncService;
     }
 
     @Override
@@ -176,6 +179,9 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         auditService.logEvent(application, KycAuditEventType.DOCUMENT_UPLOADED, uploadedBy, "CLIENT",
                 String.format("Uploaded %s (%s) version %d to WorkDrive subfolder %s", docType, applicantType, nextVersionNumber, bookingFolder.getKycSubfolderId()),
                 null);
+
+        // Auto-sync uploaded document reference to Zoho CRM Deal
+        zohoKycSyncService.syncDocumentToCrm(application, docType.name(), applicantType.name(), workDriveFileId, workDrivePermalink, "UPLOADED");
 
         log.info("[DOCUMENT_UPLOAD_TRACE]\nBooking ID: {}\nApplicant Type: {}\nDocument Type: {}\nOriginal Filename: {}\nWorkDrive Folder ID: {}\nWorkDrive File ID: {}\nDatabase Document ID: {}\nVersion: {}\nFile Size: {} bytes\nChecksum: {}\nUpload Status: SUCCESS",
                 application.getBookingId(), applicantType, docType, fileName, bookingFolder.getKycSubfolderId(), workDriveFileId, document.getId(), nextVersionNumber, size, checksumHex);

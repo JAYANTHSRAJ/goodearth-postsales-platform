@@ -70,6 +70,18 @@ public class KycApplication extends BaseEntity {
     @Column(name = "priority", length = 20)
     private String priority = "NORMAL";
 
+    @Column(name = "zoho_sync_status", length = 30)
+    private String zohoSyncStatus = "SUCCESS";
+
+    @Column(name = "zoho_last_synced_at")
+    private LocalDateTime zohoLastSyncedAt;
+
+    @Column(name = "zoho_sync_error", columnDefinition = "TEXT")
+    private String zohoSyncError;
+
+    @Column(name = "zoho_deal_record_id", length = 50)
+    private String zohoDealRecordId;
+
     @OneToMany(mappedBy = "kycApplication", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<KycApplicant> applicants = new ArrayList<>();
 }

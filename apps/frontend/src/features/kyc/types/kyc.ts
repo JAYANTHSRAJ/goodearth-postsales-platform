@@ -109,6 +109,10 @@ export interface KycApplicationResponseDto {
   internalNotes?: string;
   priority?: string;
   canBuyerEdit?: boolean;
+  zohoSyncStatus?: 'SUCCESS' | 'PENDING' | 'FAILED' | string;
+  zohoLastSyncedAt?: string;
+  zohoSyncError?: string;
+  zohoDealRecordId?: string;
   primaryApplicant?: ApplicantDto;
   jointApplicants?: ApplicantDto[];
   documentSlots?: DocumentSlotDto[];

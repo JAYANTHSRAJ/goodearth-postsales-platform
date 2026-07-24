@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.15-add-zoho-sync-telemetry-columns
+      author: antigravity
+      changes:
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: zoho_sync_status
+                  type: VARCHAR(30)
+                  defaultValue: "SUCCESS"
+              - column:
+                  name: zoho_last_synced_at
+                  type: TIMESTAMP
+              - column:
+                  name: zoho_sync_error
+                  type: TEXT
+              - column:
+                  name: zoho_deal_record_id
+                  type: VARCHAR(50)

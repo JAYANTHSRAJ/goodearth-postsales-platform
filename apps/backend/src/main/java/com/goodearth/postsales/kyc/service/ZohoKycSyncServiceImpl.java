@@ -570,12 +570,63 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         bookingId, bookingId, targetRecordId, statusCode, errorMsg);
                 throw new com.goodearth.postsales.kyc.exception.KycValidationException("Zoho CRM update failed: " + errorMsg);
             }
+            return true;
         } catch (Exception ex) {
             log.error("Failed to sync applicant info map to Zoho CRM for booking: {}", bookingId, ex);
             return false;
         } finally {
             clearRequestCache();
         }
+    }
+
+    @Override
+    public boolean syncDocumentToCrm(KycApplication application, String docType, String applicantType, String fileId, String permalink, String status) {
+        if (application == null || application.getBookingId() == null) return false;
+        String bookingId = application.getBookingId();
+
+        try {
+            String targetRecordId = resolveDealRecordIdByDealName(bookingId);
+            if (targetRecordId == null) {
+                application.setZohoSyncStatus("FAILED");
+                application.setZohoSyncError("Could not resolve Deal Record ID for booking: " + bookingId);
+                return false;
+            }
+
+            Map<String, Object> docFields = new HashMap<>();
+            docFields.put("Last_Updated_Document_Type", docType);
+            docFields.put("Last_Updated_Applicant_Type", applicantType);
+            docFields.put("Last_Updated_WorkDrive_File_ID", fileId);
+            docFields.put("Last_Updated_WorkDrive_Permalink", permalink);
+            docFields.put("Document_Verification_Status", status);
+            docFields.put("KYC_Last_Synced", java.time.LocalDateTime.now().toString());
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("data", List.of(docFields));
+
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
+            apiClient.put(url, requestBody, Map.class);
+
+            application.setZohoDealRecordId(targetRecordId);
+            application.setZohoSyncStatus("SUCCESS");
+            application.setZohoLastSyncedAt(java.time.LocalDateTime.now());
+            application.setZohoSyncError(null);
+
+            log.info("[ZOHO_DOCUMENT_SYNC_SUCCESS] Synced document {} ({}) to Deal ID {}", docType, applicantType, targetRecordId);
+            return true;
+        } catch (Exception ex) {
+            log.error("[ZOHO_DOCUMENT_SYNC_FAILED] Failed to sync document to Deal for booking {}", bookingId, ex);
+            application.setZohoSyncStatus("FAILED");
+            application.setZohoSyncError(ex.getMessage());
+            return false;
+        } finally {
+            clearRequestCache();
+        }
+    }
+
+    @Override
+    public boolean verifyDealExists(String dealIdOrBookingId) {
+        String resolvedId = resolveDealRecordIdByDealName(dealIdOrBookingId);
+        return resolvedId != null;
     }
 
     private void clearRequestCache() {
