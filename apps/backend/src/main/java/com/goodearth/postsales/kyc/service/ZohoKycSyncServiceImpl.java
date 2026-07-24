@@ -64,9 +64,8 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return cleanDealName;
         }
 
-        // 3. Search Tier 1: Multi-field exact criteria ((Deal_Name:equals:X) or (Subject:equals:X) or (Booking_ID:equals:X))
-        String rawCriteriaTier1 = String.format("((Deal_Name:equals:%s) or (Subject:equals:%s) or (Booking_ID:equals:%s))",
-                cleanDealName, cleanDealName, cleanDealName);
+        // 3. Search Tier 1: Exact match on Deal_Name criteria (Deal_Name:equals:X)
+        String rawCriteriaTier1 = String.format("(Deal_Name:equals:%s)", cleanDealName);
         String resolvedId = executeZohoDealSearch(rawCriteriaTier1, cleanDealName, false);
         if (resolvedId != null) {
             cache.put(cleanDealName, resolvedId);
@@ -142,7 +141,6 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 Map<?, ?> dealMap = (Map<?, ?>) item;
                 Object returnedDealName = dealMap.get("Deal_Name");
                 Object returnedBookingId = dealMap.get("Booking_ID");
-                Object returnedSubject = dealMap.get("Subject");
                 Object recordIdObj = dealMap.get("id");
 
                 if (recordIdObj == null) continue;
@@ -150,16 +148,13 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 String recordId = recordIdObj.toString();
                 String strName = returnedDealName != null ? returnedDealName.toString().trim() : "";
                 String strBkg = returnedBookingId != null ? returnedBookingId.toString().trim() : "";
-                String strSub = returnedSubject != null ? returnedSubject.toString().trim() : "";
 
                 boolean matches = cleanDealName.equalsIgnoreCase(strName) ||
-                        cleanDealName.equalsIgnoreCase(strBkg) ||
-                        cleanDealName.equalsIgnoreCase(strSub);
+                        cleanDealName.equalsIgnoreCase(strBkg);
 
                 if (!matches && allowPartialMatch) {
                     matches = strName.toLowerCase().contains(cleanDealName.toLowerCase()) ||
-                            strBkg.toLowerCase().contains(cleanDealName.toLowerCase()) ||
-                            strSub.toLowerCase().contains(cleanDealName.toLowerCase());
+                            strBkg.toLowerCase().contains(cleanDealName.toLowerCase());
                 }
 
                 if (matches) {

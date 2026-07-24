@@ -174,7 +174,7 @@ export const SingleKycPage: React.FC = () => {
 
   const documentSlots = initialData?.documentSlots || [];
   const kycApplicationId = initialData?.kycApplicationId || '';
-  const canEdit = initialData?.status === 'DRAFT' || initialData?.status === 'ACTION_REQUIRED';
+  const canEdit = !initialData?.status || initialData?.status === 'DRAFT' || initialData?.status === 'ACTION_REQUIRED';
 
   // Filter additional slots (Address proof, Voter ID, etc.)
   const additionalSlots = documentSlots.filter(
