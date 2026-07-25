@@ -738,6 +738,15 @@ public class KycServiceImpl implements KycService {
             ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.PAN_CARD);
             ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.ADDRESS_PROOF);
             ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.VOTER_ID);
+        } else {
+            existingDocs.stream()
+                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2)
+                    .forEach(d -> {
+                        d.setKycApplicant(null);
+                        documentRepository.save(d);
+                        documentRepository.delete(d);
+                    });
+            documentRepository.flush();
         }
     }
 
@@ -1423,7 +1432,7 @@ public class KycServiceImpl implements KycService {
             applicant.setAddressCountry("India");
         }
 
-        KycApplicant saved = kycApplicantRepository.save(applicant);
+        KycApplicant saved = kycApplicantRepository.saveAndFlush(applicant);
         if (application.getApplicants() == null) {
             application.setApplicants(new java.util.ArrayList<>());
         }
