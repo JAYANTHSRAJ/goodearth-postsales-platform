@@ -310,11 +310,11 @@ export const KycApplicantsPage: React.FC = () => {
       )}
 
       {/* Third Applicant Details Section */}
-      {hasCoApplicant === 'Yes' && hasThirdApplicant === 'Yes' && thirdApplicantDto && (
+      {hasCoApplicant === 'Yes' && hasThirdApplicant === 'Yes' && (
         <KycApplicantFormSection
           title="Third Applicant Details"
           applicantType="JOINT_2"
-          applicant={thirdApplicantDto}
+          applicant={thirdApplicantDto || { applicantType: 'JOINT_2', salutation: 'Mr.', gender: 'Male', guardianRelation: 'S/O', guardianSalutation: 'Mr.', address: { country: 'India' } }}
           primaryApplicantAddress={primaryApplicant.address}
           secondaryApplicantAddress={coApplicantDto?.address}
           onChange={(updated) => {

@@ -423,15 +423,15 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_2) {
                         if (app.getSalutation() != null) {
-                            dealFields.put("Title_S", app.getSalutation());
+                            dealFields.put("Title_T", app.getSalutation());
                             dealFields.put("Third_Applicant_Title", app.getSalutation());
                         }
                         if (app.getFirstName() != null) {
-                            dealFields.put("First_Name_S", app.getFirstName());
+                            dealFields.put("First_Name_T", app.getFirstName());
                             dealFields.put("Third_Applicant_First_Name", app.getFirstName());
                         }
                         if (app.getLastName() != null) {
-                            dealFields.put("Last_Name_S", app.getLastName());
+                            dealFields.put("Last_Name_T", app.getLastName());
                             dealFields.put("Third_Applicant_Last_Name", app.getLastName());
                         }
                         if (app.getFullName() != null) dealFields.put("Third_Applicant", app.getFullName());
@@ -445,7 +445,7 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         }
                         if (app.getEmail() != null) dealFields.put("Third_Applicant_Email", app.getEmail());
                         if (app.getPhone() != null) dealFields.put("Third_Applicant_Phone", app.getPhone());
-                        if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_S", app.getGuardianRelation());
+                        if (app.getGuardianRelation() != null) dealFields.put("S_o_D_o_W_o_T", app.getGuardianRelation());
                         if (app.getDateOfBirth() != null) dealFields.put("Third_Applicant_Date_of_Birth", app.getDateOfBirth());
                         if (app.getOccupation() != null) dealFields.put("Third_Applicant_Occupation", app.getOccupation());
                         if (app.getPanNumber() != null) dealFields.put("Third_Applicant_PAN", app.getPanNumber().toUpperCase());

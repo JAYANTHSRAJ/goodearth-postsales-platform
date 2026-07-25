@@ -100,6 +100,21 @@ public class KycApplicationMapper {
         String rawAadhaar = applicant.getAadhaarNumber();
         String maskedAadhaar = maskAadhaar(rawAadhaar);
 
+        String effectiveAge = applicant.getAge();
+        if ((effectiveAge == null || effectiveAge.trim().isEmpty() || "2026".equals(effectiveAge.trim())) && applicant.getDateOfBirth() != null) {
+            try {
+                String dobStr = applicant.getDateOfBirth().trim();
+                String[] parts = dobStr.split("-");
+                if (parts.length == 3) {
+                    int birthYear = parts[0].length() == 4 ? Integer.parseInt(parts[0]) : Integer.parseInt(parts[2]);
+                    int currentYear = java.time.LocalDate.now().getYear();
+                    if (birthYear > 1900 && birthYear <= currentYear) {
+                        effectiveAge = String.valueOf(currentYear - birthYear);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
         return ApplicantDto.builder()
                 .id(applicant.getId())
                 .applicantType(applicant.getApplicantType())
@@ -114,7 +129,7 @@ public class KycApplicationMapper {
                 .guardianName(applicant.getGuardianName())
                 .dateOfBirth(applicant.getDateOfBirth())
                 .gender(applicant.getGender())
-                .age(applicant.getAge())
+                .age(effectiveAge)
                 .occupation(applicant.getOccupation())
                 .addressSameAsPrimary(applicant.getAddressSameAsPrimary())
                 .addressSameAsSecondary(applicant.getAddressSameAsSecondary())

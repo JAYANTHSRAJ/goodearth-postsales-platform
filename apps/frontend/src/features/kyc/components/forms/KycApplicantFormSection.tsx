@@ -172,7 +172,16 @@ export const KycApplicantFormSection: React.FC<KycApplicantFormSectionProps> = (
     if (!applicant.dateOfBirth) return '';
     const parts = applicant.dateOfBirth.split('-');
     if (parts.length === 3) {
-      const birthYear = parseInt(parts[2], 10);
+      let birthYear: number = NaN;
+      if (parts[0].length === 4) {
+        birthYear = parseInt(parts[0], 10);
+      } else if (parts[2].length === 4) {
+        birthYear = parseInt(parts[2], 10);
+      } else {
+        const y1 = parseInt(parts[0], 10);
+        const y2 = parseInt(parts[2], 10);
+        birthYear = y1 > 1900 ? y1 : y2;
+      }
       const currentYear = new Date().getFullYear();
       if (!isNaN(birthYear) && birthYear > 1900 && birthYear <= currentYear) {
         return (currentYear - birthYear).toString();

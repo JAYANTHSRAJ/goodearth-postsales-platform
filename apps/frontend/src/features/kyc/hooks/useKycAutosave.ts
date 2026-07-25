@@ -45,11 +45,38 @@ export const useKycAutosave = (
     };
   };
 
+  const prepareJointApplicants = (
+    apps: ApplicantDto[] = [],
+    hasCo: string = 'No',
+    hasThird: string = 'No'
+  ): ApplicantDto[] => {
+    let result = [...apps];
+    if (hasCo === 'Yes') {
+      let coApp = result.find((a) => a.applicantType === 'JOINT_1');
+      if (!coApp) {
+        coApp = ensureDefaultApplicantFields(null, 'JOINT_1');
+        result.unshift(coApp);
+      }
+    }
+    if (hasCo === 'Yes' && hasThird === 'Yes') {
+      let thirdApp = result.find((a) => a.applicantType === 'JOINT_2');
+      if (!thirdApp) {
+        thirdApp = ensureDefaultApplicantFields(null, 'JOINT_2');
+        result.push(thirdApp);
+      }
+    }
+    return result.map((app) => ensureDefaultApplicantFields(app, app.applicantType || 'JOINT_1'));
+  };
+
   const [primaryApplicant, setPrimaryApplicant] = useState<ApplicantDto>(
     ensureDefaultApplicantFields(initialData?.primaryApplicant, 'PRIMARY')
   );
   const [jointApplicants, setJointApplicants] = useState<ApplicantDto[]>(
-    (initialData?.jointApplicants || []).map((app) => ensureDefaultApplicantFields(app, app.applicantType || 'JOINT_1'))
+    prepareJointApplicants(
+      initialData?.jointApplicants || [],
+      initialData?.hasCoApplicant || (initialData?.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No'),
+      initialData?.hasThirdApplicant || (initialData?.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No')
+    )
   );
 
   const [status, setStatus] = useState<AutosaveStatus>('idle');
@@ -76,17 +103,16 @@ export const useKycAutosave = (
       }
       if (initialData.applicationDate) setApplicationDate(initialData.applicationDate);
       if (initialData.consideringHomeLoan) setConsideringHomeLoan(initialData.consideringHomeLoan);
-      if (initialData.hasCoApplicant) setHasCoApplicant(initialData.hasCoApplicant);
-      if (initialData.hasThirdApplicant) setHasThirdApplicant(initialData.hasThirdApplicant);
+      
+      const coVal = initialData.hasCoApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No');
+      const thirdVal = initialData.hasThirdApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No');
+      setHasCoApplicant(coVal);
+      setHasThirdApplicant(thirdVal);
 
       if (initialData.primaryApplicant) {
         setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
       }
-      if (initialData.jointApplicants) {
-        setJointApplicants(
-          initialData.jointApplicants.map((app) => ensureDefaultApplicantFields(app, app.applicantType || 'JOINT_1'))
-        );
-      }
+      setJointApplicants(prepareJointApplicants(initialData.jointApplicants || [], coVal, thirdVal));
       if (initialData.lastSavedAt) {
         setLastSavedAt(initialData.lastSavedAt);
       }

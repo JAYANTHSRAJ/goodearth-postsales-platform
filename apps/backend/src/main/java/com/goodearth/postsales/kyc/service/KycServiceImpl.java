@@ -385,7 +385,6 @@ public class KycServiceImpl implements KycService {
         // Third Applicant
         if (dto.getHasThirdApplicant() != null) {
             dealFields.put("Do_you_have_third_applicant", dto.getHasThirdApplicant());
-            dealFields.put("Third_Applicant", dto.getHasThirdApplicant());
             dealFields.put("Has_Third_Applicant", dto.getHasThirdApplicant());
         }
         if (dto.getThirdApplicantTitle() != null) {
@@ -414,6 +413,7 @@ public class KycServiceImpl implements KycService {
         String thirdApplicantFullName = ((dto.getThirdApplicantFirstName() != null ? dto.getThirdApplicantFirstName().trim() : "") + " " +
                 (dto.getThirdApplicantLastName() != null ? dto.getThirdApplicantLastName().trim() : "")).trim();
         if (!thirdApplicantFullName.isEmpty()) {
+            dealFields.put("Third_Applicant", thirdApplicantFullName);
             dealFields.put("Third_Applicant_Name", thirdApplicantFullName);
         }
 
@@ -439,7 +439,7 @@ public class KycServiceImpl implements KycService {
         if (dto.getThirdApplicantAadhar() != null) {
             dealFields.put("Third_Applicant_Aadhar", dto.getThirdApplicantAadhar());
         }
-        if (dto.getThirdApplicantSoDoWo() != null) dealFields.put("S_o_D_o_W_o_S", dto.getThirdApplicantSoDoWo());
+        if (dto.getThirdApplicantSoDoWo() != null) dealFields.put("S_o_D_o_W_o_T", dto.getThirdApplicantSoDoWo());
         if (dto.getThirdApplicantFatherFirstName() != null) {
             dealFields.put("Third_Applicant_Father_First_Name", dto.getThirdApplicantFatherFirstName());
         }
