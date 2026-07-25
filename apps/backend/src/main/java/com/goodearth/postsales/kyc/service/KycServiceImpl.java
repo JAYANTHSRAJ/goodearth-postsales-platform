@@ -120,7 +120,17 @@ public class KycServiceImpl implements KycService {
         if ("No".equalsIgnoreCase(dto.getHasThirdApplicant())) {
             application.setHasThirdApplicant("No");
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
-                    .ifPresent(kycApplicantRepository::delete);
+                    .ifPresent(existing -> {
+                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
+                        for (Document d : docs) {
+                            if (d.getApplicantType() == ApplicantType.JOINT_2) {
+                                d.setKycApplicant(null);
+                                documentRepository.save(d);
+                                documentRepository.delete(d);
+                            }
+                        }
+                        kycApplicantRepository.delete(existing);
+                    });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
             }
@@ -132,9 +142,29 @@ public class KycServiceImpl implements KycService {
             application.setHasCoApplicant("No");
             application.setHasThirdApplicant("No");
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1)
-                    .ifPresent(kycApplicantRepository::delete);
+                    .ifPresent(existing -> {
+                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
+                        for (Document d : docs) {
+                            if (d.getApplicantType() == ApplicantType.JOINT_1 || d.getApplicantType() == ApplicantType.JOINT_2) {
+                                d.setKycApplicant(null);
+                                documentRepository.save(d);
+                                documentRepository.delete(d);
+                            }
+                        }
+                        kycApplicantRepository.delete(existing);
+                    });
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
-                    .ifPresent(kycApplicantRepository::delete);
+                    .ifPresent(existing -> {
+                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
+                        for (Document d : docs) {
+                            if (d.getApplicantType() == ApplicantType.JOINT_2) {
+                                d.setKycApplicant(null);
+                                documentRepository.save(d);
+                                documentRepository.delete(d);
+                            }
+                        }
+                        kycApplicantRepository.delete(existing);
+                    });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_1 || a.getApplicantType() == ApplicantType.JOINT_2);
             }
@@ -1327,7 +1357,17 @@ public class KycServiceImpl implements KycService {
         // 1. Delete JOINT_2 if Third Applicant is toggled to No or Co-Applicant is No
         if (type == ApplicantType.JOINT_2 && (!hasThirdApplicantYes || !hasCoApplicantYes)) {
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
-                    .ifPresent(kycApplicantRepository::delete);
+                    .ifPresent(existing -> {
+                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
+                        for (Document d : docs) {
+                            if (d.getApplicantType() == type) {
+                                d.setKycApplicant(null);
+                                documentRepository.save(d);
+                                documentRepository.delete(d);
+                            }
+                        }
+                        kycApplicantRepository.delete(existing);
+                    });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
             }
@@ -1337,7 +1377,17 @@ public class KycServiceImpl implements KycService {
         // 2. Delete JOINT_1 if Co-Applicant is toggled to No
         if (type == ApplicantType.JOINT_1 && !hasCoApplicantYes) {
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
-                    .ifPresent(kycApplicantRepository::delete);
+                    .ifPresent(existing -> {
+                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
+                        for (Document d : docs) {
+                            if (d.getApplicantType() == type) {
+                                d.setKycApplicant(null);
+                                documentRepository.save(d);
+                                documentRepository.delete(d);
+                            }
+                        }
+                        kycApplicantRepository.delete(existing);
+                    });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
             }
