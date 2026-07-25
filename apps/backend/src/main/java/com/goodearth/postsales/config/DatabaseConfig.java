@@ -50,7 +50,7 @@ public class DatabaseConfig {
     @Primary
     public DataSource dataSource() {
         HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setDriverClassName("org.postgresql.Driver");
+
 
         String jdbcUrl = null;
         String username = null;
@@ -114,6 +114,11 @@ public class DatabaseConfig {
         }
 
         log.info("Database Connection Configured. JDBC URL: {}, Username: {}", jdbcUrl, username);
+        if (jdbcUrl != null && jdbcUrl.startsWith("jdbc:h2:")) {
+            dataSource.setDriverClassName("org.h2.Driver");
+        } else {
+            dataSource.setDriverClassName("org.postgresql.Driver");
+        }
         dataSource.setJdbcUrl(jdbcUrl);
         dataSource.setUsername(username);
         dataSource.setPassword(password);

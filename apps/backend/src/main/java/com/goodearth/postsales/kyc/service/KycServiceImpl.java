@@ -144,8 +144,8 @@ public class KycServiceImpl implements KycService {
         if ("No".equalsIgnoreCase(dto.getHasCoApplicant())) {
             application.setHasCoApplicant("No");
             application.setHasThirdApplicant("No");
-            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_1);
-            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
+            archiveApplicantDocuments(application.getId(), ApplicantType.JOINT_1);
+            archiveApplicantDocuments(application.getId(), ApplicantType.JOINT_2);
             List<KycApplicant> existingJointApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1);
             for (KycApplicant app : existingJointApps) {
                 kycApplicantRepository.delete(app);
@@ -784,6 +784,18 @@ public class KycServiceImpl implements KycService {
         }
     }
 
+    private void archiveApplicantDocuments(UUID kycApplicationId, ApplicantType applicantType) {
+        List<Document> docs = documentRepository.findByKycApplicationId(kycApplicationId).stream()
+                .filter(d -> d.getApplicantType() == applicantType)
+                .toList();
+        for (Document doc : docs) {
+            doc.setStatus(DocumentStatus.ARCHIVED);
+            doc.setKycApplicant(null);
+            documentRepository.save(doc);
+        }
+        documentRepository.flush();
+    }
+
     private KycApplication getOrCreateKycApplication(String bookingId) {
         return kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
                 .orElseGet(() -> {
@@ -1355,7 +1367,7 @@ public class KycServiceImpl implements KycService {
         // Deletion Decision Rules:
         // 1. Delete JOINT_2 if Third Applicant is toggled to No or Co-Applicant is No
         if (type == ApplicantType.JOINT_2 && (!hasThirdApplicantYes || !hasCoApplicantYes)) {
-            documentRepository.unlinkKycApplicant(application.getId(), type);
+            archiveApplicantDocuments(application.getId(), type);
             List<KycApplicant> existingThirdApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), type);
             for (KycApplicant app : existingThirdApps) {
                 kycApplicantRepository.delete(app);
@@ -1369,7 +1381,7 @@ public class KycServiceImpl implements KycService {
 
         // 2. Delete JOINT_1 if Co-Applicant is toggled to No
         if (type == ApplicantType.JOINT_1 && !hasCoApplicantYes) {
-            documentRepository.unlinkKycApplicant(application.getId(), type);
+            archiveApplicantDocuments(application.getId(), type);
             List<KycApplicant> existingJointApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), type);
             for (KycApplicant app : existingJointApps) {
                 kycApplicantRepository.delete(app);
