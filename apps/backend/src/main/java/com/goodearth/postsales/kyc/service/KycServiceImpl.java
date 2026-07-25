@@ -129,7 +129,9 @@ public class KycServiceImpl implements KycService {
                                 documentRepository.delete(d);
                             }
                         }
+                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
+                        kycApplicantRepository.flush();
                     });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
@@ -151,7 +153,9 @@ public class KycServiceImpl implements KycService {
                                 documentRepository.delete(d);
                             }
                         }
+                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
+                        kycApplicantRepository.flush();
                     });
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
                     .ifPresent(existing -> {
@@ -163,7 +167,9 @@ public class KycServiceImpl implements KycService {
                                 documentRepository.delete(d);
                             }
                         }
+                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
+                        kycApplicantRepository.flush();
                     });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_1 || a.getApplicantType() == ApplicantType.JOINT_2);
@@ -1366,7 +1372,9 @@ public class KycServiceImpl implements KycService {
                                 documentRepository.delete(d);
                             }
                         }
+                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
+                        kycApplicantRepository.flush();
                     });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
@@ -1386,7 +1394,9 @@ public class KycServiceImpl implements KycService {
                                 documentRepository.delete(d);
                             }
                         }
+                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
+                        kycApplicantRepository.flush();
                     });
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
