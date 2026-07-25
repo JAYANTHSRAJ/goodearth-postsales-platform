@@ -83,14 +83,14 @@ public class WebSecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/actuator/**", "/health", "/api/v1/health").permitAll()
+                auth.requestMatchers("/actuator/**", "/health", "/api/v1/health", "/api/v1/admin/verification/**").permitAll()
                     .requestMatchers(
                         "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/activation/**", "/api/v1/auth/password-reset/**",
-                        "/api/v1/auth/activate", "/api/v1/auth/resend-activation",
+                        "/api/v1/auth/activate", "/api/v1/resend-activation",
                         "/auth/login", "/auth/refresh", "/auth/activation/**", "/auth/password-reset/**",
                         "/auth/activate", "/auth/resend-activation"
                     ).permitAll()
-                    .requestMatchers("/api/v1/webhooks/**", "/api/v1/admin/verification/**").permitAll();
+                    .requestMatchers("/api/v1/webhooks/**").permitAll();
                 
                 if (swaggerEnabled) {
                     auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll();
