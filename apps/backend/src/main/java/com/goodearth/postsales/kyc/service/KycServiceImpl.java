@@ -533,7 +533,16 @@ public class KycServiceImpl implements KycService {
         if (dto.getApplicantTitle() != null) primaryApplicant.setSalutation(dto.getApplicantTitle());
         if (dto.getApplicantFirstName() != null) primaryApplicant.setFirstName(dto.getApplicantFirstName());
         if (dto.getApplicantLastName() != null) primaryApplicant.setLastName(dto.getApplicantLastName());
-        if (!fullName.isEmpty()) primaryApplicant.setFullName(fullName);
+
+        String effectivePrimaryName = fullName;
+        if (effectivePrimaryName.isEmpty()) {
+            effectivePrimaryName = ((primaryApplicant.getFirstName() != null ? primaryApplicant.getFirstName().trim() : "") + " " +
+                    (primaryApplicant.getLastName() != null ? primaryApplicant.getLastName().trim() : "")).trim();
+        }
+        if (effectivePrimaryName.isEmpty()) {
+            effectivePrimaryName = "Primary Applicant";
+        }
+        primaryApplicant.setFullName(effectivePrimaryName);
         if (dto.getApplicantEmail() != null) primaryApplicant.setEmail(dto.getApplicantEmail());
         if (dto.getApplicantPhone() != null) primaryApplicant.setPhone(dto.getApplicantPhone());
         if (dto.getApplicantDob() != null) primaryApplicant.setDateOfBirth(dto.getApplicantDob());

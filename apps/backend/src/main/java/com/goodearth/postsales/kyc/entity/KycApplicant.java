@@ -28,7 +28,7 @@ public class KycApplicant extends BaseEntity {
     @Column(name = "applicant_type", nullable = false, length = 50)
     private ApplicantType applicantType;
 
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "full_name")
     private String fullName;
 
     @Column(name = "salutation", length = 20)
