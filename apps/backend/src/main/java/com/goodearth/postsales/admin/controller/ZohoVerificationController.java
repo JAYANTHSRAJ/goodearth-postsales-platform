@@ -283,21 +283,7 @@ public class ZohoVerificationController {
                     "joint2_pan_v1.pdf", "application/pdf", panV1Content.length, panV1Content, "SYSTEM_VERIFIER"
             );
 
-            // STEP 3: Upload Aadhaar for JOINT_2
-            byte[] aadhaarV1Content = "%PDF-1.4 Mock JOINT_2 Aadhaar Version 1".getBytes(StandardCharsets.UTF_8);
-            DocumentUploadResponseDto aadharRes = kycDocumentService.uploadKycDocument(
-                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.AADHAAR_CARD, ApplicantType.JOINT_2,
-                    "joint2_aadhaar_v1.pdf", "application/pdf", aadhaarV1Content.length, aadhaarV1Content, "SYSTEM_VERIFIER"
-            );
-
-            // STEP 4: Upload Address Proof for JOINT_2
-            byte[] addrContent = "%PDF-1.4 Mock JOINT_2 Address Proof Version 1".getBytes(StandardCharsets.UTF_8);
-            DocumentUploadResponseDto addrRes = kycDocumentService.uploadKycDocument(
-                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.ADDRESS_PROOF, ApplicantType.JOINT_2,
-                    "joint2_address_v1.pdf", "application/pdf", addrContent.length, addrContent, "SYSTEM_VERIFIER"
-            );
-
-            // STEP 5: Save Draft
+            // STEP 3-5: Save Draft & Verify Active Slots
             kycService.saveDraft(draft1Req, "SYSTEM_VERIFIER");
 
             // STEP 6: Submit
