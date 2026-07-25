@@ -26,4 +26,8 @@ public class DocumentVersionDto {
     private String uploadedBy;
     private LocalDateTime uploadedAt;
     private Boolean isCurrent;
+    private String crmAttachmentId;
+    private String crmAttachmentName;
+    private LocalDateTime crmAttachmentUploadedAt;
+    private String crmAttachmentSyncStatus;
 }

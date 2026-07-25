@@ -13,4 +13,5 @@ public interface DocumentVersionRepository extends JpaRepository<DocumentVersion
     List<DocumentVersion> findByDocumentIdOrderByVersionNumberDesc(UUID documentId);
     Optional<DocumentVersion> findByDocumentIdAndIsCurrentTrue(UUID documentId);
     Optional<DocumentVersion> findByDocumentIdAndVersionNumber(UUID documentId, Integer versionNumber);
+    List<DocumentVersion> findByCrmAttachmentSyncStatus(String crmAttachmentSyncStatus);
 }

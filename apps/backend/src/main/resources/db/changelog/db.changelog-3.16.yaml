@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.16-add-crm-attachment-metadata-columns
+      author: antigravity
+      changes:
+        - addColumn:
+            tableName: documents
+            columns:
+              - column:
+                  name: crm_attachment_id
+                  type: VARCHAR(255)
+              - column:
+                  name: crm_attachment_name
+                  type: VARCHAR(255)
+              - column:
+                  name: crm_attachment_uploaded_at
+                  type: TIMESTAMP
+              - column:
+                  name: crm_attachment_sync_status
+                  type: VARCHAR(50)
+        - addColumn:
+            tableName: document_versions
+            columns:
+              - column:
+                  name: crm_attachment_id
+                  type: VARCHAR(255)
+              - column:
+                  name: crm_attachment_name
+                  type: VARCHAR(255)
+              - column:
+                  name: crm_attachment_uploaded_at
+                  type: TIMESTAMP
+              - column:
+                  name: crm_attachment_sync_status
+                  type: VARCHAR(50)

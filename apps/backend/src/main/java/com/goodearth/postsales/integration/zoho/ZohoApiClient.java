@@ -67,6 +67,20 @@ public class ZohoApiClient {
         }
     }
 
+    public <T> T postMultipart(String url, org.springframework.util.MultiValueMap<String, Object> body, Class<T> responseType) {
+        try {
+            return restClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA)
+                    .body(body)
+                    .retrieve()
+                    .body(responseType);
+        } catch (Exception ex) {
+            handleAndLogException("POST_MULTIPART", url, ex);
+            throw new ZohoIntegrationException("POST multipart request failed for URL: " + url + " - " + ex.getMessage(), ex);
+        }
+    }
+
     public <T> T put(String url, Object body, Class<T> responseType) {
         try {
             return restClient.put()

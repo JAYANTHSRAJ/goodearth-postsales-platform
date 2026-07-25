@@ -12,5 +12,15 @@ public interface ZohoKycSyncService {
 
     boolean syncDocumentToCrm(KycApplication application, String docType, String applicantType, String fileId, String permalink, String status);
 
+    boolean syncAttachmentToCrm(
+            KycApplication application,
+            com.goodearth.postsales.document.entity.Document document,
+            com.goodearth.postsales.document.entity.DocumentVersion version,
+            String fileName,
+            String contentType,
+            byte[] content);
+
+    void retryFailedCrmAttachments();
+
     boolean verifyDealExists(String dealIdOrBookingId);
 }

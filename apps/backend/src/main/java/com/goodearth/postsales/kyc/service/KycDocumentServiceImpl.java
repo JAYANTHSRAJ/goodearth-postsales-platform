@@ -182,6 +182,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
 
         // Auto-sync uploaded document reference to Zoho CRM Deal
         zohoKycSyncService.syncDocumentToCrm(application, docType.name(), applicantType.name(), workDriveFileId, workDrivePermalink, "UPLOADED");
+        zohoKycSyncService.syncAttachmentToCrm(application, document, savedVersion, fileName, contentType, content);
 
         log.info("[DOCUMENT_UPLOAD_TRACE]\nBooking ID: {}\nApplicant Type: {}\nDocument Type: {}\nOriginal Filename: {}\nWorkDrive Folder ID: {}\nWorkDrive File ID: {}\nDatabase Document ID: {}\nVersion: {}\nFile Size: {} bytes\nChecksum: {}\nUpload Status: SUCCESS",
                 application.getBookingId(), applicantType, docType, fileName, bookingFolder.getKycSubfolderId(), workDriveFileId, document.getId(), nextVersionNumber, size, checksumHex);

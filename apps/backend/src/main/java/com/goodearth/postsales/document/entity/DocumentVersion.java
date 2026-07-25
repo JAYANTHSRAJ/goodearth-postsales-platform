@@ -65,4 +65,16 @@ public class DocumentVersion extends BaseEntity {
 
     @Column(name = "is_current", nullable = false)
     private Boolean isCurrent = true;
+
+    @Column(name = "crm_attachment_id")
+    private String crmAttachmentId;
+
+    @Column(name = "crm_attachment_name")
+    private String crmAttachmentName;
+
+    @Column(name = "crm_attachment_uploaded_at")
+    private LocalDateTime crmAttachmentUploadedAt;
+
+    @Column(name = "crm_attachment_sync_status", length = 50)
+    private String crmAttachmentSyncStatus;
 }

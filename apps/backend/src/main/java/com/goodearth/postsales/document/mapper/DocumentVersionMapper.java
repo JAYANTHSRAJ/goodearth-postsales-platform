@@ -23,6 +23,10 @@ public class DocumentVersionMapper {
                 .uploadedBy(entity.getUploadedBy())
                 .uploadedAt(entity.getUploadedAt())
                 .isCurrent(entity.getIsCurrent())
+                .crmAttachmentId(entity.getCrmAttachmentId())
+                .crmAttachmentName(entity.getCrmAttachmentName())
+                .crmAttachmentUploadedAt(entity.getCrmAttachmentUploadedAt())
+                .crmAttachmentSyncStatus(entity.getCrmAttachmentSyncStatus())
                 .build();
     }
 }

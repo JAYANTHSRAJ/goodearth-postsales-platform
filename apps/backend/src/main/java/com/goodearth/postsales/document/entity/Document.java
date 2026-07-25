@@ -82,6 +82,18 @@ public class Document extends BaseEntity {
     @Column(name = "status", nullable = false, length = 50)
     private DocumentStatus status;
 
+    @Column(name = "crm_attachment_id")
+    private String crmAttachmentId;
+
+    @Column(name = "crm_attachment_name")
+    private String crmAttachmentName;
+
+    @Column(name = "crm_attachment_uploaded_at")
+    private LocalDateTime crmAttachmentUploadedAt;
+
+    @Column(name = "crm_attachment_sync_status", length = 50)
+    private String crmAttachmentSyncStatus;
+
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<DocumentVersion> versions = new ArrayList<>();
 }

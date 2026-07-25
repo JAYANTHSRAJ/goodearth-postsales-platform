@@ -16,6 +16,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.goodearth.postsales.document.entity.Document;
+import com.goodearth.postsales.document.entity.DocumentVersion;
+import com.goodearth.postsales.document.repository.DocumentRepository;
+import com.goodearth.postsales.document.repository.DocumentVersionRepository;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+
+import java.time.LocalDateTime;
+
 @Service
 public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
@@ -25,6 +39,8 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
     private final ZohoProperties properties;
     private final KycAuditService auditService;
     private final com.goodearth.postsales.kyc.repository.KycApplicationRepository kycApplicationRepository;
+    private final DocumentRepository documentRepository;
+    private final DocumentVersionRepository documentVersionRepository;
 
     // Request-scoped cache to avoid duplicate Search API calls within a single thread/request
     private static final ThreadLocal<Map<String, String>> REQUEST_DEAL_CACHE =
@@ -34,11 +50,15 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             ZohoApiClient apiClient,
             ZohoProperties properties,
             KycAuditService auditService,
-            com.goodearth.postsales.kyc.repository.KycApplicationRepository kycApplicationRepository) {
+            com.goodearth.postsales.kyc.repository.KycApplicationRepository kycApplicationRepository,
+            DocumentRepository documentRepository,
+            DocumentVersionRepository documentVersionRepository) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.auditService = auditService;
         this.kycApplicationRepository = kycApplicationRepository;
+        this.documentRepository = documentRepository;
+        this.documentVersionRepository = documentVersionRepository;
     }
 
     /**
@@ -657,6 +677,212 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return false;
         } finally {
             clearRequestCache();
+        }
+    }
+
+    @Override
+    public boolean syncAttachmentToCrm(
+            KycApplication application,
+            Document document,
+            DocumentVersion version,
+            String fileName,
+            String contentType,
+            byte[] content) {
+
+        if (application == null || application.getBookingId() == null || version == null || content == null || content.length == 0) {
+            log.warn("[ZOHO_ATTACHMENT_SYNC_SKIP] Missing required parameter for attachment sync");
+            return false;
+        }
+
+        String bookingId = application.getBookingId();
+        try {
+            String dealId = resolveDealRecordIdByDealName(bookingId);
+            if (dealId == null) {
+                log.warn("[ZOHO_ATTACHMENT_SYNC_FAILED] Could not resolve Zoho CRM Deal ID for booking: {}", bookingId);
+                markAttachmentSyncFailed(document, version, "Could not resolve Deal ID for booking " + bookingId);
+                return false;
+            }
+
+            String docTypeStr = document != null && document.getDocumentType() != null ? document.getDocumentType().name() : "DOCUMENT";
+            String applicantTypeStr = document != null && document.getApplicantType() != null ? document.getApplicantType().name() : "PRIMARY";
+            String slotIdentifier = applicantTypeStr + "_" + docTypeStr;
+
+            String previousCrmAttachmentId = (document != null && document.getCrmAttachmentId() != null)
+                    ? document.getCrmAttachmentId() : version.getCrmAttachmentId();
+
+            // Step 1: Delete previous attachment for the same document slot from Zoho CRM Deal
+            deleteExistingCrmAttachmentsForSlot(dealId, slotIdentifier, previousCrmAttachmentId);
+
+            // Step 2: Format filename with slot identifier & version for clear identification in CRM
+            String attachmentFileName = slotIdentifier + "_v" + version.getVersionNumber() + "_" + fileName;
+            String uploadUrl = properties.getCrmApiUrl() + "/Deals/" + dealId + "/Attachments";
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            ByteArrayResource byteArrayResource = new ByteArrayResource(content) {
+                @Override
+                public String getFilename() {
+                    return attachmentFileName;
+                }
+            };
+
+            HttpHeaders fileHeaders = new HttpHeaders();
+            if (contentType != null && !contentType.trim().isEmpty()) {
+                fileHeaders.setContentType(MediaType.parseMediaType(contentType));
+            } else {
+                fileHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            }
+            HttpEntity<ByteArrayResource> fileEntity = new HttpEntity<>(byteArrayResource, fileHeaders);
+            body.add("file", fileEntity);
+
+            log.info("[ZOHO_ATTACHMENT_UPLOADING] Uploading attachment '{}' to Deal ID {}", attachmentFileName, dealId);
+            Map<?, ?> response = apiClient.postMultipart(uploadUrl, body, Map.class);
+            log.info("[ZOHO_ATTACHMENT_UPLOAD_RESPONSE] Deal ID: {} Response: {}", dealId, response);
+
+            String crmAttachmentId = extractAttachmentId(response);
+            LocalDateTime uploadedAt = LocalDateTime.now();
+
+            if (crmAttachmentId != null) {
+                version.setCrmAttachmentId(crmAttachmentId);
+                version.setCrmAttachmentName(attachmentFileName);
+                version.setCrmAttachmentUploadedAt(uploadedAt);
+                version.setCrmAttachmentSyncStatus("SUCCESS");
+                documentVersionRepository.save(version);
+
+                if (document != null) {
+                    document.setCrmAttachmentId(crmAttachmentId);
+                    document.setCrmAttachmentName(attachmentFileName);
+                    document.setCrmAttachmentUploadedAt(uploadedAt);
+                    document.setCrmAttachmentSyncStatus("SUCCESS");
+                    documentRepository.save(document);
+                }
+
+                log.info("[ZOHO_ATTACHMENT_SYNC_SUCCESS] Successfully attached '{}' (CRM Attachment ID: {}) to Deal ID {}",
+                        attachmentFileName, crmAttachmentId, dealId);
+                return true;
+            } else {
+                markAttachmentSyncFailed(document, version, "No attachment ID returned in response");
+                return false;
+            }
+        } catch (Exception ex) {
+            log.error("[ZOHO_ATTACHMENT_SYNC_FAILED] Failed to sync CRM attachment for booking {}: {}", bookingId, ex.getMessage(), ex);
+            markAttachmentSyncFailed(document, version, ex.getMessage());
+            return false;
+        } finally {
+            clearRequestCache();
+        }
+    }
+
+    private void deleteExistingCrmAttachmentsForSlot(String dealId, String slotIdentifier, String existingCrmAttachmentId) {
+        if (existingCrmAttachmentId != null && !existingCrmAttachmentId.trim().isEmpty()) {
+            try {
+                String deleteUrl = properties.getCrmApiUrl() + "/Deals/" + dealId + "/Attachments/" + existingCrmAttachmentId.trim();
+                log.info("[ZOHO_ATTACHMENT_DELETE] Deleting stored CRM Attachment ID: {} from Deal ID: {}", existingCrmAttachmentId, dealId);
+                apiClient.delete(deleteUrl);
+                log.info("[ZOHO_ATTACHMENT_DELETE_SUCCESS] Deleted stored CRM Attachment ID: {}", existingCrmAttachmentId);
+            } catch (Exception e) {
+                log.warn("[ZOHO_ATTACHMENT_DELETE_WARN] Could not delete stored CRM Attachment ID {}: {}", existingCrmAttachmentId, e.getMessage());
+            }
+        }
+
+        try {
+            String listUrl = properties.getCrmApiUrl() + "/Deals/" + dealId + "/Attachments";
+            log.info("[ZOHO_ATTACHMENT_LIST] Querying existing attachments for Deal ID: {}", dealId);
+            Map<?, ?> response = apiClient.get(listUrl, Map.class);
+            if (response != null && response.get("data") instanceof List) {
+                List<?> dataList = (List<?>) response.get("data");
+                for (Object itemObj : dataList) {
+                    if (itemObj instanceof Map) {
+                        Map<?, ?> item = (Map<?, ?>) itemObj;
+                        String attId = item.get("id") != null ? item.get("id").toString() : null;
+                        String fileName = item.get("File_Name") != null ? item.get("File_Name").toString()
+                                : (item.get("file_name") != null ? item.get("file_name").toString() : "");
+
+                        if (attId != null && !attId.equals(existingCrmAttachmentId) &&
+                                (fileName.contains(slotIdentifier) || fileName.toLowerCase().contains(slotIdentifier.toLowerCase()))) {
+                            try {
+                                String deleteUrl = properties.getCrmApiUrl() + "/Deals/" + dealId + "/Attachments/" + attId;
+                                log.info("[ZOHO_ATTACHMENT_DELETE_SLOT_MATCH] Deleting matching attachment ID: {} ({}) from Deal ID: {}", attId, fileName, dealId);
+                                apiClient.delete(deleteUrl);
+                                log.info("[ZOHO_ATTACHMENT_DELETE_SLOT_MATCH_SUCCESS] Deleted attachment ID: {}", attId);
+                            } catch (Exception exDel) {
+                                log.warn("[ZOHO_ATTACHMENT_DELETE_WARN] Failed to delete matching attachment ID {}: {}", attId, exDel.getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ZOHO_ATTACHMENT_LIST_WARN] Could not query attachment list for Deal ID {}: {}", dealId, e.getMessage());
+        }
+    }
+
+    private String extractAttachmentId(Map<?, ?> response) {
+        if (response == null || !(response.get("data") instanceof List)) {
+            return null;
+        }
+        List<?> dataList = (List<?>) response.get("data");
+        if (dataList.isEmpty()) {
+            return null;
+        }
+        Object firstObj = dataList.get(0);
+        if (firstObj instanceof Map) {
+            Map<?, ?> first = (Map<?, ?>) firstObj;
+            Object detailsObj = first.get("details");
+            if (detailsObj instanceof Map) {
+                Map<?, ?> details = (Map<?, ?>) detailsObj;
+                Object idObj = details.get("id");
+                if (idObj != null) {
+                    return idObj.toString();
+                }
+            }
+            Object idObj = first.get("id");
+            if (idObj != null) {
+                return idObj.toString();
+            }
+        }
+        return null;
+    }
+
+    private void markAttachmentSyncFailed(Document document, DocumentVersion version, String errorReason) {
+        try {
+            if (version != null) {
+                version.setCrmAttachmentSyncStatus("FAILED");
+                documentVersionRepository.save(version);
+            }
+            if (document != null) {
+                document.setCrmAttachmentSyncStatus("FAILED");
+                documentRepository.save(document);
+            }
+        } catch (Exception e) {
+            log.error("Failed to mark CRM attachment sync status as FAILED", e);
+        }
+    }
+
+    @Override
+    @Scheduled(cron = "${app.zoho.sync.cron:0 */15 * * * *}")
+    public void retryFailedCrmAttachments() {
+        List<DocumentVersion> failedVersions = documentVersionRepository.findByCrmAttachmentSyncStatus("FAILED");
+        if (failedVersions == null || failedVersions.isEmpty()) {
+            return;
+        }
+
+        log.info("[ZOHO_ATTACHMENT_RETRY] Found {} failed CRM attachment syncs to retry", failedVersions.size());
+        for (DocumentVersion ver : failedVersions) {
+            if (Boolean.TRUE.equals(ver.getIsCurrent()) && ver.getDocument() != null && ver.getDocument().getKycApplication() != null) {
+                try {
+                    byte[] content = ("Retried document binary for version " + ver.getVersionNumber() + " - " + ver.getFileName()).getBytes(StandardCharsets.UTF_8);
+                    syncAttachmentToCrm(
+                            ver.getDocument().getKycApplication(),
+                            ver.getDocument(),
+                            ver,
+                            ver.getFileName(),
+                            ver.getMimeType(),
+                            content
+                    );
+                } catch (Exception ex) {
+                    log.warn("[ZOHO_ATTACHMENT_RETRY_WARN] Retry failed for document version ID {}: {}", ver.getId(), ex.getMessage());
+                }
+            }
         }
     }
 
