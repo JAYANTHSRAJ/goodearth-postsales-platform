@@ -68,27 +68,29 @@ public class WorkDriveFolderServiceImpl implements WorkDriveFolderService {
     @Override
     @Transactional
     public WorkDriveFolder getOrCreateBookingFolder(String bookingId) {
-        Optional<WorkDriveFolder> existingOpt = folderRepository.findByBookingId(bookingId);
+        String effectiveBookingId = (bookingId != null && !bookingId.trim().isEmpty()) ? bookingId.trim() : "DEFAULT";
+
+        Optional<WorkDriveFolder> existingOpt = folderRepository.findByBookingId(effectiveBookingId);
         if (existingOpt.isPresent()) {
             return existingOpt.get();
         }
 
-        log.info("Creating WorkDrive folder hierarchy for Booking ID: {}", bookingId);
+        log.info("Creating WorkDrive folder hierarchy for Booking ID: {}", effectiveBookingId);
 
         WorkDriveFolder folder = new WorkDriveFolder();
-        folder.setBookingId(bookingId);
+        folder.setBookingId(effectiveBookingId);
         folder.setProjectFolderId("wd_proj_goodearth_root");
-        folder.setBookingFolderId("WD-FLDR-BOOKING-" + bookingId);
-        folder.setKycSubfolderId("WD-FLDR-KYC-" + bookingId);
-        folder.setAgreementsSubfolderId("WD-FLDR-AGR-" + bookingId);
-        folder.setPaymentsSubfolderId("WD-FLDR-PAY-" + bookingId);
-        folder.setHandoverSubfolderId("WD-FLDR-HND-" + bookingId);
+        folder.setBookingFolderId("WD-FLDR-BOOKING-" + effectiveBookingId);
+        folder.setKycSubfolderId("WD-FLDR-KYC-" + effectiveBookingId);
+        folder.setAgreementsSubfolderId("WD-FLDR-AGR-" + effectiveBookingId);
+        folder.setPaymentsSubfolderId("WD-FLDR-PAY-" + effectiveBookingId);
+        folder.setHandoverSubfolderId("WD-FLDR-HND-" + effectiveBookingId);
 
-        folder.setFolderId("WD-FLDR-BOOKING-" + bookingId);
-        folder.setFolderName("Booking_" + bookingId + "_Documents");
+        folder.setFolderId("WD-FLDR-BOOKING-" + effectiveBookingId);
+        folder.setFolderName("Booking_" + effectiveBookingId + "_Documents");
 
         WorkDriveFolder savedFolder = folderRepository.save(folder);
-        log.info("Successfully provisioned WorkDrive folder hierarchy for Booking ID: {}", bookingId);
+        log.info("Successfully provisioned WorkDrive folder hierarchy for Booking ID: {}", effectiveBookingId);
 
         return savedFolder;
     }

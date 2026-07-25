@@ -49,7 +49,7 @@ public class KycDocumentController {
     @Operation(summary = "Upload document file for a KYC slot", description = "Uploads file binary, increments version, provisions WorkDrive folder, and updates active document slot")
     public ResponseEntity<ApiResponse<DocumentUploadResponseDto>> uploadDocument(
             @RequestParam("kycApplicationId") UUID kycApplicationId,
-            @RequestParam("documentCategory") DocumentCategory documentCategory,
+            @RequestParam(value = "documentCategory", required = false) DocumentCategory documentCategory,
             @RequestParam("documentType") DocumentType documentType,
             @RequestParam("applicantType") ApplicantType applicantType,
             @RequestParam("file") MultipartFile file,
