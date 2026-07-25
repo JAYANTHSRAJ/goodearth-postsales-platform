@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.17-add-user-email-and-user-id-to-kyc-applications
+      author: antigravity
+      changes:
+        - addColumn:
+            tableName: kyc_applications
+            columns:
+              - column:
+                  name: user_email
+                  type: VARCHAR(255)
+              - column:
+                  name: user_id
+                  type: VARCHAR(255)
