@@ -18,7 +18,7 @@ export const KycApplicantsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [initialData, setInitialData] = useState<KycApplicationResponseDto | null>(null);
 
-  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.zohoDealName || activeUnit?.workflowId || activeUnit?.id || 'current';
 
   const loadInitialData = async () => {
     try {

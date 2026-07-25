@@ -13,6 +13,10 @@ import {
 } from '../types/kyc';
 
 export const kycService = {
+  createKycApplication: (bookingId?: string): Promise<KycApplicationResponseDto> => {
+    return api.post<KycApplicationResponseDto>('/kyc/create', { bookingId });
+  },
+
   getKycByBooking: (bookingId: string): Promise<KycApplicationResponseDto> => {
     return api.get<KycApplicationResponseDto>(`/kyc/booking/${bookingId}`);
   },

@@ -188,6 +188,10 @@ export const router = createBrowserRouter([
                 element: <SingleKycPage />,
               },
               {
+                path: '/client/kyc/new',
+                element: <SingleKycPage />,
+              },
+              {
                 path: '/client/kyc/property',
                 element: <SingleKycPage />,
               },

@@ -95,27 +95,36 @@ export const useKycAutosave = (
     }
   }, [initialData?.status]);
 
-  // Sync initialData when loaded from backend
+  // Sync initialData when loaded from backend or reset when empty
   useEffect(() => {
     if (initialData) {
       if (initialData.status) {
         statusRef.current = initialData.status;
       }
-      if (initialData.applicationDate) setApplicationDate(initialData.applicationDate);
-      if (initialData.consideringHomeLoan) setConsideringHomeLoan(initialData.consideringHomeLoan);
+      setApplicationDate(initialData.applicationDate || new Date().toISOString().split('T')[0]);
+      setConsideringHomeLoan(initialData.consideringHomeLoan || 'No');
       
       const coVal = initialData.hasCoApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No');
       const thirdVal = initialData.hasThirdApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No');
       setHasCoApplicant(coVal);
       setHasThirdApplicant(thirdVal);
 
-      if (initialData.primaryApplicant) {
-        setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
-      }
+      setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
       setJointApplicants(prepareJointApplicants(initialData.jointApplicants || [], coVal, thirdVal));
-      if (initialData.lastSavedAt) {
-        setLastSavedAt(initialData.lastSavedAt);
-      }
+      setLastSavedAt(initialData.lastSavedAt || null);
+      setErrors({});
+      setIsDirty(false);
+    } else {
+      statusRef.current = 'DRAFT';
+      setApplicationDate(new Date().toISOString().split('T')[0]);
+      setConsideringHomeLoan('No');
+      setHasCoApplicant('No');
+      setHasThirdApplicant('No');
+      setPrimaryApplicant(ensureDefaultApplicantFields(null, 'PRIMARY'));
+      setJointApplicants([]);
+      setLastSavedAt(null);
+      setErrors({});
+      setIsDirty(false);
     }
   }, [initialData]);
 

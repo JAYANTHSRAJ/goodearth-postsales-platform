@@ -27,7 +27,7 @@ export const KycReviewPage: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.zohoDealName || activeUnit?.workflowId || activeUnit?.id || 'current';
 
   const loadData = async () => {
     try {

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { useUnitStore } from './unitStore';
+
 export type UserRole = 'admin' | 'buyer' | 'employee' | string;
 
 export interface User {
@@ -52,6 +54,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.clear();
     sessionStorage.clear();
+    try {
+      useUnitStore.getState().clearActiveUnit();
+    } catch (e) {
+      console.error('Failed to clear active unit on logout', e);
+    }
     set({
       isAuthenticated: false,
       user: null,

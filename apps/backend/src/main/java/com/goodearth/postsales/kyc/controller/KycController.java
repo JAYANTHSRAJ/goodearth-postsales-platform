@@ -104,12 +104,32 @@ public class KycController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
+    @PostMapping("/create")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Explicitly create a new, empty KYC application", description = "Creates a brand new empty KYC application for the authenticated user and booking")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> createKycApplication(
+            @RequestBody(required = false) java.util.Map<String, String> body,
+            Authentication authentication) {
+        long startTime = System.currentTimeMillis();
+        String bookingId = body != null && body.containsKey("bookingId") && body.get("bookingId") != null ? body.get("bookingId") : "DEFAULT_BOOKING";
+        String actorId = authentication != null ? authentication.getName() : "CLIENT";
+
+        KycApplicationResponseDto response = kycService.createKycApplication(bookingId, actorId, actorId);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Endpoint: POST /api/v1/kyc/create, Execution Time: {}ms, Booking ID: {}", duration, bookingId);
+
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
     @GetMapping("/booking/{bookingId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Fetch KYC application by Booking ID", description = "Returns complete KYC application payload including applicants and document slots")
-    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> getKycByBooking(@PathVariable String bookingId) {
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> getKycByBooking(
+            @PathVariable String bookingId,
+            Authentication authentication) {
         long startTime = System.currentTimeMillis();
-        KycApplicationResponseDto response = kycService.getKycApplicationByBooking(bookingId);
+        String actorId = authentication != null ? authentication.getName() : null;
+        KycApplicationResponseDto response = kycService.getKycApplicationByBooking(bookingId, actorId, actorId);
         long duration = System.currentTimeMillis() - startTime;
         log.info("Endpoint: GET /api/v1/kyc/booking/{}, Execution Time: {}ms", bookingId, duration);
 

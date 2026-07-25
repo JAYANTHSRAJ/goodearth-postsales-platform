@@ -22,7 +22,7 @@ export const ApplicantInfoPage: React.FC = () => {
     activeUnit?.projectName ||
     searchParams.get('bookingId') ||
     activeUnit?.unitName ||
-    'motif16-280726';
+    'current';
   const targetDealId = activeUnit?.zohoDealId || undefined;
 
   const [documentSlots, setDocumentSlots] = useState<DocumentSlotDto[]>([]);

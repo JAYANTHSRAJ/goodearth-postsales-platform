@@ -109,7 +109,11 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional
     public KycApplicationResponseDto saveDraft(KycDraftSaveRequestDto dto, String actorId) {
-        KycApplication application = getOrCreateKycApplication(dto.getBookingId());
+        KycApplication application = getOrCreateKycApplication(dto.getBookingId(), actorId, actorId);
+        if (application.getUserEmail() == null && actorId != null && !"anonymousUser".equalsIgnoreCase(actorId)) {
+            application.setUserEmail(actorId);
+            application.setUserId(actorId);
+        }
 
         // State Machine Check: Cannot save draft if under review, approved, or rejected
         if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
@@ -348,7 +352,10 @@ public class KycServiceImpl implements KycService {
             dealFields.put("Co_applicant", dto.getHasCoApplicant());
             dealFields.put("Has_Co_Applicant", dto.getHasCoApplicant());
         }
-        if (dto.getSoDoWoA() != null) dealFields.put("S_o_D_o_W_o_A", dto.getSoDoWoA());
+        if (dto.getSoDoWoA() != null) {
+            dealFields.put("S_o_D_o_W_o_C", dto.getSoDoWoA());
+            dealFields.put("S_o_D_o_W_o_A", dto.getSoDoWoA());
+        }
         if (dto.getTitleA() != null) {
             dealFields.put("Title_C", dto.getTitleA());
             dealFields.put("CoApplicant_Title", dto.getTitleA());
@@ -411,6 +418,9 @@ public class KycServiceImpl implements KycService {
         if (dto.getCoApplicantFatherLastName() != null) {
             dealFields.put("Co_applicant_Father_Last_Name", dto.getCoApplicantFatherLastName());
         }
+        if (dto.getCoApplicantAddressSameAsPrimary() != null) {
+            dealFields.put("Is_it_the_same_address_as_the_first_applicant_s", dto.getCoApplicantAddressSameAsPrimary() ? "Yes" : "No");
+        }
         if (dto.getCoApplicantAddressStreet() != null) {
             dealFields.put("Street_Address_C", dto.getCoApplicantAddressStreet());
             dealFields.put("Address_Line_C", dto.getCoApplicantAddressStreet());
@@ -430,14 +440,17 @@ public class KycServiceImpl implements KycService {
         }
         if (dto.getThirdApplicantTitle() != null) {
             dealFields.put("Title_T", dto.getThirdApplicantTitle());
+            dealFields.put("Title_S", dto.getThirdApplicantTitle());
             dealFields.put("Third_Applicant_Title", dto.getThirdApplicantTitle());
         }
         if (dto.getThirdApplicantFirstName() != null) {
             dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
+            dealFields.put("First_Name_S", dto.getThirdApplicantFirstName());
             dealFields.put("Third_Applicant_First_Name", dto.getThirdApplicantFirstName());
         }
         if (dto.getThirdApplicantLastName() != null) {
             dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
+            dealFields.put("Last_Name_S", dto.getThirdApplicantLastName());
             dealFields.put("Third_Applicant_Last_Name", dto.getThirdApplicantLastName());
         }
         if (dto.getThirdApplicantGender() != null) {
@@ -480,7 +493,10 @@ public class KycServiceImpl implements KycService {
         if (dto.getThirdApplicantAadhar() != null) {
             dealFields.put("Third_Applicant_Aadhar", dto.getThirdApplicantAadhar());
         }
-        if (dto.getThirdApplicantSoDoWo() != null) dealFields.put("S_o_D_o_W_o_T", dto.getThirdApplicantSoDoWo());
+        if (dto.getThirdApplicantSoDoWo() != null) {
+            dealFields.put("S_o_D_o_W_o_T", dto.getThirdApplicantSoDoWo());
+            dealFields.put("S_o_D_o_W_o_S", dto.getThirdApplicantSoDoWo());
+        }
         if (dto.getThirdApplicantFatherFirstName() != null) {
             dealFields.put("Third_Applicant_Father_First_Name", dto.getThirdApplicantFatherFirstName());
         }
@@ -796,15 +812,108 @@ public class KycServiceImpl implements KycService {
         documentRepository.flush();
     }
 
+    private String resolveCanonicalBookingId(String requestedBookingId, String userEmail) {
+        if (requestedBookingId != null && !requestedBookingId.isBlank()
+                && !"DEFAULT_BOOKING".equalsIgnoreCase(requestedBookingId)
+                && !"current".equalsIgnoreCase(requestedBookingId)
+                && !requestedBookingId.startsWith("BKG-GUEST")
+                && !requestedBookingId.startsWith("BKG-user")) {
+            return requestedBookingId.trim();
+        }
+
+        if (userEmail != null && !userEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(userEmail)) {
+            List<com.goodearth.postsales.buyer.entity.Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(userEmail.trim());
+            if (!buyers.isEmpty()) {
+                com.goodearth.postsales.buyer.entity.Buyer primaryBuyer = buyers.get(0);
+                if (primaryBuyer.getUnitName() != null && !primaryBuyer.getUnitName().isBlank()) {
+                    return primaryBuyer.getUnitName().trim();
+                }
+                if (primaryBuyer.getZohoDealId() != null && !primaryBuyer.getZohoDealId().isBlank()) {
+                    return primaryBuyer.getZohoDealId().trim();
+                }
+            }
+            Optional<KycApplication> existingKyc = kycApplicationRepository.findFirstByUserEmailOrderByCreatedAtDesc(userEmail.trim());
+            if (existingKyc.isPresent() && existingKyc.get().getBookingId() != null && !existingKyc.get().getBookingId().isBlank()) {
+                return existingKyc.get().getBookingId();
+            }
+        }
+
+        return null;
+    }
+
+    private KycApplication getOrCreateKycApplication(String bookingId, String userEmail, String userId) {
+        String cleanEmail = (userEmail != null && !userEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(userEmail)) ? userEmail.trim() : null;
+        String canonicalBookingId = resolveCanonicalBookingId(bookingId, cleanEmail);
+
+        if (canonicalBookingId == null) {
+            throw new com.goodearth.postsales.common.exception.CustomException(
+                    "No active booking found for this user.",
+                    org.springframework.http.HttpStatus.NOT_FOUND
+            );
+        }
+
+        Optional<KycApplication> appOpt = Optional.empty();
+        if (cleanEmail != null) {
+            appOpt = kycApplicationRepository.findFirstByBookingIdAndUserEmailOrderByCreatedAtDesc(canonicalBookingId, cleanEmail);
+            if (appOpt.isEmpty()) {
+                appOpt = kycApplicationRepository.findFirstByUserEmailOrderByCreatedAtDesc(cleanEmail);
+                if (appOpt.isPresent() && !canonicalBookingId.equalsIgnoreCase(appOpt.get().getBookingId())) {
+                    appOpt = Optional.empty();
+                }
+            }
+        } else {
+            appOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(canonicalBookingId);
+        }
+
+        return appOpt.orElseGet(() -> {
+            KycApplication newApp = new KycApplication();
+            newApp.setBookingId(canonicalBookingId);
+            newApp.setUserEmail(cleanEmail);
+            newApp.setUserId(userId);
+            newApp.setStatus(KycApplicationStatus.DRAFT);
+            newApp.setCompletionPercentage(0);
+            return kycApplicationRepository.save(newApp);
+        });
+    }
+
     private KycApplication getOrCreateKycApplication(String bookingId) {
-        return kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
-                .orElseGet(() -> {
-                    KycApplication newApp = new KycApplication();
-                    newApp.setBookingId(bookingId);
-                    newApp.setStatus(KycApplicationStatus.DRAFT);
-                    newApp.setCompletionPercentage(0);
-                    return kycApplicationRepository.save(newApp);
-                });
+        return getOrCreateKycApplication(bookingId, null, null);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto createKycApplication(String bookingId, String userEmail, String userId) {
+        String cleanEmail = (userEmail != null && !userEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(userEmail)) ? userEmail.trim() : null;
+        String canonicalBookingId = resolveCanonicalBookingId(bookingId, cleanEmail);
+
+        if (canonicalBookingId == null) {
+            throw new com.goodearth.postsales.common.exception.CustomException(
+                    "No active booking found for this user.",
+                    org.springframework.http.HttpStatus.NOT_FOUND
+            );
+        }
+
+        KycApplication newApp = new KycApplication();
+        newApp.setBookingId(canonicalBookingId);
+        newApp.setUserEmail(cleanEmail);
+        newApp.setUserId(userId);
+        newApp.setStatus(KycApplicationStatus.DRAFT);
+        newApp.setCompletionPercentage(0);
+        KycApplication savedApp = kycApplicationRepository.save(newApp);
+
+        ensureDocumentSlots(savedApp);
+        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
+        return kycApplicationMapper.toResponseDto(savedApp, documents);
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto getKycApplicationByBooking(String bookingId, String userEmail, String userId) {
+        KycApplication application = getOrCreateKycApplication(bookingId, userEmail, userId);
+        ensureDocumentSlots(application);
+
+        List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
+        return kycApplicationMapper.toResponseDto(application, documents);
     }
 
     @Override

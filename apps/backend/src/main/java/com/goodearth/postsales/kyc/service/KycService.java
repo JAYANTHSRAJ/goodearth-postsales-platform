@@ -24,7 +24,11 @@ public interface KycService {
 
     KycAutosaveResponseDto autosaveField(KycAutosaveRequestDto dto, String actorId);
 
+    KycApplicationResponseDto createKycApplication(String bookingId, String userEmail, String userId);
+
     KycApplicationResponseDto getKycApplicationByBooking(String bookingId);
+
+    KycApplicationResponseDto getKycApplicationByBooking(String bookingId, String userEmail, String userId);
 
     KycValidationSummaryResponseDto validateKyc(String bookingId);
 

@@ -27,6 +27,12 @@ public class KycApplication extends BaseEntity {
     @Column(name = "booking_id", nullable = false)
     private String bookingId;
 
+    @Column(name = "user_email", length = 100)
+    private String userEmail;
+
+    @Column(name = "user_id", length = 100)
+    private String userId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private KycApplicationStatus status = KycApplicationStatus.DRAFT;

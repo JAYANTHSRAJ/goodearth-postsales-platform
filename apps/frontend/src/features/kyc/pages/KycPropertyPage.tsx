@@ -14,7 +14,7 @@ export const KycPropertyPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [kycData, setKycData] = useState<KycApplicationResponseDto | null>(null);
 
-  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.zohoDealName || activeUnit?.workflowId || activeUnit?.id || 'current';
 
   useEffect(() => {
     kycService.getKycByBooking(bookingId)

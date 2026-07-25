@@ -164,6 +164,18 @@ public class KycDocumentServiceImpl implements KycDocumentService {
 
         DocumentVersion savedVersion = documentVersionRepository.saveAndFlush(newVersion);
 
+        // Save real binary content to local file storage for streaming/downloading
+        if (content != null && content.length > 0) {
+            try {
+                java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
+                java.nio.file.Files.createDirectories(storageDir);
+                java.nio.file.Path filePath = storageDir.resolve(savedVersion.getId().toString());
+                java.nio.file.Files.write(filePath, content);
+            } catch (Exception e) {
+                log.warn("Could not save document binary to local disk for version {}: {}", savedVersion.getId(), e.getMessage());
+            }
+        }
+
         // Synchronize in-memory JPA collection for immediate DTO mapping
         if (document.getVersions() == null) {
             document.setVersions(new ArrayList<>());
@@ -277,8 +289,24 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        byte[] binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
-        String mimeType = "application/pdf";
+        byte[] binaryContent = null;
+        String mimeType = targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf";
+
+        // Attempt reading stored file binary from disk
+        try {
+            java.nio.file.Path diskFile = java.nio.file.Paths.get("uploads", "documents", targetVersion.getId().toString());
+            if (java.nio.file.Files.exists(diskFile)) {
+                binaryContent = java.nio.file.Files.readAllBytes(diskFile);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to read document binary from disk for version {}: {}", targetVersion.getId(), e.getMessage());
+        }
+
+        // Fallback to valid minimal PDF if disk binary does not exist
+        if (binaryContent == null || binaryContent.length == 0) {
+            binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
+            mimeType = "application/pdf";
+        }
 
         log.info("[DOCUMENT_PREVIEW_TRACE]\nDocument ID: {}\nVersion Number: {}\nFilename: {}\nMIME Type: {}\nStream Size: {} bytes\nWorkDrive File ID: {}",
                 documentId, targetVersion.getVersionNumber(), targetVersion.getFileName(), mimeType, binaryContent.length, targetVersion.getWorkDriveFileId());
@@ -292,31 +320,33 @@ public class KycDocumentServiceImpl implements KycDocumentService {
     }
 
     private byte[] generateMinimalPdfBytes(String fileName) {
-        String pdfString = "%PDF-1.4\n" +
-                "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n" +
-                "2 0 obj <</Type /Pages /Kinds [3 0 R] /Count 1>> endobj\n" +
-                "3 0 obj <</Type /Page /Parent 2 0 R /Resources <</Font <</F1 4 0 R>>>> /MediaBox [0 0 612 792] /Contents 5 0 R>> endobj\n" +
-                "4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n" +
-                "5 0 obj <</Length 65>> stream\n" +
-                "BT\n" +
-                "/F1 16 Tf\n" +
-                "50 700 Td\n" +
-                "(GoodEarth Secure Document Stream - " + (fileName != null ? fileName : "Document") + ") Tj\n" +
-                "ET\n" +
-                "endstream endobj\n" +
-                "xref\n" +
-                "0 6\n" +
-                "0000000000 65535 f \n" +
-                "0000000009 00000 n \n" +
-                "0000000056 00000 n \n" +
-                "0000000114 00000 n \n" +
-                "0000000244 00000 n \n" +
-                "0000000313 00000 n \n" +
-                "trailer <</Size 6 /Root 1 0 R>>\n" +
-                "startxref\n" +
-                "429\n" +
-                "%%EOF\n";
-        return pdfString.getBytes(StandardCharsets.ISO_8859_1);
+        String name = (fileName != null && !fileName.isBlank()) ? fileName : "Document";
+        String streamContent = "BT /F1 16 Tf 50 700 Td (" + name.replace("(", "\\(").replace(")", "\\)") + ") Tj ET";
+        int streamLength = streamContent.getBytes(StandardCharsets.ISO_8859_1).length;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("%PDF-1.4\n");
+        int obj1 = sb.length();
+        sb.append("1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n");
+        int obj2 = sb.length();
+        sb.append("2 0 obj\n<</Type /Pages /Kids [3 0 R] /Count 1>>\nendobj\n");
+        int obj3 = sb.length();
+        sb.append("3 0 obj\n<</Type /Page /Parent 2 0 R /Resources <</Font <</F1 4 0 R>>>> /MediaBox [0 0 612 792] /Contents 5 0 R>>\nendobj\n");
+        int obj4 = sb.length();
+        sb.append("4 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>\nendobj\n");
+        int obj5 = sb.length();
+        sb.append("5 0 obj\n<</Length ").append(streamLength).append(">>\nstream\n").append(streamContent).append("\nendstream\nendobj\n");
+        int startXref = sb.length();
+        sb.append("xref\n0 6\n");
+        sb.append("0000000000 65535 f \n");
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj1));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj2));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj3));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj4));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj5));
+        sb.append("trailer\n<</Size 6 /Root 1 0 R>>\nstartxref\n").append(startXref).append("\n%%EOF\n");
+
+        return sb.toString().getBytes(StandardCharsets.ISO_8859_1);
     }
 
     private String calculateSha256(byte[] data) {

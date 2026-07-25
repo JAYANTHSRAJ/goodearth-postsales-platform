@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheck,
   Sparkles,
@@ -30,8 +30,9 @@ import { KycApplicationResponseDto, KycValidationSummaryResponseDto, KycApplicat
 import { useUnitStore } from '../../../store/unitStore';
 
 export const SingleKycPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { activeUnit } = useUnitStore();
   const [loading, setLoading] = useState<boolean>(true);
   const [initialData, setInitialData] = useState<KycApplicationResponseDto | null>(null);
@@ -53,23 +54,40 @@ export const SingleKycPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [noBookingFoundError, setNoBookingFoundError] = useState<string | null>(null);
+
   const bookingId =
     searchParams.get('bookingId') ||
     activeUnit?.unitName ||
     activeUnit?.zohoDealName ||
     activeUnit?.workflowId ||
     activeUnit?.id ||
-    'BKG-2026-101';
+    'current';
+
+  const isNewFormRoute = location.pathname.endsWith('/new') || searchParams.get('new') === 'true';
 
   const loadInitialData = async () => {
+    setLoading(true);
+    setNoBookingFoundError(null);
     try {
-      const data = await kycService.getKycByBooking(bookingId);
+      let data: KycApplicationResponseDto;
+      if (isNewFormRoute) {
+        data = await kycService.createKycApplication(bookingId);
+      } else {
+        data = await kycService.getKycByBooking(bookingId);
+      }
       setInitialData(data);
 
-      const summary = await kycService.validateKyc(bookingId).catch(() => null);
+      const targetId = data.bookingId || bookingId;
+      const summary = await kycService.validateKyc(targetId).catch(() => null);
       if (summary) setValidationSummary(summary);
-    } catch {
-      // Handled in UI
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'No active booking found for this user.';
+      if (msg.includes('No active booking found') || err?.response?.status === 404) {
+        setNoBookingFoundError('No active booking found for your account. Please contact support or complete unit booking.');
+      } else {
+        setSubmitError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -77,7 +95,7 @@ export const SingleKycPage: React.FC = () => {
 
   useEffect(() => {
     loadInitialData();
-  }, [bookingId]);
+  }, [bookingId, isNewFormRoute]);
 
   const {
     applicationDate,
@@ -222,6 +240,28 @@ export const SingleKycPage: React.FC = () => {
   };
 
   const badge = getStatusBadge(currentStatus);
+
+  if (noBookingFoundError) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">No Active Booking Found</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+            {noBookingFoundError}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/my-home')}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md transition-all"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">

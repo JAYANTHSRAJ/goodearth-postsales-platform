@@ -15,7 +15,7 @@ export const KycDashboardPage: React.FC = () => {
   const [kycData, setKycData] = useState<KycApplicationResponseDto | null>(null);
   const [timeline, setTimeline] = useState<KycTimelineResponseDto | null>(null);
 
-  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.workflowId || activeUnit?.id || 'BKG-2026-101';
+  const bookingId = searchParams.get('bookingId') || activeUnit?.unitName || activeUnit?.zohoDealName || activeUnit?.workflowId || activeUnit?.id || 'current';
 
   const fetchKycData = async () => {
     setLoading(true);
