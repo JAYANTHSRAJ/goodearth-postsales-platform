@@ -119,7 +119,16 @@ public class KycServiceImpl implements KycService {
         if (dto.getApplicationDate() != null) application.setApplicationDate(dto.getApplicationDate());
         if ("No".equalsIgnoreCase(dto.getHasThirdApplicant())) {
             application.setHasThirdApplicant("No");
-            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
+            List<Document> joint2Docs = documentRepository.findByKycApplicationId(application.getId()).stream()
+                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2)
+                    .toList();
+            for (Document doc : joint2Docs) {
+                doc.setStatus(DocumentStatus.ARCHIVED);
+                doc.setKycApplicant(null);
+                documentRepository.save(doc);
+            }
+            documentRepository.flush();
+
             List<KycApplicant> existingThirdApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2);
             for (KycApplicant app : existingThirdApps) {
                 kycApplicantRepository.delete(app);
@@ -740,11 +749,11 @@ public class KycServiceImpl implements KycService {
             ensureSlot(application, existingDocs, ApplicantType.JOINT_2, DocumentType.VOTER_ID);
         } else {
             existingDocs.stream()
-                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2)
+                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2 && d.getStatus() == DocumentStatus.ACTIVE)
                     .forEach(d -> {
+                        d.setStatus(DocumentStatus.ARCHIVED);
                         d.setKycApplicant(null);
                         documentRepository.save(d);
-                        documentRepository.delete(d);
                     });
             documentRepository.flush();
         }
@@ -752,7 +761,7 @@ public class KycServiceImpl implements KycService {
 
     private void ensureSlot(KycApplication application, List<Document> existingDocs, ApplicantType applicantType, DocumentType docType) {
         boolean exists = existingDocs.stream()
-                .anyMatch(d -> d.getApplicantType() == applicantType && d.getDocumentType() == docType);
+                .anyMatch(d -> d.getApplicantType() == applicantType && d.getDocumentType() == docType && d.getStatus() == DocumentStatus.ACTIVE);
         if (!exists) {
             com.goodearth.postsales.document.config.DocumentSlotConfig slotConfig =
                     com.goodearth.postsales.document.config.DocumentSlotConfig.getConfig(applicantType, docType);

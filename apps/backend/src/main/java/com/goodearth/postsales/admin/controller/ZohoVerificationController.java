@@ -325,7 +325,7 @@ public class ZohoVerificationController {
             boolean joint2DeletedInDb = kycAppAfterNo != null && (kycAppAfterNo.getApplicants() == null ||
                     kycAppAfterNo.getApplicants().stream().noneMatch(a -> a.getApplicantType() == ApplicantType.JOINT_2));
             List<Document> joint2DocsAfterNo = documentRepository.findByKycApplicationId(kycApp.getId()).stream()
-                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2 && d.getKycApplicant() != null)
+                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2 && d.getStatus() == com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE)
                     .toList();
             List<DocumentVersion> joint2DocVersions = documentVersionRepository.findAll();
 
