@@ -51,10 +51,15 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: Failed to fetch file binary stream`);
         }
-        return res.blob();
+        const responseContentType = res.headers.get('content-type') || mimeType || 'application/pdf';
+        return res.arrayBuffer().then((buf) => ({ buf, responseContentType }));
       })
-      .then((blob) => {
+      .then(({ buf, responseContentType }) => {
         if (isMounted) {
+          const blobMime = (responseContentType && responseContentType.includes('/'))
+            ? responseContentType.split(';')[0].trim()
+            : (mimeType || 'application/pdf');
+          const blob = new Blob([buf], { type: blobMime });
           const url = URL.createObjectURL(blob);
           setObjectUrl(url);
           setLoading(false);

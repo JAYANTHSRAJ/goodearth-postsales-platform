@@ -169,8 +169,13 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             try {
                 java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
                 java.nio.file.Files.createDirectories(storageDir);
-                java.nio.file.Path filePath = storageDir.resolve(savedVersion.getId().toString());
-                java.nio.file.Files.write(filePath, content);
+                java.nio.file.Files.write(storageDir.resolve(savedVersion.getId().toString()), content);
+                if (document != null && document.getId() != null) {
+                    java.nio.file.Files.write(storageDir.resolve(document.getId().toString()), content);
+                }
+                if (savedVersion.getWorkDriveFileId() != null) {
+                    java.nio.file.Files.write(storageDir.resolve(savedVersion.getWorkDriveFileId()), content);
+                }
             } catch (Exception e) {
                 log.warn("Could not save document binary to local disk for version {}: {}", savedVersion.getId(), e.getMessage());
             }
@@ -294,9 +299,17 @@ public class KycDocumentServiceImpl implements KycDocumentService {
 
         // Attempt reading stored file binary from disk
         try {
-            java.nio.file.Path diskFile = java.nio.file.Paths.get("uploads", "documents", targetVersion.getId().toString());
-            if (java.nio.file.Files.exists(diskFile)) {
-                binaryContent = java.nio.file.Files.readAllBytes(diskFile);
+            java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
+            java.nio.file.Path diskVer = storageDir.resolve(targetVersion.getId().toString());
+            java.nio.file.Path diskDoc = storageDir.resolve(document.getId().toString());
+            java.nio.file.Path diskWd = targetVersion.getWorkDriveFileId() != null ? storageDir.resolve(targetVersion.getWorkDriveFileId()) : null;
+
+            if (java.nio.file.Files.exists(diskVer)) {
+                binaryContent = java.nio.file.Files.readAllBytes(diskVer);
+            } else if (java.nio.file.Files.exists(diskDoc)) {
+                binaryContent = java.nio.file.Files.readAllBytes(diskDoc);
+            } else if (diskWd != null && java.nio.file.Files.exists(diskWd)) {
+                binaryContent = java.nio.file.Files.readAllBytes(diskWd);
             }
         } catch (Exception e) {
             log.warn("Failed to read document binary from disk for version {}: {}", targetVersion.getId(), e.getMessage());

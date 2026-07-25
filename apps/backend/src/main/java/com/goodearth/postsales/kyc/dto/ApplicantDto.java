@@ -45,20 +45,16 @@ public class ApplicantDto {
     private Boolean addressSameAsPrimary;
     private Boolean addressSameAsSecondary;
 
-    @Email(message = "Email must be valid")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
 
-    @Pattern(regexp = "^$|^\\+?[0-9]{10,15}$", message = "Phone must be valid format (10-15 digits)")
     private String phone;
 
     @Size(max = 50, message = "Relation must not exceed 50 characters")
     private String relation;
 
-    @Pattern(regexp = "^$|^[A-Z]{5}[0-9]{4}[A-Z]{1}$", message = "PAN must be 10 uppercase characters (e.g. ABCDE1234F)")
     private String panNumber;
 
-    @Pattern(regexp = "^$|^[0-9]{12}$", message = "Aadhaar must be 12 digits")
     private String aadhaarNumber;
 
     private String maskedAadhaarNumber;

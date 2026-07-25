@@ -642,6 +642,9 @@ public class KycServiceImpl implements KycService {
 
             if ("Yes".equalsIgnoreCase(dto.getHasThirdApplicant()) && "Yes".equalsIgnoreCase(application.getHasCoApplicant())) {
                 boolean hasThirdData = !thirdApplicantFullName.isEmpty() ||
+                        (dto.getThirdApplicantFirstName() != null && !dto.getThirdApplicantFirstName().trim().isEmpty()) ||
+                        (dto.getThirdApplicantLastName() != null && !dto.getThirdApplicantLastName().trim().isEmpty()) ||
+                        (dto.getThirdApplicantTitle() != null && !dto.getThirdApplicantTitle().trim().isEmpty()) ||
                         (dto.getThirdApplicantEmail() != null && !dto.getThirdApplicantEmail().trim().isEmpty()) ||
                         (dto.getThirdApplicantPhone() != null && !dto.getThirdApplicantPhone().trim().isEmpty()) ||
                         (dto.getThirdApplicantPan() != null && !dto.getThirdApplicantPan().trim().isEmpty()) ||
@@ -1474,6 +1477,9 @@ public class KycServiceImpl implements KycService {
         }
 
         boolean hasData = !computedFullName.isEmpty() ||
+                (dto.getFirstName() != null && !dto.getFirstName().trim().isEmpty()) ||
+                (dto.getLastName() != null && !dto.getLastName().trim().isEmpty()) ||
+                (dto.getSalutation() != null && !dto.getSalutation().trim().isEmpty()) ||
                 (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) ||
                 (dto.getPhone() != null && !dto.getPhone().trim().isEmpty()) ||
                 (dto.getPanNumber() != null && !dto.getPanNumber().trim().isEmpty()) ||
