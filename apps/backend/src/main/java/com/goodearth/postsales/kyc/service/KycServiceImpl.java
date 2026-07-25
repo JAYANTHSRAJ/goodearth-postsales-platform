@@ -688,7 +688,7 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional
     public KycAutosaveResponseDto autosaveField(KycAutosaveRequestDto dto, String actorId) {
-        KycApplication application = kycApplicationRepository.findByBookingId(dto.getBookingId())
+        KycApplication application = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dto.getBookingId())
                 .orElseThrow(() -> new KycNotFoundException("Booking ID", dto.getBookingId()));
 
         if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
@@ -767,7 +767,7 @@ public class KycServiceImpl implements KycService {
     }
 
     private KycApplication getOrCreateKycApplication(String bookingId) {
-        return kycApplicationRepository.findByBookingId(bookingId)
+        return kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
                 .orElseGet(() -> {
                     KycApplication newApp = new KycApplication();
                     newApp.setBookingId(bookingId);
@@ -1205,7 +1205,7 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional(readOnly = true)
     public KycProgressResponseDto getKycProgress(String bookingId) {
-        KycApplication application = kycApplicationRepository.findByBookingId(bookingId)
+        KycApplication application = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
                 .orElseThrow(() -> new KycNotFoundException("Booking ID", bookingId));
 
         List<Document> documents = documentRepository.findByKycApplicationId(application.getId());
@@ -1301,7 +1301,7 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional(readOnly = true)
     public KycTimelineResponseDto getTimeline(String bookingId) {
-        KycApplication application = kycApplicationRepository.findByBookingId(bookingId)
+        KycApplication application = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
                 .orElseThrow(() -> new KycNotFoundException("Booking ID", bookingId));
 
         List<KycAuditLog> auditLogs = auditLogRepository.findByKycApplicationIdOrderByCreatedAtDesc(application.getId());

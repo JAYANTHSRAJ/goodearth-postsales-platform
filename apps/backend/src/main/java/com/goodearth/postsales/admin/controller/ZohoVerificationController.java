@@ -225,7 +225,7 @@ public class ZohoVerificationController {
         report.put("dealRecordId", dealId);
 
         try {
-            KycApplication kycApp = kycApplicationRepository.findByBookingId(dealId)
+            KycApplication kycApp = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dealId)
                     .orElseGet(() -> {
                         KycApplication newApp = new KycApplication();
                         newApp.setBookingId(dealId);
@@ -317,7 +317,7 @@ public class ZohoVerificationController {
             kycService.saveDraft(draftNoReq, "SYSTEM_VERIFIER");
 
             // Verify state after setting to No
-            KycApplication kycAppAfterNo = kycApplicationRepository.findByBookingId(dealId).orElse(null);
+            KycApplication kycAppAfterNo = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dealId).orElse(null);
             boolean joint2DeletedInDb = kycAppAfterNo != null && (kycAppAfterNo.getApplicants() == null ||
                     kycAppAfterNo.getApplicants().stream().noneMatch(a -> a.getApplicantType() == ApplicantType.JOINT_2));
             List<Document> joint2DocsAfterNo = documentRepository.findByKycApplicationId(kycApp.getId()).stream()

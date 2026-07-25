@@ -70,7 +70,7 @@ public class WorkDriveFolderServiceImpl implements WorkDriveFolderService {
     public WorkDriveFolder getOrCreateBookingFolder(String bookingId) {
         String effectiveBookingId = (bookingId != null && !bookingId.trim().isEmpty()) ? bookingId.trim() : "DEFAULT";
 
-        Optional<WorkDriveFolder> existingOpt = folderRepository.findByBookingId(effectiveBookingId);
+        Optional<WorkDriveFolder> existingOpt = folderRepository.findFirstByBookingIdOrderByCreatedAtDesc(effectiveBookingId);
         if (existingOpt.isPresent()) {
             return existingOpt.get();
         }
@@ -98,7 +98,7 @@ public class WorkDriveFolderServiceImpl implements WorkDriveFolderService {
     @Override
     @Transactional(readOnly = true)
     public WorkDriveFolderDto getFolderByBooking(String bookingId) {
-        WorkDriveFolder folder = folderRepository.findByBookingId(bookingId)
+        WorkDriveFolder folder = folderRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
                 .orElseThrow(() -> new CustomException("WorkDrive folder hierarchy not found for Booking ID: " + bookingId, HttpStatus.NOT_FOUND));
         return mapper.toDto(folder);
     }
