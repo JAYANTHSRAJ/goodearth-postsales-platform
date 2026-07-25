@@ -162,23 +162,25 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setUploadedAt(LocalDateTime.now());
         newVersion.setIsCurrent(true);
 
-        DocumentVersion savedVersion = documentVersionRepository.save(newVersion);
+        DocumentVersion savedVersion = documentVersionRepository.saveAndFlush(newVersion);
 
         // Synchronize in-memory JPA collection for immediate DTO mapping
         if (document.getVersions() == null) {
             document.setVersions(new ArrayList<>());
         }
-        document.getVersions().add(savedVersion);
+        if (!document.getVersions().contains(savedVersion)) {
+            document.getVersions().add(savedVersion);
+        }
 
         // Update header document metadata
         document.setVersion(nextVersionNumber);
         document.setFileName(fileName);
-        document.setWorkDriveFileId(savedVersion.getWorkDriveFileId());
         document.setMimeType(contentType);
         document.setFileSize(size);
-        document.setUploadedBy(uploadedBy);
+        document.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         document.setUploadedAt(LocalDateTime.now());
-        documentRepository.save(document);
+        document.setWorkDriveFileId(savedVersion.getWorkDriveFileId());
+        documentRepository.saveAndFlush(document);
 
         auditService.logEvent(application, KycAuditEventType.DOCUMENT_UPLOADED, uploadedBy, "CLIENT",
                 String.format("Uploaded %s (%s) version %d to WorkDrive subfolder %s", docType, applicantType, nextVersionNumber, bookingFolder.getKycSubfolderId()),
