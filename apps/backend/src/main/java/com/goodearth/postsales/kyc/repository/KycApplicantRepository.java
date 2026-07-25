@@ -12,5 +12,7 @@ import java.util.UUID;
 @Repository
 public interface KycApplicantRepository extends JpaRepository<KycApplicant, UUID> {
     List<KycApplicant> findByKycApplicationId(UUID kycApplicationId);
+    Optional<KycApplicant> findFirstByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
+    List<KycApplicant> findAllByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
     Optional<KycApplicant> findByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
 }

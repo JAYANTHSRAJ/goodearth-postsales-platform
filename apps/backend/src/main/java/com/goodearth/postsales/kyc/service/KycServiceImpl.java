@@ -120,11 +120,11 @@ public class KycServiceImpl implements KycService {
         if ("No".equalsIgnoreCase(dto.getHasThirdApplicant())) {
             application.setHasThirdApplicant("No");
             documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
-                    .ifPresent(existing -> {
-                        kycApplicantRepository.delete(existing);
-                        kycApplicantRepository.flush();
-                    });
+            List<KycApplicant> existingThirdApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2);
+            for (KycApplicant app : existingThirdApps) {
+                kycApplicantRepository.delete(app);
+            }
+            kycApplicantRepository.flush();
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
             }
@@ -137,16 +137,15 @@ public class KycServiceImpl implements KycService {
             application.setHasThirdApplicant("No");
             documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_1);
             documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1)
-                    .ifPresent(existing -> {
-                        kycApplicantRepository.delete(existing);
-                        kycApplicantRepository.flush();
-                    });
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
-                    .ifPresent(existing -> {
-                        kycApplicantRepository.delete(existing);
-                        kycApplicantRepository.flush();
-                    });
+            List<KycApplicant> existingJointApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1);
+            for (KycApplicant app : existingJointApps) {
+                kycApplicantRepository.delete(app);
+            }
+            List<KycApplicant> existingThirdApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2);
+            for (KycApplicant app : existingThirdApps) {
+                kycApplicantRepository.delete(app);
+            }
+            kycApplicantRepository.flush();
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_1 || a.getApplicantType() == ApplicantType.JOINT_2);
             }
@@ -1339,11 +1338,11 @@ public class KycServiceImpl implements KycService {
         // 1. Delete JOINT_2 if Third Applicant is toggled to No or Co-Applicant is No
         if (type == ApplicantType.JOINT_2 && (!hasThirdApplicantYes || !hasCoApplicantYes)) {
             documentRepository.unlinkKycApplicant(application.getId(), type);
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
-                    .ifPresent(existing -> {
-                        kycApplicantRepository.delete(existing);
-                        kycApplicantRepository.flush();
-                    });
+            List<KycApplicant> existingThirdApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), type);
+            for (KycApplicant app : existingThirdApps) {
+                kycApplicantRepository.delete(app);
+            }
+            kycApplicantRepository.flush();
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
             }
@@ -1353,11 +1352,11 @@ public class KycServiceImpl implements KycService {
         // 2. Delete JOINT_1 if Co-Applicant is toggled to No
         if (type == ApplicantType.JOINT_1 && !hasCoApplicantYes) {
             documentRepository.unlinkKycApplicant(application.getId(), type);
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
-                    .ifPresent(existing -> {
-                        kycApplicantRepository.delete(existing);
-                        kycApplicantRepository.flush();
-                    });
+            List<KycApplicant> existingJointApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), type);
+            for (KycApplicant app : existingJointApps) {
+                kycApplicantRepository.delete(app);
+            }
+            kycApplicantRepository.flush();
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type);
             }
@@ -1366,19 +1365,19 @@ public class KycServiceImpl implements KycService {
 
         // 3. Preserve saved JOINT_1 / JOINT_2 data if toggle is Yes, unless record has no name and no data
         if (!hasData && type != ApplicantType.PRIMARY) {
-            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
-                    .ifPresent(existing -> {
-                        if (existing.getFullName() == null || existing.getFullName().trim().isEmpty()) {
-                            kycApplicantRepository.delete(existing);
-                        }
-                    });
+            List<KycApplicant> existingApps = kycApplicantRepository.findAllByKycApplicationIdAndApplicantType(application.getId(), type);
+            for (KycApplicant existing : existingApps) {
+                if (existing.getFullName() == null || existing.getFullName().trim().isEmpty()) {
+                    kycApplicantRepository.delete(existing);
+                }
+            }
             if (application.getApplicants() != null) {
                 application.getApplicants().removeIf(a -> a.getApplicantType() == type && (a.getFullName() == null || a.getFullName().trim().isEmpty()));
             }
             return;
         }
 
-        KycApplicant applicant = kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
+        KycApplicant applicant = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(application.getId(), type)
                 .orElseGet(() -> {
                     KycApplicant newApp = new KycApplicant();
                     newApp.setKycApplication(application);
