@@ -90,7 +90,7 @@ public class WebSecurityConfig {
                         "/auth/login", "/auth/refresh", "/auth/activation/**", "/auth/password-reset/**",
                         "/auth/activate", "/auth/resend-activation"
                     ).permitAll()
-                    .requestMatchers("/api/v1/webhooks/**").permitAll();
+                    .requestMatchers("/api/v1/webhooks/**", "/api/v1/admin/verification/**").permitAll();
                 
                 if (swaggerEnabled) {
                     auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll();
