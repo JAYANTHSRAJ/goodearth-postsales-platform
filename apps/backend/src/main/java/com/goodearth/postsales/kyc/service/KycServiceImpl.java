@@ -117,9 +117,30 @@ public class KycServiceImpl implements KycService {
         }
 
         if (dto.getApplicationDate() != null) application.setApplicationDate(dto.getApplicationDate());
-        if (dto.getConsideringHomeLoan() != null) application.setConsideringHomeLoan(dto.getConsideringHomeLoan());
-        if (dto.getHasCoApplicant() != null) application.setHasCoApplicant(dto.getHasCoApplicant());
-        if (dto.getHasThirdApplicant() != null) application.setHasThirdApplicant(dto.getHasThirdApplicant());
+        if ("No".equalsIgnoreCase(dto.getHasThirdApplicant())) {
+            application.setHasThirdApplicant("No");
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
+                    .ifPresent(kycApplicantRepository::delete);
+            if (application.getApplicants() != null) {
+                application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_2);
+            }
+        } else if (dto.getHasThirdApplicant() != null) {
+            application.setHasThirdApplicant(dto.getHasThirdApplicant());
+        }
+
+        if ("No".equalsIgnoreCase(dto.getHasCoApplicant())) {
+            application.setHasCoApplicant("No");
+            application.setHasThirdApplicant("No");
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1)
+                    .ifPresent(kycApplicantRepository::delete);
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
+                    .ifPresent(kycApplicantRepository::delete);
+            if (application.getApplicants() != null) {
+                application.getApplicants().removeIf(a -> a.getApplicantType() == ApplicantType.JOINT_1 || a.getApplicantType() == ApplicantType.JOINT_2);
+            }
+        } else if (dto.getHasCoApplicant() != null) {
+            application.setHasCoApplicant(dto.getHasCoApplicant());
+        }
 
         if (dto.getPrimaryApplicant() != null) {
             updateOrCreateApplicant(application, dto.getPrimaryApplicant(), ApplicantType.PRIMARY);
@@ -1299,6 +1320,31 @@ public class KycServiceImpl implements KycService {
                 (dto.getPanNumber() != null && !dto.getPanNumber().trim().isEmpty()) ||
                 (dto.getAadhaarNumber() != null && !dto.getAadhaarNumber().trim().isEmpty());
 
+        boolean hasThirdApplicantYes = "Yes".equalsIgnoreCase(application.getHasThirdApplicant());
+        boolean hasCoApplicantYes = "Yes".equalsIgnoreCase(application.getHasCoApplicant());
+
+        // Deletion Decision Rules:
+        // 1. Delete JOINT_2 if Third Applicant is toggled to No or Co-Applicant is No
+        if (type == ApplicantType.JOINT_2 && (!hasThirdApplicantYes || !hasCoApplicantYes)) {
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
+                    .ifPresent(kycApplicantRepository::delete);
+            if (application.getApplicants() != null) {
+                application.getApplicants().removeIf(a -> a.getApplicantType() == type);
+            }
+            return;
+        }
+
+        // 2. Delete JOINT_1 if Co-Applicant is toggled to No
+        if (type == ApplicantType.JOINT_1 && !hasCoApplicantYes) {
+            kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
+                    .ifPresent(kycApplicantRepository::delete);
+            if (application.getApplicants() != null) {
+                application.getApplicants().removeIf(a -> a.getApplicantType() == type);
+            }
+            return;
+        }
+
+        // 3. Preserve saved JOINT_1 / JOINT_2 data if toggle is Yes, unless record has no name and no data
         if (!hasData && type != ApplicantType.PRIMARY) {
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
                     .ifPresent(existing -> {
@@ -1306,7 +1352,9 @@ public class KycServiceImpl implements KycService {
                             kycApplicantRepository.delete(existing);
                         }
                     });
-            application.getApplicants().removeIf(a -> a.getApplicantType() == type && (a.getFullName() == null || a.getFullName().trim().isEmpty()));
+            if (application.getApplicants() != null) {
+                application.getApplicants().removeIf(a -> a.getApplicantType() == type && (a.getFullName() == null || a.getFullName().trim().isEmpty()));
+            }
             return;
         }
 

@@ -292,7 +292,37 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             if (application.getApplicationDate() != null) dealFields.put("Application_Date", application.getApplicationDate());
             if (application.getConsideringHomeLoan() != null) dealFields.put("Are_you_considering_a_home_loan", application.getConsideringHomeLoan());
             if (application.getHasCoApplicant() != null) dealFields.put("Do_you_have_coapplicant", application.getHasCoApplicant());
-            if (application.getHasThirdApplicant() != null) dealFields.put("Do_you_have_third_applicant", application.getHasThirdApplicant());
+            if (application.getHasThirdApplicant() != null) {
+                dealFields.put("Do_you_have_third_applicant", application.getHasThirdApplicant());
+                if ("No".equalsIgnoreCase(application.getHasThirdApplicant())) {
+                    dealFields.put("Third_Applicant", null);
+                    dealFields.put("Third_Applicant_Name", null);
+                    dealFields.put("Third_Applicant_Title", null);
+                    dealFields.put("Third_Applicant_First_Name", null);
+                    dealFields.put("Third_Applicant_Last_Name", null);
+                    dealFields.put("Third_Applicant_Gender", null);
+                    dealFields.put("Third_applicant_age", null);
+                    dealFields.put("Third_Applicant_Email", null);
+                    dealFields.put("Third_Applicant_Phone", null);
+                    dealFields.put("Third_Applicant_Date_of_Birth", null);
+                    dealFields.put("Third_Applicant_Occupation", null);
+                    dealFields.put("Third_Applicant_PAN", null);
+                    dealFields.put("Third_Applicant_Aadhar", null);
+                    dealFields.put("Title_T", null);
+                    dealFields.put("First_Name_T", null);
+                    dealFields.put("Last_Name_T", null);
+                    dealFields.put("Phone_T", null);
+                    dealFields.put("Email_T", null);
+                    dealFields.put("DOB_T", null);
+                    dealFields.put("S_o_D_o_W_o_T", null);
+                    dealFields.put("Street_Address_T", null);
+                    dealFields.put("Address_Line_T", null);
+                    dealFields.put("City_T", null);
+                    dealFields.put("State_T", null);
+                    dealFields.put("Postal_Zip_Code_T", null);
+                    dealFields.put("Country_T", null);
+                }
+            }
 
             if (application.getApplicants() != null) {
                 for (com.goodearth.postsales.kyc.entity.KycApplicant app : application.getApplicants()) {
