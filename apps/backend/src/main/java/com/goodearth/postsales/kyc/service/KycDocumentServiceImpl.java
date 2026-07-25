@@ -107,7 +107,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         // Provision/ensure WorkDrive folder hierarchy exists for booking
         WorkDriveFolder bookingFolder = workDriveFolderService.getOrCreateBookingFolder(application.getBookingId());
 
-        KycApplicant applicant = kycApplicantRepository.findByKycApplicationIdAndApplicantType(kycApplicationId, applicantType)
+        KycApplicant applicant = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(kycApplicationId, applicantType)
                 .orElse(null);
 
         Document document = documentRepository.findByKycApplicationIdAndDocumentTypeAndApplicantType(
