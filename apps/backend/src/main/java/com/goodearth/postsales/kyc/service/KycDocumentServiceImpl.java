@@ -161,6 +161,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         newVersion.setUploadedAt(LocalDateTime.now());
         newVersion.setIsCurrent(true);
+        newVersion.setFileBytes(content);
 
         DocumentVersion savedVersion = documentVersionRepository.saveAndFlush(newVersion);
 
@@ -294,28 +295,30 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        byte[] binaryContent = null;
+        byte[] binaryContent = targetVersion.getFileBytes();
         String mimeType = targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf";
 
-        // Attempt reading stored file binary from disk
-        try {
-            java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
-            java.nio.file.Path diskVer = storageDir.resolve(targetVersion.getId().toString());
-            java.nio.file.Path diskDoc = storageDir.resolve(document.getId().toString());
-            java.nio.file.Path diskWd = targetVersion.getWorkDriveFileId() != null ? storageDir.resolve(targetVersion.getWorkDriveFileId()) : null;
+        // Attempt reading stored file binary from disk if DB byte array is null
+        if (binaryContent == null || binaryContent.length == 0) {
+            try {
+                java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
+                java.nio.file.Path diskVer = storageDir.resolve(targetVersion.getId().toString());
+                java.nio.file.Path diskDoc = storageDir.resolve(document.getId().toString());
+                java.nio.file.Path diskWd = targetVersion.getWorkDriveFileId() != null ? storageDir.resolve(targetVersion.getWorkDriveFileId()) : null;
 
-            if (java.nio.file.Files.exists(diskVer)) {
-                binaryContent = java.nio.file.Files.readAllBytes(diskVer);
-            } else if (java.nio.file.Files.exists(diskDoc)) {
-                binaryContent = java.nio.file.Files.readAllBytes(diskDoc);
-            } else if (diskWd != null && java.nio.file.Files.exists(diskWd)) {
-                binaryContent = java.nio.file.Files.readAllBytes(diskWd);
+                if (java.nio.file.Files.exists(diskVer)) {
+                    binaryContent = java.nio.file.Files.readAllBytes(diskVer);
+                } else if (java.nio.file.Files.exists(diskDoc)) {
+                    binaryContent = java.nio.file.Files.readAllBytes(diskDoc);
+                } else if (diskWd != null && java.nio.file.Files.exists(diskWd)) {
+                    binaryContent = java.nio.file.Files.readAllBytes(diskWd);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to read document binary from disk for version {}: {}", targetVersion.getId(), e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("Failed to read document binary from disk for version {}: {}", targetVersion.getId(), e.getMessage());
         }
 
-        // Fallback to valid minimal PDF if disk binary does not exist
+        // Fallback to valid minimal PDF if disk/DB binary does not exist
         if (binaryContent == null || binaryContent.length == 0) {
             binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
             mimeType = "application/pdf";
@@ -334,30 +337,40 @@ public class KycDocumentServiceImpl implements KycDocumentService {
 
     private byte[] generateMinimalPdfBytes(String fileName) {
         String name = (fileName != null && !fileName.isBlank()) ? fileName : "Document";
-        String streamContent = "BT /F1 16 Tf 50 700 Td (" + name.replace("(", "\\(").replace(")", "\\)") + ") Tj ET";
-        int streamLength = streamContent.getBytes(StandardCharsets.ISO_8859_1).length;
+        String escapedName = name.replace("(", "\\(").replace(")", "\\)");
+
+        String obj1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        String obj2 = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
+        String obj3 = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n";
+        String obj4 = "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+
+        String streamContent = "BT\n/F1 16 Tf\n50 700 Td\n(" + escapedName + ") Tj\nET\n";
+        byte[] streamBytes = streamContent.getBytes(StandardCharsets.ISO_8859_1);
+        String obj5 = "5 0 obj\n<< /Length " + streamBytes.length + " >>\nstream\n" + streamContent + "endstream\nendobj\n";
+
+        String header = "%PDF-1.4\n";
+        int offset1 = header.getBytes(StandardCharsets.ISO_8859_1).length;
+        int offset2 = offset1 + obj1.getBytes(StandardCharsets.ISO_8859_1).length;
+        int offset3 = offset2 + obj2.getBytes(StandardCharsets.ISO_8859_1).length;
+        int offset4 = offset3 + obj3.getBytes(StandardCharsets.ISO_8859_1).length;
+        int offset5 = offset4 + obj4.getBytes(StandardCharsets.ISO_8859_1).length;
+        int startXref = offset5 + obj5.getBytes(StandardCharsets.ISO_8859_1).length;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("%PDF-1.4\n");
-        int obj1 = sb.length();
-        sb.append("1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n");
-        int obj2 = sb.length();
-        sb.append("2 0 obj\n<</Type /Pages /Kids [3 0 R] /Count 1>>\nendobj\n");
-        int obj3 = sb.length();
-        sb.append("3 0 obj\n<</Type /Page /Parent 2 0 R /Resources <</Font <</F1 4 0 R>>>> /MediaBox [0 0 612 792] /Contents 5 0 R>>\nendobj\n");
-        int obj4 = sb.length();
-        sb.append("4 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>\nendobj\n");
-        int obj5 = sb.length();
-        sb.append("5 0 obj\n<</Length ").append(streamLength).append(">>\nstream\n").append(streamContent).append("\nendstream\nendobj\n");
-        int startXref = sb.length();
+        sb.append(header);
+        sb.append(obj1);
+        sb.append(obj2);
+        sb.append(obj3);
+        sb.append(obj4);
+        sb.append(obj5);
         sb.append("xref\n0 6\n");
-        sb.append("0000000000 65535 f \n");
-        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj1));
-        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj2));
-        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj3));
-        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj4));
-        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \n", obj5));
-        sb.append("trailer\n<</Size 6 /Root 1 0 R>>\nstartxref\n").append(startXref).append("\n%%EOF\n");
+        sb.append("0000000000 65535 f \r\n");
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \r\n", offset1));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \r\n", offset2));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \r\n", offset3));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \r\n", offset4));
+        sb.append(String.format(java.util.Locale.US, "%010d 00000 n \r\n", offset5));
+        sb.append("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n").append(startXref).append("\n%%EOF\n");
 
         return sb.toString().getBytes(StandardCharsets.ISO_8859_1);
     }

@@ -57,6 +57,10 @@ public class DocumentVersion extends BaseEntity {
     @Column(name = "rejection_comments", columnDefinition = "TEXT")
     private String rejectionComments;
 
+    @jakarta.persistence.Lob
+    @Column(name = "file_bytes", columnDefinition = "BYTEA")
+    private byte[] fileBytes;
+
     @Column(name = "uploaded_by")
     private String uploadedBy;
 
