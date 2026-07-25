@@ -453,13 +453,29 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("data", List.of(dealFields));
 
-            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
+            // Read-Before-Write Verification GET
+            try {
+                log.info("[ZOHO_RAW_BEFORE] Fetching Deal state BEFORE update for Record ID: {}", targetRecordId);
+                Map<?, ?> getBefore = apiClient.get(url, Map.class);
+                log.info("[ZOHO_RAW_BEFORE] GET /Deals/{} Response: {}", targetRecordId, getBefore);
+            } catch (Exception exBefore) {
+                log.warn("[ZOHO_RAW_BEFORE_WARN] Could not fetch Deal before update: {}", exBefore.getMessage());
+            }
 
             try {
-                log.info("[KYC_SYNC] Executing Zoho CRM PUT /Deals request for Record ID: {} URL: {}", targetRecordId, url);
+                log.info("[ZOHO_RAW_PUT] Executing Zoho CRM PUT /Deals request for Record ID: {} URL: {}", targetRecordId, url);
+                log.info("[ZOHO_RAW_PUT_PAYLOAD] Payload: {}", requestBody);
                 Map<?, ?> response = apiClient.put(url, requestBody, Map.class);
-                log.info("[KYC_SYNC]\nBooking ID: {}\nDeal Name: {}\nResolved Deal ID: {}\nSearch Status: SUCCESS\nUpdate Status: SUCCESS\nHTTP Status: 200\nResponse Payload: {}",
-                        bookingId, bookingId, targetRecordId, response);
+                log.info("[ZOHO_RAW_PUT_RESPONSE] PUT /Deals/{} Response Payload: {}", targetRecordId, response);
+
+                // Read-After-Write Verification GET
+                try {
+                    log.info("[ZOHO_RAW_AFTER] Fetching Deal state AFTER update for Record ID: {}", targetRecordId);
+                    Map<?, ?> getAfter = apiClient.get(url, Map.class);
+                    log.info("[ZOHO_RAW_AFTER] GET /Deals/{} Response: {}", targetRecordId, getAfter);
+                } catch (Exception exAfter) {
+                    log.warn("[ZOHO_RAW_AFTER_WARN] Could not fetch Deal after update: {}", exAfter.getMessage());
+                }
 
                 application.setZohoDealRecordId(targetRecordId);
                 application.setZohoSyncStatus("SUCCESS");
