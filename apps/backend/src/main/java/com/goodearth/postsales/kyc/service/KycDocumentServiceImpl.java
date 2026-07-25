@@ -110,9 +110,11 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         KycApplicant applicant = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(kycApplicationId, applicantType)
                 .orElse(null);
 
-        Document document = documentRepository.findByKycApplicationIdAndDocumentTypeAndApplicantType(
+        List<Document> existingDocs = documentRepository.findAllByKycApplicationIdAndDocumentTypeAndApplicantType(
                 kycApplicationId, docType, applicantType
-        ).orElseGet(() -> {
+        );
+        Document document = !existingDocs.isEmpty() ? existingDocs.get(0) : null;
+        if (document == null) {
             Document newDoc = new Document();
             newDoc.setKycApplication(application);
             newDoc.setKycApplicant(applicant);
@@ -123,8 +125,8 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             newDoc.setStatus(DocumentStatus.ACTIVE);
             newDoc.setWorkDriveFileId("WD-FILE-" + UUID.randomUUID());
             newDoc.setFileName(fileName);
-            return documentRepository.save(newDoc);
-        });
+            document = documentRepository.save(newDoc);
+        }
 
         // Versioning logic: mark existing active versions as SUPERSEDED and not current
         List<DocumentVersion> existingVersions = documentVersionRepository.findByDocumentIdOrderByVersionNumberDesc(document.getId());

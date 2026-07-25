@@ -28,7 +28,14 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findByKycApplicationIdAndCategory(UUID kycApplicationId, DocumentCategory category);
 
-    @Query("SELECT DISTINCT d FROM Document d LEFT JOIN FETCH d.versions WHERE d.kycApplication.id = :kycApplicationId AND d.documentType = :documentType AND d.applicantType = :applicantType")
+    @Query("SELECT DISTINCT d FROM Document d LEFT JOIN FETCH d.versions WHERE d.kycApplication.id = :kycApplicationId AND d.documentType = :documentType AND d.applicantType = :applicantType ORDER BY d.createdAt DESC")
+    List<Document> findAllByKycApplicationIdAndDocumentTypeAndApplicantType(
+            @Param("kycApplicationId") UUID kycApplicationId,
+            @Param("documentType") DocumentType documentType,
+            @Param("applicantType") ApplicantType applicantType
+    );
+
+    @Query("SELECT DISTINCT d FROM Document d LEFT JOIN FETCH d.versions WHERE d.kycApplication.id = :kycApplicationId AND d.documentType = :documentType AND d.applicantType = :applicantType ORDER BY d.createdAt DESC")
     Optional<Document> findByKycApplicationIdAndDocumentTypeAndApplicantType(
             @Param("kycApplicationId") UUID kycApplicationId,
             @Param("documentType") DocumentType documentType,
