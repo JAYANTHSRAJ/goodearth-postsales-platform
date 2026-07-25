@@ -42,6 +42,7 @@ public class ZohoVerificationController {
     private final KycDocumentService kycDocumentService;
     private final ZohoKycSyncService zohoKycSyncService;
     private final com.goodearth.postsales.kyc.service.KycService kycService;
+    private final com.goodearth.postsales.kyc.repository.KycApplicantRepository kycApplicantRepository;
 
     public ZohoVerificationController(
             ZohoApiClient apiClient,
@@ -51,7 +52,8 @@ public class ZohoVerificationController {
             DocumentVersionRepository documentVersionRepository,
             KycDocumentService kycDocumentService,
             ZohoKycSyncService zohoKycSyncService,
-            com.goodearth.postsales.kyc.service.KycService kycService) {
+            com.goodearth.postsales.kyc.service.KycService kycService,
+            com.goodearth.postsales.kyc.repository.KycApplicantRepository kycApplicantRepository) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.kycApplicationRepository = kycApplicationRepository;
@@ -60,6 +62,7 @@ public class ZohoVerificationController {
         this.kycDocumentService = kycDocumentService;
         this.zohoKycSyncService = zohoKycSyncService;
         this.kycService = kycService;
+        this.kycApplicantRepository = kycApplicantRepository;
     }
 
     @GetMapping("/zoho-attachments")
@@ -378,17 +381,13 @@ public class ZohoVerificationController {
                     "alexander_pan_v1.pdf", "application/pdf", alexPanContent.length, alexPanContent, "SYSTEM_VERIFIER"
             );
 
-            com.goodearth.postsales.kyc.dto.KycApplicationResponseDto freshKycResponse = kycService.getKycApplicationByBooking(dealId);
-            com.goodearth.postsales.kyc.dto.ApplicantDto restoredJoint2 = freshKycResponse.getJointApplicants().stream()
-                    .filter(a -> a.getApplicantType() == ApplicantType.JOINT_2)
-                    .findFirst()
-                    .orElse(null);
+            com.goodearth.postsales.kyc.entity.KycApplicant freshJoint2Entity = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(kycApp.getId(), ApplicantType.JOINT_2).orElse(null);
 
             report.put("step12_13_verification_after_recreation", Map.of(
-                    "completely_new_joint_2_record_created", restoredJoint2 != null && "Alexander Smith".equals(restoredJoint2.getFullName()),
-                    "old_deleted_applicant_data_not_restored", restoredJoint2 != null && !"Robert Junior".equals(restoredJoint2.getFirstName()),
-                    "new_applicant_full_name", restoredJoint2 != null ? restoredJoint2.getFullName() : "N/A",
-                    "new_applicant_pan", restoredJoint2 != null ? restoredJoint2.getPanNumber() : "N/A",
+                    "completely_new_joint_2_record_created", freshJoint2Entity != null && "Alexander Smith".equals(freshJoint2Entity.getFullName()),
+                    "old_deleted_applicant_data_not_restored", freshJoint2Entity != null && !"Robert Junior".equals(freshJoint2Entity.getFirstName()),
+                    "new_applicant_full_name", freshJoint2Entity != null ? freshJoint2Entity.getFullName() : "N/A",
+                    "new_applicant_pan", freshJoint2Entity != null ? freshJoint2Entity.getPanNumber() : "N/A",
                     "new_documents_uploaded_successfully", alexPanRes != null && alexPanRes.getDocumentId() != null,
                     "zoho_crm_fields_updated_with_new_applicant", true,
                     "status", "SUCCESS"
