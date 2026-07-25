@@ -31,6 +31,17 @@ export const KycDocumentsPage: React.FC = () => {
     }
   };
 
+  const loadDataSilently = async () => {
+    try {
+      const data = await kycService.getKycByBooking(bookingId);
+      setKycData(data);
+      const prog = await kycService.getKycProgress(bookingId).catch(() => null);
+      if (prog) setProgress(prog);
+    } catch {
+      // Ignore background refresh error
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -101,7 +112,7 @@ export const KycDocumentsPage: React.FC = () => {
                 key={slot.documentId}
                 slot={slot}
                 kycApplicationId={kycData?.kycApplicationId || ''}
-                onRefresh={loadData}
+                onRefresh={loadDataSilently}
                 canEdit={canEdit}
               />
             ))
@@ -130,7 +141,7 @@ export const KycDocumentsPage: React.FC = () => {
                   key={slot.documentId}
                   slot={slot}
                   kycApplicationId={kycData?.kycApplicationId || ''}
-                  onRefresh={loadData}
+                  onRefresh={loadDataSilently}
                   canEdit={canEdit}
                 />
               ))
@@ -160,7 +171,7 @@ export const KycDocumentsPage: React.FC = () => {
                   key={slot.documentId}
                   slot={slot}
                   kycApplicationId={kycData?.kycApplicationId || ''}
-                  onRefresh={loadData}
+                  onRefresh={loadDataSilently}
                   canEdit={canEdit}
                 />
               ))

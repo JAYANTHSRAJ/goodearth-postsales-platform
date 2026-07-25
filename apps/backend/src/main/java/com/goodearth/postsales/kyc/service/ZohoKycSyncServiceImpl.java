@@ -761,7 +761,13 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 }
             };
 
-            body.add("file", byteArrayResource);
+            org.springframework.http.HttpHeaders partHeaders = new org.springframework.http.HttpHeaders();
+            String effectiveContentType = (contentType != null && !contentType.isBlank()) ? contentType : "application/pdf";
+            partHeaders.setContentType(org.springframework.http.MediaType.parseMediaType(effectiveContentType));
+            partHeaders.setContentDispositionFormData("file", attachmentFileName);
+            org.springframework.http.HttpEntity<ByteArrayResource> part = new org.springframework.http.HttpEntity<>(byteArrayResource, partHeaders);
+
+            body.add("file", part);
 
             log.info("[ZOHO_ATTACHMENT_UPLOADING] Uploading attachment '{}' to Deal ID {}", attachmentFileName, dealId);
             Map<?, ?> response = apiClient.postMultipart(uploadUrl, body, Map.class);

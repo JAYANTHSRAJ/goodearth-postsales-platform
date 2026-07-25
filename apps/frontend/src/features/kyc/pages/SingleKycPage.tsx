@@ -93,6 +93,18 @@ export const SingleKycPage: React.FC = () => {
     }
   };
 
+  const refreshDocumentsSilently = async () => {
+    try {
+      const data = await kycService.getKycByBooking(bookingId);
+      setInitialData(data);
+      const targetId = data.bookingId || bookingId;
+      const summary = await kycService.validateKyc(targetId).catch(() => null);
+      if (summary) setValidationSummary(summary);
+    } catch (err) {
+      console.warn('Failed silent document refresh:', err);
+    }
+  };
+
   useEffect(() => {
     loadInitialData();
   }, [bookingId, isNewFormRoute]);
@@ -717,7 +729,7 @@ export const SingleKycPage: React.FC = () => {
                       key={slot.documentId}
                       slot={slot}
                       kycApplicationId={kycApplicationId}
-                      onRefresh={loadInitialData}
+                      onRefresh={refreshDocumentsSilently}
                       canEdit={canEdit}
                     />
                   ))}
