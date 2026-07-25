@@ -57,7 +57,7 @@ public class DocumentVersion extends BaseEntity {
     @Column(name = "rejection_comments", columnDefinition = "TEXT")
     private String rejectionComments;
 
-    @jakarta.persistence.Lob
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.BINARY)
     @Column(name = "file_data", columnDefinition = "BYTEA")
     private byte[] fileData;
 
