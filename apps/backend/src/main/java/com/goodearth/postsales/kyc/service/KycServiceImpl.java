@@ -439,17 +439,17 @@ public class KycServiceImpl implements KycService {
             dealFields.put("Has_Third_Applicant", dto.getHasThirdApplicant());
         }
         if (dto.getThirdApplicantTitle() != null) {
-            dealFields.put("Title_T", dto.getThirdApplicantTitle());
+            // dealFields.put("Title_T", dto.getThirdApplicantTitle());
             dealFields.put("Title_S", dto.getThirdApplicantTitle());
             dealFields.put("Third_Applicant_Title", dto.getThirdApplicantTitle());
         }
         if (dto.getThirdApplicantFirstName() != null) {
-            dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
+            // dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
             dealFields.put("First_Name_S", dto.getThirdApplicantFirstName());
             dealFields.put("Third_Applicant_First_Name", dto.getThirdApplicantFirstName());
         }
         if (dto.getThirdApplicantLastName() != null) {
-            dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
+            // dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
             dealFields.put("Last_Name_S", dto.getThirdApplicantLastName());
             dealFields.put("Third_Applicant_Last_Name", dto.getThirdApplicantLastName());
         }
