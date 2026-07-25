@@ -1423,7 +1423,13 @@ public class KycServiceImpl implements KycService {
             applicant.setAddressCountry("India");
         }
 
-        kycApplicantRepository.save(applicant);
+        KycApplicant saved = kycApplicantRepository.save(applicant);
+        if (application.getApplicants() == null) {
+            application.setApplicants(new java.util.ArrayList<>());
+        }
+        if (!application.getApplicants().contains(saved)) {
+            application.getApplicants().add(saved);
+        }
     }
 
     private int calculateCompletionPercentage(KycApplication application) {
