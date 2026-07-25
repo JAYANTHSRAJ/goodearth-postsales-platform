@@ -453,6 +453,8 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("data", List.of(dealFields));
 
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
+
             // Read-Before-Write Verification GET
             try {
                 log.info("[ZOHO_RAW_BEFORE] Fetching Deal state BEFORE update for Record ID: {}", targetRecordId);
@@ -606,7 +608,6 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         bookingId, bookingId, targetRecordId, statusCode, errorMsg);
                 throw new com.goodearth.postsales.kyc.exception.KycValidationException("Zoho CRM update failed: " + errorMsg);
             }
-            return true;
         } catch (Exception ex) {
             log.error("Failed to sync applicant info map to Zoho CRM for booking: {}", bookingId, ex);
             return false;
@@ -657,12 +658,6 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
         } finally {
             clearRequestCache();
         }
-    }
-
-    @Override
-    public boolean verifyDealExists(String dealIdOrBookingId) {
-        String resolvedId = resolveDealRecordIdByDealName(dealIdOrBookingId);
-        return resolvedId != null;
     }
 
     private void clearRequestCache() {
