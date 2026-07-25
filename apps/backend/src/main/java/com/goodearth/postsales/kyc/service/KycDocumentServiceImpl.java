@@ -161,7 +161,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         newVersion.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         newVersion.setUploadedAt(LocalDateTime.now());
         newVersion.setIsCurrent(true);
-        newVersion.setFileBytes(content);
+        newVersion.setFileData(content);
 
         DocumentVersion savedVersion = documentVersionRepository.saveAndFlush(newVersion);
 
@@ -295,7 +295,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     .orElseThrow(() -> new CustomException("Current active version not found for document", HttpStatus.NOT_FOUND));
         }
 
-        byte[] binaryContent = targetVersion.getFileBytes();
+        byte[] binaryContent = targetVersion.getFileData();
         String mimeType = targetVersion.getMimeType() != null ? targetVersion.getMimeType() : "application/pdf";
 
         // Attempt reading stored file binary from disk if DB byte array is null

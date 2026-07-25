@@ -58,8 +58,8 @@ public class DocumentVersion extends BaseEntity {
     private String rejectionComments;
 
     @jakarta.persistence.Lob
-    @Column(name = "file_bytes", columnDefinition = "BYTEA")
-    private byte[] fileBytes;
+    @Column(name = "file_data", columnDefinition = "BYTEA")
+    private byte[] fileData;
 
     @Column(name = "uploaded_by")
     private String uploadedBy;

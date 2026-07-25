@@ -1,11 +1,11 @@
 databaseChangeLog:
   - changeSet:
-      id: 3.19-add-file-bytes-to-document-versions
+      id: 3.19-add-file-data-to-document-versions
       author: antigravity
       changes:
         - addColumn:
             tableName: document_versions
             columns:
               - column:
-                  name: file_bytes
+                  name: file_data
                   type: BYTEA
