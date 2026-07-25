@@ -216,6 +216,7 @@ public class ZohoVerificationController {
     }
 
     @GetMapping("/third-applicant-lifecycle")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Map<String, Object>> runThirdApplicantLifecycleVerification(
             @RequestParam(value = "dealId", defaultValue = "6638590000147048029") String dealId) {
 
