@@ -128,9 +128,11 @@ public class KycDocumentServiceImpl implements KycDocumentService {
 
         // Versioning logic: mark existing active versions as SUPERSEDED and not current
         List<DocumentVersion> existingVersions = documentVersionRepository.findByDocumentIdOrderByVersionNumberDesc(document.getId());
-        int nextVersionNumber = 1;
+        int maxDbVersion = existingVersions.stream().mapToInt(v -> v.getVersionNumber() != null ? v.getVersionNumber() : 0).max().orElse(0);
+        int maxMemVersion = document.getVersions() != null ? document.getVersions().stream().mapToInt(v -> v.getVersionNumber() != null ? v.getVersionNumber() : 0).max().orElse(0) : 0;
+        int nextVersionNumber = Math.max(maxDbVersion, maxMemVersion) + 1;
+
         if (!existingVersions.isEmpty()) {
-            nextVersionNumber = existingVersions.get(0).getVersionNumber() + 1;
             for (DocumentVersion ver : existingVersions) {
                 if (Boolean.TRUE.equals(ver.getIsCurrent())) {
                     ver.setIsCurrent(false);
