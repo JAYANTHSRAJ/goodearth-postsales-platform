@@ -119,17 +119,9 @@ public class KycServiceImpl implements KycService {
         if (dto.getApplicationDate() != null) application.setApplicationDate(dto.getApplicationDate());
         if ("No".equalsIgnoreCase(dto.getHasThirdApplicant())) {
             application.setHasThirdApplicant("No");
+            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
                     .ifPresent(existing -> {
-                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
-                        for (Document d : docs) {
-                            if (d.getApplicantType() == ApplicantType.JOINT_2) {
-                                d.setKycApplicant(null);
-                                documentRepository.save(d);
-                                documentRepository.delete(d);
-                            }
-                        }
-                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
                         kycApplicantRepository.flush();
                     });
@@ -143,31 +135,15 @@ public class KycServiceImpl implements KycService {
         if ("No".equalsIgnoreCase(dto.getHasCoApplicant())) {
             application.setHasCoApplicant("No");
             application.setHasThirdApplicant("No");
+            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_1);
+            documentRepository.unlinkKycApplicant(application.getId(), ApplicantType.JOINT_2);
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_1)
                     .ifPresent(existing -> {
-                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
-                        for (Document d : docs) {
-                            if (d.getApplicantType() == ApplicantType.JOINT_1 || d.getApplicantType() == ApplicantType.JOINT_2) {
-                                d.setKycApplicant(null);
-                                documentRepository.save(d);
-                                documentRepository.delete(d);
-                            }
-                        }
-                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
                         kycApplicantRepository.flush();
                     });
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), ApplicantType.JOINT_2)
                     .ifPresent(existing -> {
-                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
-                        for (Document d : docs) {
-                            if (d.getApplicantType() == ApplicantType.JOINT_2) {
-                                d.setKycApplicant(null);
-                                documentRepository.save(d);
-                                documentRepository.delete(d);
-                            }
-                        }
-                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
                         kycApplicantRepository.flush();
                     });
@@ -1362,17 +1338,9 @@ public class KycServiceImpl implements KycService {
         // Deletion Decision Rules:
         // 1. Delete JOINT_2 if Third Applicant is toggled to No or Co-Applicant is No
         if (type == ApplicantType.JOINT_2 && (!hasThirdApplicantYes || !hasCoApplicantYes)) {
+            documentRepository.unlinkKycApplicant(application.getId(), type);
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
                     .ifPresent(existing -> {
-                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
-                        for (Document d : docs) {
-                            if (d.getApplicantType() == type) {
-                                d.setKycApplicant(null);
-                                documentRepository.save(d);
-                                documentRepository.delete(d);
-                            }
-                        }
-                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
                         kycApplicantRepository.flush();
                     });
@@ -1384,17 +1352,9 @@ public class KycServiceImpl implements KycService {
 
         // 2. Delete JOINT_1 if Co-Applicant is toggled to No
         if (type == ApplicantType.JOINT_1 && !hasCoApplicantYes) {
+            documentRepository.unlinkKycApplicant(application.getId(), type);
             kycApplicantRepository.findByKycApplicationIdAndApplicantType(application.getId(), type)
                     .ifPresent(existing -> {
-                        List<Document> docs = documentRepository.findByKycApplicationId(application.getId());
-                        for (Document d : docs) {
-                            if (d.getApplicantType() == type) {
-                                d.setKycApplicant(null);
-                                documentRepository.save(d);
-                                documentRepository.delete(d);
-                            }
-                        }
-                        documentRepository.flush();
                         kycApplicantRepository.delete(existing);
                         kycApplicantRepository.flush();
                     });

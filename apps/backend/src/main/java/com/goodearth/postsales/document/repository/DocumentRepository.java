@@ -34,4 +34,8 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
             @Param("documentType") DocumentType documentType,
             @Param("applicantType") ApplicantType applicantType
     );
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Document d SET d.kycApplicant = null WHERE d.kycApplication.id = :kycApplicationId AND d.applicantType = :applicantType")
+    void unlinkKycApplicant(@Param("kycApplicationId") UUID kycApplicationId, @Param("applicantType") ApplicantType applicantType);
 }
