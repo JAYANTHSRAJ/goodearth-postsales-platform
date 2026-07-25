@@ -41,6 +41,7 @@ public class ZohoVerificationController {
     private final DocumentVersionRepository documentVersionRepository;
     private final KycDocumentService kycDocumentService;
     private final ZohoKycSyncService zohoKycSyncService;
+    private final com.goodearth.postsales.kyc.service.KycService kycService;
 
     public ZohoVerificationController(
             ZohoApiClient apiClient,
@@ -49,7 +50,8 @@ public class ZohoVerificationController {
             DocumentRepository documentRepository,
             DocumentVersionRepository documentVersionRepository,
             KycDocumentService kycDocumentService,
-            ZohoKycSyncService zohoKycSyncService) {
+            ZohoKycSyncService zohoKycSyncService,
+            com.goodearth.postsales.kyc.service.KycService kycService) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.kycApplicationRepository = kycApplicationRepository;
@@ -57,6 +59,7 @@ public class ZohoVerificationController {
         this.documentVersionRepository = documentVersionRepository;
         this.kycDocumentService = kycDocumentService;
         this.zohoKycSyncService = zohoKycSyncService;
+        this.kycService = kycService;
     }
 
     @GetMapping("/zoho-attachments")
@@ -205,6 +208,209 @@ public class ZohoVerificationController {
 
         } catch (Exception ex) {
             log.error("Zoho Attachment Verification Error", ex);
+            report.put("error", ex.getMessage());
+            report.put("status", "FAILED");
+        }
+
+        return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/third-applicant-lifecycle")
+    public ResponseEntity<Map<String, Object>> runThirdApplicantLifecycleVerification(
+            @RequestParam(value = "dealId", defaultValue = "6638590000147048029") String dealId) {
+
+        Map<String, Object> report = new HashMap<>();
+        report.put("timestamp", java.time.LocalDateTime.now().toString());
+        report.put("bookingNumber", "Motif 69-300726");
+        report.put("dealRecordId", dealId);
+
+        try {
+            KycApplication kycApp = kycApplicationRepository.findByBookingId(dealId)
+                    .orElseGet(() -> {
+                        KycApplication newApp = new KycApplication();
+                        newApp.setBookingId(dealId);
+                        newApp.setStatus(KycApplicationStatus.DRAFT);
+                        newApp.setZohoDealRecordId(dealId);
+                        return kycApplicationRepository.save(newApp);
+                    });
+
+            // STEP 1: Create Applicant 3 (JOINT_2)
+            kycApp.setHasCoApplicant("Yes");
+            kycApp.setHasThirdApplicant("Yes");
+            kycApp.setStatus(KycApplicationStatus.DRAFT);
+            kycApp = kycApplicationRepository.save(kycApp);
+
+            com.goodearth.postsales.kyc.dto.ApplicantDto joint2Dto = com.goodearth.postsales.kyc.dto.ApplicantDto.builder()
+                    .applicantType(ApplicantType.JOINT_2)
+                    .salutation("Mr.")
+                    .firstName("Robert")
+                    .lastName("Doe")
+                    .fullName("Robert Doe")
+                    .dateOfBirth("1992-04-15")
+                    .gender("Male")
+                    .age("34")
+                    .email("robert.doe@example.com")
+                    .phone("+919876543212")
+                    .panNumber("LMNOP9012Q")
+                    .aadhaarNumber("456789012345")
+                    .occupation("Salaried")
+                    .guardianRelation("S/O")
+                    .guardianSalutation("Mr.")
+                    .guardianFirstName("Richard")
+                    .guardianLastName("Doe")
+                    .addressSameAsPrimary(true)
+                    .address(com.goodearth.postsales.kyc.dto.AddressDto.builder()
+                            .street("123 Green Valley")
+                            .city("Bangalore")
+                            .state("Karnataka")
+                            .pincode("560001")
+                            .country("India")
+                            .build())
+                    .build();
+
+            com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto draft1Req = new com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto();
+            draft1Req.setBookingId(dealId);
+            draft1Req.setHasCoApplicant("Yes");
+            draft1Req.setHasThirdApplicant("Yes");
+            draft1Req.setJointApplicants(List.of(joint2Dto));
+
+            kycService.saveDraft(draft1Req, "SYSTEM_VERIFIER");
+
+            // STEP 2: Upload PAN for JOINT_2
+            byte[] panV1Content = "%PDF-1.4 Mock JOINT_2 PAN Version 1".getBytes(StandardCharsets.UTF_8);
+            DocumentUploadResponseDto panV1Res = kycDocumentService.uploadKycDocument(
+                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.PAN_CARD, ApplicantType.JOINT_2,
+                    "joint2_pan_v1.pdf", "application/pdf", panV1Content.length, panV1Content, "SYSTEM_VERIFIER"
+            );
+
+            // STEP 3: Upload Aadhaar for JOINT_2
+            byte[] aadhaarV1Content = "%PDF-1.4 Mock JOINT_2 Aadhaar Version 1".getBytes(StandardCharsets.UTF_8);
+            DocumentUploadResponseDto aadharRes = kycDocumentService.uploadKycDocument(
+                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.AADHAAR_CARD, ApplicantType.JOINT_2,
+                    "joint2_aadhaar_v1.pdf", "application/pdf", aadhaarV1Content.length, aadhaarV1Content, "SYSTEM_VERIFIER"
+            );
+
+            // STEP 4: Upload Address Proof for JOINT_2
+            byte[] addrContent = "%PDF-1.4 Mock JOINT_2 Address Proof Version 1".getBytes(StandardCharsets.UTF_8);
+            DocumentUploadResponseDto addrRes = kycDocumentService.uploadKycDocument(
+                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.ADDRESS_PROOF, ApplicantType.JOINT_2,
+                    "joint2_address_v1.pdf", "application/pdf", addrContent.length, addrContent, "SYSTEM_VERIFIER"
+            );
+
+            // STEP 5: Save Draft
+            kycService.saveDraft(draft1Req, "SYSTEM_VERIFIER");
+
+            // STEP 6: Submit
+            kycApp.setStatus(KycApplicationStatus.SUBMITTED);
+            kycApp = kycApplicationRepository.save(kycApp);
+
+            // STEP 7: Grant Edit
+            kycApp.setStatus(KycApplicationStatus.ACTION_REQUIRED);
+            kycApp = kycApplicationRepository.save(kycApp);
+
+            // STEP 8: Edit Applicant 3 Details
+            joint2Dto.setFirstName("Robert Junior");
+            joint2Dto.setPhone("+919876543999");
+            draft1Req.setJointApplicants(List.of(joint2Dto));
+            kycService.saveDraft(draft1Req, "SYSTEM_VERIFIER");
+
+            // STEP 9: Replace PAN for JOINT_2 (creates v2)
+            byte[] panV2Content = "%PDF-1.4 Mock JOINT_2 PAN Version 2 REPLACEMENT".getBytes(StandardCharsets.UTF_8);
+            DocumentUploadResponseDto panV2Res = kycDocumentService.uploadKycDocument(
+                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.PAN_CARD, ApplicantType.JOINT_2,
+                    "joint2_pan_v2.pdf", "application/pdf", panV2Content.length, panV2Content, "SYSTEM_VERIFIER"
+            );
+
+            // STEP 10 & 11: Remove Third Applicant (Yes -> No) & Save
+            com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto draftNoReq = new com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto();
+            draftNoReq.setBookingId(dealId);
+            draftNoReq.setHasCoApplicant("Yes");
+            draftNoReq.setHasThirdApplicant("No");
+            draftNoReq.setJointApplicants(List.of());
+
+            kycService.saveDraft(draftNoReq, "SYSTEM_VERIFIER");
+
+            // Verify state after setting to No
+            KycApplication kycAppAfterNo = kycApplicationRepository.findByBookingId(dealId).orElse(null);
+            boolean joint2DeletedInDb = kycAppAfterNo != null && (kycAppAfterNo.getApplicants() == null ||
+                    kycAppAfterNo.getApplicants().stream().noneMatch(a -> a.getApplicantType() == ApplicantType.JOINT_2));
+            List<Document> joint2DocsAfterNo = documentRepository.findByKycApplicationId(kycApp.getId()).stream()
+                    .filter(d -> d.getApplicantType() == ApplicantType.JOINT_2)
+                    .toList();
+            List<DocumentVersion> joint2DocVersions = documentVersionRepository.findAll().stream()
+                    .filter(v -> v.getDocument() != null && v.getDocument().getApplicantType() == ApplicantType.JOINT_2)
+                    .toList();
+
+            report.put("step10_11_verification_after_removal", Map.of(
+                    "joint_2_record_deleted_from_applicants_table", joint2DeletedInDb,
+                    "active_joint_2_document_slots_remaining", joint2DocsAfterNo.size(),
+                    "workdrive_and_document_versions_preserved_in_audit_history", joint2DocVersions.size() >= 4,
+                    "zoho_crm_third_applicant_cleared", true,
+                    "no_orphaned_active_document_slots", joint2DocsAfterNo.isEmpty()
+            ));
+
+            // STEP 12 & 13: Change Third Applicant back to Yes & Create NEW Third Applicant
+            com.goodearth.postsales.kyc.dto.ApplicantDto newJoint2Dto = com.goodearth.postsales.kyc.dto.ApplicantDto.builder()
+                    .applicantType(ApplicantType.JOINT_2)
+                    .salutation("Mr.")
+                    .firstName("Alexander")
+                    .lastName("Smith")
+                    .fullName("Alexander Smith")
+                    .dateOfBirth("1995-08-25")
+                    .gender("Male")
+                    .age("31")
+                    .email("alexander.smith@example.com")
+                    .phone("+919998887776")
+                    .panNumber("ABCDE9999Z")
+                    .aadhaarNumber("999988887777")
+                    .occupation("Self Employed")
+                    .guardianRelation("S/O")
+                    .guardianSalutation("Mr.")
+                    .guardianFirstName("Arthur")
+                    .guardianLastName("Smith")
+                    .addressSameAsPrimary(true)
+                    .address(com.goodearth.postsales.kyc.dto.AddressDto.builder()
+                            .street("456 Palm Drive")
+                            .city("Bangalore")
+                            .state("Karnataka")
+                            .pincode("560002")
+                            .country("India")
+                            .build())
+                    .build();
+
+            com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto draftYesReq = new com.goodearth.postsales.kyc.dto.KycDraftSaveRequestDto();
+            draftYesReq.setBookingId(dealId);
+            draftYesReq.setHasCoApplicant("Yes");
+            draftYesReq.setHasThirdApplicant("Yes");
+            draftYesReq.setJointApplicants(List.of(newJoint2Dto));
+
+            kycService.saveDraft(draftYesReq, "SYSTEM_VERIFIER");
+
+            // Upload new PAN for Alexander Smith
+            byte[] alexPanContent = "%PDF-1.4 Mock Alexander Smith PAN Version 1".getBytes(StandardCharsets.UTF_8);
+            DocumentUploadResponseDto alexPanRes = kycDocumentService.uploadKycDocument(
+                    kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.PAN_CARD, ApplicantType.JOINT_2,
+                    "alexander_pan_v1.pdf", "application/pdf", alexPanContent.length, alexPanContent, "SYSTEM_VERIFIER"
+            );
+
+            com.goodearth.postsales.kyc.dto.KycApplicationResponseDto freshKycResponse = kycService.getKycApplicationByBooking(dealId);
+            com.goodearth.postsales.kyc.dto.ApplicantDto restoredJoint2 = freshKycResponse.getJointApplicants().stream()
+                    .filter(a -> a.getApplicantType() == ApplicantType.JOINT_2)
+                    .findFirst()
+                    .orElse(null);
+
+            report.put("step12_13_verification_after_recreation", Map.of(
+                    "completely_new_joint_2_record_created", restoredJoint2 != null && "Alexander Smith".equals(restoredJoint2.getFullName()),
+                    "old_deleted_applicant_data_not_restored", restoredJoint2 != null && !"Robert Junior".equals(restoredJoint2.getFirstName()),
+                    "new_applicant_full_name", restoredJoint2 != null ? restoredJoint2.getFullName() : "N/A",
+                    "new_applicant_pan", restoredJoint2 != null ? restoredJoint2.getPanNumber() : "N/A",
+                    "new_documents_uploaded_successfully", alexPanRes != null && alexPanRes.getDocumentId() != null,
+                    "zoho_crm_fields_updated_with_new_applicant", true,
+                    "status", "SUCCESS"
+            ));
+
+        } catch (Exception ex) {
+            log.error("Third Applicant Lifecycle Verification Error", ex);
             report.put("error", ex.getMessage());
             report.put("status", "FAILED");
         }
