@@ -54,6 +54,36 @@ public class ZohoApiClient {
         }
     }
 
+    public byte[] downloadWorkDriveFile(String urlOrFileId) {
+        try {
+            byte[] content = restClient.get()
+                    .uri(urlOrFileId)
+                    .retrieve()
+                    .body(byte[].class);
+            if (content != null) {
+                log.info("[WORKDRIVE_DOWNLOAD_TRACE] WorkDrive download complete. Length: {} bytes. First 16 bytes: {}",
+                        content.length, formatFirstBytes(content, 16));
+            }
+            return content;
+        } catch (Exception ex) {
+            handleAndLogException("GET_WORKDRIVE_DOWNLOAD", urlOrFileId, ex);
+            throw new ZohoIntegrationException("WorkDrive download failed for URL: " + urlOrFileId + " - " + ex.getMessage(), ex);
+        }
+    }
+
+    public static String formatFirstBytes(byte[] bytes, int count) {
+        if (bytes == null || bytes.length == 0) return "EMPTY";
+        int len = Math.min(bytes.length, count);
+        StringBuilder hex = new StringBuilder();
+        StringBuilder ascii = new StringBuilder();
+        for (int i = 0; i < len; i++) {
+            hex.append(String.format("%02X ", bytes[i]));
+            char c = (char) (bytes[i] & 0xFF);
+            ascii.append((c >= 32 && c <= 126) ? c : '.');
+        }
+        return hex.toString().trim() + " | ASCII: '" + ascii.toString() + "'";
+    }
+
     public <T> T post(String url, Object body, Class<T> responseType) {
         try {
             return restClient.post()

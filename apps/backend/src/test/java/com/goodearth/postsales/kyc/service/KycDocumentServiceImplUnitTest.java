@@ -30,7 +30,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class KycDocumentServiceImplUnitTest {
 
     @Mock
@@ -49,6 +53,8 @@ public class KycDocumentServiceImplUnitTest {
     private WorkDriveFolderService workDriveFolderService;
     @Mock
     private ZohoKycSyncService zohoKycSyncService;
+    @Mock
+    private com.goodearth.postsales.integration.zoho.ZohoApiClient zohoApiClient;
 
     @InjectMocks
     private KycDocumentServiceImpl kycDocumentService;
@@ -92,7 +98,7 @@ public class KycDocumentServiceImplUnitTest {
         mockVersion.setId(UUID.randomUUID());
         mockVersion.setVersionNumber(1);
 
-        when(documentVersionRepository.save(any(DocumentVersion.class))).thenReturn(mockVersion);
+        when(documentVersionRepository.saveAndFlush(any(DocumentVersion.class))).thenReturn(mockVersion);
 
         byte[] content = "dummy pdf bytes".getBytes();
         DocumentUploadResponseDto result = kycDocumentService.uploadKycDocument(

@@ -50,6 +50,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
     private final KycAuditService auditService;
     private final WorkDriveFolderService workDriveFolderService;
     private final ZohoKycSyncService zohoKycSyncService;
+    private final com.goodearth.postsales.integration.zoho.ZohoApiClient zohoApiClient;
 
     public KycDocumentServiceImpl(
             KycApplicationRepository kycApplicationRepository,
@@ -59,7 +60,8 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             DocumentVersionMapper documentVersionMapper,
             KycAuditService auditService,
             WorkDriveFolderService workDriveFolderService,
-            ZohoKycSyncService zohoKycSyncService) {
+            ZohoKycSyncService zohoKycSyncService,
+            com.goodearth.postsales.integration.zoho.ZohoApiClient zohoApiClient) {
         this.kycApplicationRepository = kycApplicationRepository;
         this.kycApplicantRepository = kycApplicantRepository;
         this.documentRepository = documentRepository;
@@ -68,6 +70,7 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         this.auditService = auditService;
         this.workDriveFolderService = workDriveFolderService;
         this.zohoKycSyncService = zohoKycSyncService;
+        this.zohoApiClient = zohoApiClient;
     }
 
     @Override
@@ -318,14 +321,26 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             }
         }
 
-        // Fallback to valid minimal PDF if disk/DB binary does not exist
+        // Attempt downloading directly from WorkDrive if DB & disk are empty
+        if ((binaryContent == null || binaryContent.length == 0) && targetVersion.getWorkDriveFileId() != null && !targetVersion.getWorkDriveFileId().startsWith("WD-FILE-")) {
+            try {
+                binaryContent = zohoApiClient.downloadWorkDriveFile(targetVersion.getWorkDriveFileId());
+            } catch (Exception e) {
+                log.warn("Failed to download binary from WorkDrive for ID {}: {}", targetVersion.getWorkDriveFileId(), e.getMessage());
+            }
+        }
+
+        // Fallback to valid minimal PDF if disk/DB/WorkDrive binary does not exist
         if (binaryContent == null || binaryContent.length == 0) {
             binaryContent = generateMinimalPdfBytes(targetVersion.getFileName());
             mimeType = "application/pdf";
         }
 
-        log.info("[DOCUMENT_PREVIEW_TRACE]\nDocument ID: {}\nVersion Number: {}\nFilename: {}\nMIME Type: {}\nStream Size: {} bytes\nWorkDrive File ID: {}",
-                documentId, targetVersion.getVersionNumber(), targetVersion.getFileName(), mimeType, binaryContent.length, targetVersion.getWorkDriveFileId());
+        String first16BytesTrace = com.goodearth.postsales.integration.zoho.ZohoApiClient.formatFirstBytes(binaryContent, 16);
+        String first32BytesTrace = com.goodearth.postsales.integration.zoho.ZohoApiClient.formatFirstBytes(binaryContent, 32);
+
+        log.info("[DOCUMENT_PREVIEW_TRACE]\nDocument ID: {}\nVersion Number: {}\nFilename: {}\nMIME Type: {}\nStream Size: {} bytes\nWorkDrive File ID: {}\nFirst 16 Bytes: {}\nFirst 32 Bytes: {}",
+                documentId, targetVersion.getVersionNumber(), targetVersion.getFileName(), mimeType, binaryContent.length, targetVersion.getWorkDriveFileId(), first16BytesTrace, first32BytesTrace);
 
         return KycDocumentStreamDto.builder()
                 .fileName(targetVersion.getFileName())

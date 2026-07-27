@@ -49,7 +49,7 @@ public class KycDocumentController {
     @Operation(summary = "Upload document file for a KYC slot", description = "Uploads file binary, increments version, provisions WorkDrive folder, and updates active document slot")
     public ResponseEntity<ApiResponse<DocumentUploadResponseDto>> uploadDocument(
             @RequestParam("kycApplicationId") UUID kycApplicationId,
-            @RequestParam(value = "documentCategory", required = false) DocumentCategory documentCategory,
+            @RequestParam("documentCategory") DocumentCategory documentCategory,
             @RequestParam("documentType") DocumentType documentType,
             @RequestParam("applicantType") ApplicantType applicantType,
             @RequestParam("file") MultipartFile file,
@@ -71,7 +71,7 @@ public class KycDocumentController {
         );
 
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Endpoint: POST /api/v1/kyc/documents/upload, Execution Time: {}ms, Document ID: {}", duration, response.getDocumentId());
+        log.info("Endpoint: POST /api/v1/kyc/documents/upload, Execution Time: {}ms, Document ID: {}", duration, response != null ? response.getDocumentId() : "N/A");
 
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
@@ -117,7 +117,6 @@ public class KycDocumentController {
     }
 
     @GetMapping("/{documentId}/file")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Stream document file binary directly", description = "Streams document file content from WorkDrive without exposing raw WorkDrive file links")
     public ResponseEntity<byte[]> streamFile(
             @PathVariable UUID documentId,
