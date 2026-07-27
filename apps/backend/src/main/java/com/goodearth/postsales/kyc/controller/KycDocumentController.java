@@ -117,6 +117,7 @@ public class KycDocumentController {
     }
 
     @GetMapping("/{documentId}/file")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Stream document file binary directly", description = "Streams document file content from WorkDrive without exposing raw WorkDrive file links")
     public ResponseEntity<byte[]> streamFile(
             @PathVariable UUID documentId,

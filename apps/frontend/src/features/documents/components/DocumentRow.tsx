@@ -26,11 +26,37 @@ export const DocumentRow: React.FC<DocumentRowProps> = ({ document, onVerify }) 
     }
   };
 
-  const handleDownload = () => {
-    if (document.workDriveFileId) {
+  const handleDownload = async () => {
+    if (document.id) {
+      const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+      const fileUrl = `${baseUrl}/kyc/documents/${document.id}/file`;
+      const { accessToken } = useAuthStore.getState();
+      const headers: Record<string, string> = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      try {
+        const res = await fetch(fileUrl, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = document.name || 'document.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        if (document.workDriveFileId) {
+          window.open(`https://workdrive.zoho.com/file/${document.workDriveFileId}`, '_blank');
+        }
+      }
+    } else if (document.workDriveFileId) {
       window.open(`https://workdrive.zoho.com/file/${document.workDriveFileId}`, '_blank');
     } else {
-      alert('This document does not have an active WorkDrive reference.');
+      alert('This document does not have an active reference.');
     }
   };
 
