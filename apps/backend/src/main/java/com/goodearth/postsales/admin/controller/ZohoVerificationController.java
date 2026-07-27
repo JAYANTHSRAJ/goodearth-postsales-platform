@@ -357,6 +357,7 @@ public class ZohoVerificationController {
                     .guardianFirstName("Arthur")
                     .guardianLastName("Smith")
                     .addressSameAsPrimary(true)
+                    .addressSameAsSecondary(false)
                     .address(com.goodearth.postsales.kyc.dto.AddressDto.builder()
                             .street("456 Palm Drive")
                             .city("Bangalore")

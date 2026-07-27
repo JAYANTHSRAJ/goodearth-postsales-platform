@@ -476,7 +476,6 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                         if (app.getEmail() != null) dealFields.put("Third_Applicant_Email", app.getEmail());
                         if (app.getPhone() != null) dealFields.put("Third_Applicant_Phone", app.getPhone());
                         if (app.getGuardianRelation() != null) {
-                            dealFields.put("S_o_D_o_W_o_T", app.getGuardianRelation());
                             dealFields.put("S_o_D_o_W_o_S", app.getGuardianRelation());
                         }
                         if (app.getDateOfBirth() != null) dealFields.put("Third_Applicant_Date_of_Birth", app.getDateOfBirth());

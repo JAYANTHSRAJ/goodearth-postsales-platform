@@ -494,7 +494,6 @@ public class KycServiceImpl implements KycService {
             dealFields.put("Third_Applicant_Aadhar", dto.getThirdApplicantAadhar());
         }
         if (dto.getThirdApplicantSoDoWo() != null) {
-            dealFields.put("S_o_D_o_W_o_T", dto.getThirdApplicantSoDoWo());
             dealFields.put("S_o_D_o_W_o_S", dto.getThirdApplicantSoDoWo());
         }
         if (dto.getThirdApplicantFatherFirstName() != null) {
