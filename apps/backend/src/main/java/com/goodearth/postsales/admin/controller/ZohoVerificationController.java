@@ -96,7 +96,7 @@ public class ZohoVerificationController {
                     });
 
             // STEP 2 - UPLOAD PAN V1
-            byte[] panV1Content = "%PDF-1.4 Mock PAN Card Document Binary Version 1 for Motif 69-300726".getBytes(StandardCharsets.UTF_8);
+            byte[] panV1Content = generateValidRealPdf("GOODEARTH PRIMARY APPLICANT PAN CARD V1");
 
             DocumentUploadResponseDto uploadV1Dto = kycDocumentService.uploadKycDocument(
                     kycApp.getId(),
@@ -375,7 +375,7 @@ public class ZohoVerificationController {
             kycService.saveDraft(draftYesReq, "SYSTEM_VERIFIER");
 
             // Upload new PAN for Alexander Smith
-            byte[] alexPanContent = "%PDF-1.4 Mock Alexander Smith PAN Version 1".getBytes(StandardCharsets.UTF_8);
+            byte[] alexPanContent = generateValidRealPdf("GOODEARTH ALEXANDER SMITH PAN CARD V1");
             DocumentUploadResponseDto alexPanRes = kycDocumentService.uploadKycDocument(
                     kycApp.getId(), com.goodearth.postsales.document.entity.DocumentCategory.KYC, DocumentType.PAN_CARD, ApplicantType.JOINT_2,
                     "alexander_pan_v1.pdf", "application/pdf", alexPanContent.length, alexPanContent, "SYSTEM_VERIFIER"
@@ -442,5 +442,25 @@ public class ZohoVerificationController {
             result.add(m);
         }
         return ResponseEntity.ok(result);
+    }
+
+    private static byte[] generateValidRealPdf(String title) {
+        String pdf = "%PDF-1.4\n" +
+                "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+                "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" +
+                "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n" +
+                "4 0 obj\n<< /Length " + (50 + title.length()) + " >>\nstream\n" +
+                "BT /F1 24 Tf 100 700 Td (" + title + ") Tj ET\n" +
+                "endstream\nendobj\n" +
+                "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n" +
+                "xref\n0 6\n" +
+                "0000000000 65535 f \n" +
+                "0000000009 00000 n \n" +
+                "0000000058 00000 n \n" +
+                "0000000115 00000 n \n" +
+                "0000000244 00000 n \n" +
+                "0000000348 00000 n \n" +
+                "startxref\n420\n%%EOF";
+        return pdf.getBytes(StandardCharsets.UTF_8);
     }
 }
