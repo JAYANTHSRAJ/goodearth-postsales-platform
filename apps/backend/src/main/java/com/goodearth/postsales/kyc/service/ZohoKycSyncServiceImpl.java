@@ -527,6 +527,20 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                     log.info("[ZOHO_RAW_AFTER] Fetching Deal state AFTER update for Record ID: {}", targetRecordId);
                     Map<?, ?> getAfter = apiClient.get(url, Map.class);
                     log.info("[ZOHO_RAW_AFTER] GET /Deals/{} Response: {}", targetRecordId, getAfter);
+
+                    if (getAfter != null && getAfter.get("data") instanceof List<?> dataList && !dataList.isEmpty()) {
+                        Object firstRecord = dataList.get(0);
+                        if (firstRecord instanceof Map<?, ?> recordMap) {
+                            log.info("[ZOHO_FIELD_AUDIT_6_FIELDS]\nRecord ID: {}\nTitle_S: {}\nFirst_Name_S: {}\nLast_Name_S: {}\nS_o_D_o_W_o_S: {}\nIs_it_the_same_address_as_the_1st_applicant_s: {}\nIs_it_the_same_address_as_the_second_applicant_s: {}",
+                                    targetRecordId,
+                                    recordMap.get("Title_S"),
+                                    recordMap.get("First_Name_S"),
+                                    recordMap.get("Last_Name_S"),
+                                    recordMap.get("S_o_D_o_W_o_S"),
+                                    recordMap.get("Is_it_the_same_address_as_the_1st_applicant_s"),
+                                    recordMap.get("Is_it_the_same_address_as_the_second_applicant_s"));
+                        }
+                    }
                 } catch (Exception exAfter) {
                     log.warn("[ZOHO_RAW_AFTER_WARN] Could not fetch Deal after update: {}", exAfter.getMessage());
                 }
