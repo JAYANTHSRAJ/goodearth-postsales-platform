@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
         return path.contains("/actuator") || path.contains("/health")
-                || path.contains("/webhooks") || path.contains("/verification");
+                || path.contains("/verification");
     }
 
     @Override
