@@ -453,16 +453,22 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
                     } else if (app.getApplicantType() == com.goodearth.postsales.kyc.entity.ApplicantType.JOINT_2) {
                         if (app.getSalutation() != null) {
-                            dealFields.put("Title_S", app.getSalutation());
                             dealFields.put("Third_Applicant_Title", app.getSalutation());
                         }
                         if (app.getFirstName() != null) {
-                            dealFields.put("First_Name_S", app.getFirstName());
                             dealFields.put("Third_Applicant_First_Name", app.getFirstName());
                         }
                         if (app.getLastName() != null) {
-                            dealFields.put("Last_Name_S", app.getLastName());
                             dealFields.put("Third_Applicant_Last_Name", app.getLastName());
+                        }
+                        if (app.getGuardianSalutation() != null) {
+                            dealFields.put("Title_S", app.getGuardianSalutation());
+                        }
+                        if (app.getGuardianFirstName() != null) {
+                            dealFields.put("First_Name_S", app.getGuardianFirstName());
+                        }
+                        if (app.getGuardianLastName() != null) {
+                            dealFields.put("Last_Name_S", app.getGuardianLastName());
                         }
                         if (app.getFullName() != null) dealFields.put("Third_Applicant", app.getFullName());
                         if (app.getGender() != null) dealFields.put("Third_Applicant_Gender", app.getGender());

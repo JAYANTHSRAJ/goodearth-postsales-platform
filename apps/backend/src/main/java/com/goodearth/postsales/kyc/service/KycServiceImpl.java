@@ -439,18 +439,12 @@ public class KycServiceImpl implements KycService {
             dealFields.put("Has_Third_Applicant", dto.getHasThirdApplicant());
         }
         if (dto.getThirdApplicantTitle() != null) {
-            // dealFields.put("Title_T", dto.getThirdApplicantTitle());
-            dealFields.put("Title_S", dto.getThirdApplicantTitle());
             dealFields.put("Third_Applicant_Title", dto.getThirdApplicantTitle());
         }
         if (dto.getThirdApplicantFirstName() != null) {
-            // dealFields.put("First_Name_T", dto.getThirdApplicantFirstName());
-            dealFields.put("First_Name_S", dto.getThirdApplicantFirstName());
             dealFields.put("Third_Applicant_First_Name", dto.getThirdApplicantFirstName());
         }
         if (dto.getThirdApplicantLastName() != null) {
-            // dealFields.put("Last_Name_T", dto.getThirdApplicantLastName());
-            dealFields.put("Last_Name_S", dto.getThirdApplicantLastName());
             dealFields.put("Third_Applicant_Last_Name", dto.getThirdApplicantLastName());
         }
         if (dto.getThirdApplicantGender() != null) {
@@ -496,10 +490,15 @@ public class KycServiceImpl implements KycService {
         if (dto.getThirdApplicantSoDoWo() != null) {
             dealFields.put("S_o_D_o_W_o_S", dto.getThirdApplicantSoDoWo());
         }
+        if (dto.getThirdApplicantFatherSalutation() != null) {
+            dealFields.put("Title_S", dto.getThirdApplicantFatherSalutation());
+        }
         if (dto.getThirdApplicantFatherFirstName() != null) {
+            dealFields.put("First_Name_S", dto.getThirdApplicantFatherFirstName());
             dealFields.put("Third_Applicant_Father_First_Name", dto.getThirdApplicantFatherFirstName());
         }
         if (dto.getThirdApplicantFatherLastName() != null) {
+            dealFields.put("Last_Name_S", dto.getThirdApplicantFatherLastName());
             dealFields.put("Third_Applicant_Father_Last_Name", dto.getThirdApplicantFatherLastName());
         }
         if (dto.getThirdApplicantAddressStreet() != null) {
