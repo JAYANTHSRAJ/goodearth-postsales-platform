@@ -426,4 +426,20 @@ public class ZohoVerificationController {
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(dest)) { fos.write(content); }
         }
     }
+
+    @GetMapping("/documents")
+    public ResponseEntity<List<Map<String, Object>>> listVerificationDocuments() {
+        List<Document> docs = documentRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Document d : docs) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("documentId", d.getId());
+            m.put("fileName", d.getFileName());
+            m.put("mimeType", d.getMimeType());
+            m.put("workDriveFileId", d.getWorkDriveFileId());
+            m.put("fileSize", d.getFileSize());
+            result.add(m);
+        }
+        return ResponseEntity.ok(result);
+    }
 }
