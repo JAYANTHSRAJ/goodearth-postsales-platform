@@ -383,6 +383,7 @@ public class ZohoVerificationController {
 
             com.goodearth.postsales.kyc.entity.KycApplicant freshJoint2Entity = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(kycApp.getId(), ApplicantType.JOINT_2).orElse(null);
 
+            report.put("uploadedDocumentId", alexPanRes != null ? alexPanRes.getDocumentId().toString() : "N/A");
             report.put("step12_13_verification_after_recreation", Map.of(
                     "completely_new_joint_2_record_created", freshJoint2Entity != null && "Alexander Smith".equals(freshJoint2Entity.getFullName()),
                     "old_deleted_applicant_data_not_restored", freshJoint2Entity != null && !"Robert Junior".equals(freshJoint2Entity.getFirstName()),
