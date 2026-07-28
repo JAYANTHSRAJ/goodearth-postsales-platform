@@ -19,6 +19,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +53,7 @@ public class OfferLetterServiceTest {
                         Map.of("id", dealId, "Generate_Milestone", false)
                 )
         );
-        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + dealId + "?fields=Generate_Milestone,Deal_Name"), eq(Map.class)))
+        when(apiClient.get(startsWith("https://crmsandbox.zoho.in/crm/v2/Deals/" + dealId), eq(Map.class)))
                 .thenReturn(crmResponse);
 
         OfferLetterStatusDto status = offerLetterService.getOfferLetterStatus(dealId);
@@ -73,7 +74,7 @@ public class OfferLetterServiceTest {
                         Map.of("id", dealId, "Generate_Milestone", true)
                 )
         );
-        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + dealId + "?fields=Generate_Milestone,Deal_Name"), eq(Map.class)))
+        when(apiClient.get(startsWith("https://crmsandbox.zoho.in/crm/v2/Deals/" + dealId), eq(Map.class)))
                 .thenReturn(crmResponse);
 
         OfferLetterStatusDto status = offerLetterService.getOfferLetterStatus(dealId);

@@ -53,7 +53,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         }
 
         try {
-            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId + "?fields=Generate_Milestone,Deal_Name";
+            String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
             log.info("[OFFER_LETTER] Querying Deal status from URL: {}", url);
             Map<?, ?> response = apiClient.get(url, Map.class);
 
@@ -67,55 +67,42 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                     if (dealMap.get("Deal_Name") != null) {
                         dealName = dealMap.get("Deal_Name").toString();
                     }
-                    rawVal = dealMap.get("Generate_Milestone");
-                }
-            }
 
-            // If field not found in filtered fields query, attempt full Deal object query
-            if (rawVal == null) {
-                try {
-                    String fullUrl = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
-                    log.info("[OFFER_LETTER] Re-querying full Deal object without field restrictions: {}", fullUrl);
-                    Map<?, ?> fullResponse = apiClient.get(fullUrl, Map.class);
-                    if (fullResponse != null && fullResponse.get("data") instanceof List<?> fullDataList && !fullDataList.isEmpty()) {
-                        Object firstFull = fullDataList.get(0);
-                        if (firstFull instanceof Map<?, ?> fullDealMap) {
-                            log.info("[OFFER_LETTER_TRACE] Full Zoho Deal Response JSON: {}", fullResponse);
-                            log.info("[OFFER_LETTER_TRACE] Deal Map Keys: {}", fullDealMap.keySet());
+                    log.info("================ ZOHO DEAL FIELD INSPECTION ================");
+                    log.info("[ZOHO_INSPECT] Deal ID: {}", targetRecordId);
+                    log.info("[ZOHO_INSPECT] Deal Name: {}", dealName);
+                    log.info("[ZOHO_INSPECT] All Deal Keys (Total {} keys): {}", dealMap.size(), dealMap.keySet());
 
-                            if (dealName == null && fullDealMap.get("Deal_Name") != null) {
-                                dealName = fullDealMap.get("Deal_Name").toString();
-                            }
-
-                            rawVal = fullDealMap.get("Generate_Milestone");
-                            if (rawVal == null) rawVal = fullDealMap.get("Generate_Milestones");
-                            if (rawVal == null) rawVal = fullDealMap.get("Generated_Milestone");
-                            if (rawVal == null) rawVal = fullDealMap.get("generate_milestone");
-
-                            if (rawVal == null) {
-                                for (Object keyObj : fullDealMap.keySet()) {
-                                    if (keyObj != null && keyObj.toString().toLowerCase().contains("milestone")) {
-                                        rawVal = fullDealMap.get(keyObj);
-                                        log.info("[OFFER_LETTER_TRACE] Found milestone fallback key candidate: '{}' with value: '{}'", keyObj, rawVal);
-                                        break;
-                                    }
-                                }
+                    for (Map.Entry<?, ?> entry : dealMap.entrySet()) {
+                        if (entry.getKey() != null) {
+                            String keyStr = entry.getKey().toString();
+                            String lowerKey = keyStr.toLowerCase();
+                            if (lowerKey.contains("milestone") || lowerKey.contains("generate") ||
+                                lowerKey.contains("letter") || lowerKey.contains("offer")) {
+                                Object valObj = entry.getValue();
+                                log.info("[ZOHO_FIELD_MATCH] Field Name: '{}' | Value: '{}' | Value Type: '{}'",
+                                        keyStr, valObj, valObj != null ? valObj.getClass().getName() : "null");
                             }
                         }
                     }
-                } catch (Exception exFallback) {
-                    log.warn("[OFFER_LETTER] Fallback full deal query failed: {}", exFallback.getMessage());
-                }
-            }
+                    log.info("============================================================");
 
-            if (rawVal != null) {
-                if (rawVal instanceof Boolean b) {
-                    isGenerated = b;
-                } else if (rawVal instanceof Number n) {
-                    isGenerated = n.intValue() == 1;
-                } else {
-                    String strVal = rawVal.toString().trim();
-                    isGenerated = "true".equalsIgnoreCase(strVal) || "yes".equalsIgnoreCase(strVal) || "1".equals(strVal);
+                    rawVal = dealMap.get("Generate_Milestone");
+                    if (rawVal == null) rawVal = dealMap.get("Generate_Milestone1");
+                    if (rawVal == null) rawVal = dealMap.get("Generate_Milestones");
+                    if (rawVal == null) rawVal = dealMap.get("Generated_Milestone");
+                    if (rawVal == null) rawVal = dealMap.get("generate_milestone");
+
+                    if (rawVal != null) {
+                        if (rawVal instanceof Boolean b) {
+                            isGenerated = b;
+                        } else if (rawVal instanceof Number n) {
+                            isGenerated = n.intValue() == 1;
+                        } else {
+                            String strVal = rawVal.toString().trim();
+                            isGenerated = "true".equalsIgnoreCase(strVal) || "yes".equalsIgnoreCase(strVal) || "1".equals(strVal);
+                        }
+                    }
                 }
             }
 
