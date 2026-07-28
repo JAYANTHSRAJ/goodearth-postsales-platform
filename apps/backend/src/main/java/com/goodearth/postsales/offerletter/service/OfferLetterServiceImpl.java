@@ -54,29 +54,76 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
         try {
             String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId + "?fields=Generate_Milestone,Deal_Name";
-            log.info("[OFFER_LETTER] Querying Deal Generate_Milestone status from URL: {}", url);
+            log.info("[OFFER_LETTER] Querying Deal status from URL: {}", url);
             Map<?, ?> response = apiClient.get(url, Map.class);
 
             boolean isGenerated = false;
+            Object rawVal = null;
+            String dealName = null;
+
             if (response != null && response.get("data") instanceof List<?> dataList && !dataList.isEmpty()) {
                 Object first = dataList.get(0);
                 if (first instanceof Map<?, ?> dealMap) {
-                    Object val = dealMap.get("Generate_Milestone");
-                    if (val != null) {
-                        if (val instanceof Boolean b) {
-                            isGenerated = b;
-                        } else {
-                            String strVal = val.toString().trim();
-                            isGenerated = "true".equalsIgnoreCase(strVal) || "yes".equalsIgnoreCase(strVal);
-                        }
+                    if (dealMap.get("Deal_Name") != null) {
+                        dealName = dealMap.get("Deal_Name").toString();
                     }
+                    rawVal = dealMap.get("Generate_Milestone");
                 }
             }
 
+            // If field not found in filtered fields query, attempt full Deal object query
+            if (rawVal == null) {
+                try {
+                    String fullUrl = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
+                    log.info("[OFFER_LETTER] Re-querying full Deal object without field restrictions: {}", fullUrl);
+                    Map<?, ?> fullResponse = apiClient.get(fullUrl, Map.class);
+                    if (fullResponse != null && fullResponse.get("data") instanceof List<?> fullDataList && !fullDataList.isEmpty()) {
+                        Object firstFull = fullDataList.get(0);
+                        if (firstFull instanceof Map<?, ?> fullDealMap) {
+                            log.info("[OFFER_LETTER_TRACE] Full Zoho Deal Response JSON: {}", fullResponse);
+                            log.info("[OFFER_LETTER_TRACE] Deal Map Keys: {}", fullDealMap.keySet());
+
+                            if (dealName == null && fullDealMap.get("Deal_Name") != null) {
+                                dealName = fullDealMap.get("Deal_Name").toString();
+                            }
+
+                            rawVal = fullDealMap.get("Generate_Milestone");
+                            if (rawVal == null) rawVal = fullDealMap.get("Generate_Milestones");
+                            if (rawVal == null) rawVal = fullDealMap.get("Generated_Milestone");
+                            if (rawVal == null) rawVal = fullDealMap.get("generate_milestone");
+
+                            if (rawVal == null) {
+                                for (Object keyObj : fullDealMap.keySet()) {
+                                    if (keyObj != null && keyObj.toString().toLowerCase().contains("milestone")) {
+                                        rawVal = fullDealMap.get(keyObj);
+                                        log.info("[OFFER_LETTER_TRACE] Found milestone fallback key candidate: '{}' with value: '{}'", keyObj, rawVal);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception exFallback) {
+                    log.warn("[OFFER_LETTER] Fallback full deal query failed: {}", exFallback.getMessage());
+                }
+            }
+
+            if (rawVal != null) {
+                if (rawVal instanceof Boolean b) {
+                    isGenerated = b;
+                } else if (rawVal instanceof Number n) {
+                    isGenerated = n.intValue() == 1;
+                } else {
+                    String strVal = rawVal.toString().trim();
+                    isGenerated = "true".equalsIgnoreCase(strVal) || "yes".equalsIgnoreCase(strVal) || "1".equals(strVal);
+                }
+            }
+
+            OfferLetterStatusDto resultDto;
             if (isGenerated) {
                 String fileUrl = "/api/v1/deals/" + cleanIdentifier + "/offer-letter/file";
                 String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
-                return new OfferLetterStatusDto(
+                resultDto = new OfferLetterStatusDto(
                         true,
                         "Offer Letter is generated and available for viewing.",
                         fileUrl,
@@ -84,7 +131,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                         targetRecordId
                 );
             } else {
-                return new OfferLetterStatusDto(
+                resultDto = new OfferLetterStatusDto(
                         false,
                         "Offer Letter has not been generated yet.",
                         null,
@@ -92,6 +139,15 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                         targetRecordId
                 );
             }
+
+            log.info("[OFFER_LETTER_PROOF] Deal ID: {}", targetRecordId);
+            log.info("[OFFER_LETTER_PROOF] Deal Name: {}", dealName);
+            log.info("[OFFER_LETTER_PROOF] Raw Generate_Milestone value returned by Zoho: {} (type: {})",
+                    rawVal, rawVal != null ? rawVal.getClass().getName() : "null");
+            log.info("[OFFER_LETTER_PROOF] Parsed boolean value: {}", isGenerated);
+            log.info("[OFFER_LETTER_PROOF] Final API response: {}", resultDto);
+
+            return resultDto;
 
         } catch (Exception ex) {
             log.error("[OFFER_LETTER] Exception while fetching Deal status for {}: {}", cleanIdentifier, ex.getMessage(), ex);

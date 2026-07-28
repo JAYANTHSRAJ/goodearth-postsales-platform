@@ -32,7 +32,7 @@ public class OfferLetterController {
     }
 
     @GetMapping("/{dealIdOrBookingId}/offer-letter/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Check Deal Offer Letter generation status", description = "Checks whether Generate_Milestone is enabled for the specified Deal")
     public ResponseEntity<ApiResponse<OfferLetterStatusDto>> getOfferLetterStatus(
             @PathVariable String dealIdOrBookingId) {
@@ -48,7 +48,7 @@ public class OfferLetterController {
     }
 
     @GetMapping("/{dealIdOrBookingId}/offer-letter/file")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Stream Offer Letter PDF binary inline", description = "Streams the generated Offer Letter PDF directly from Zoho CRM for authenticated admin viewing")
     public ResponseEntity<byte[]> streamOfferLetterFile(
             @PathVariable String dealIdOrBookingId,
