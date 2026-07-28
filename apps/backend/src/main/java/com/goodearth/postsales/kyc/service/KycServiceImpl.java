@@ -866,9 +866,12 @@ public class KycServiceImpl implements KycService {
         if (cleanEmail != null) {
             appOpt = kycApplicationRepository.findFirstByBookingIdAndUserEmailOrderByCreatedAtDesc(canonicalBookingId, cleanEmail);
             if (appOpt.isEmpty()) {
-                appOpt = kycApplicationRepository.findFirstByUserEmailOrderByCreatedAtDesc(cleanEmail);
-                if (appOpt.isPresent() && !canonicalBookingId.equalsIgnoreCase(appOpt.get().getBookingId())) {
-                    appOpt = Optional.empty();
+                appOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(canonicalBookingId);
+                if (appOpt.isEmpty()) {
+                    appOpt = kycApplicationRepository.findFirstByUserEmailOrderByCreatedAtDesc(cleanEmail);
+                    if (appOpt.isPresent() && !canonicalBookingId.equalsIgnoreCase(appOpt.get().getBookingId())) {
+                        appOpt = Optional.empty();
+                    }
                 }
             }
         } else {
