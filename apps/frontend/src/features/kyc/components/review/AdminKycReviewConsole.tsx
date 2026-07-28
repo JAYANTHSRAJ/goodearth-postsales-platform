@@ -310,8 +310,6 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           <button onClick={() => setOfferLetterWarning(null)} className="text-amber-700 font-bold hover:text-amber-900 px-1">✕</button>
         </div>
       )}
-        </div>
-      )}
 
       {/* Notifications Banner */}
       {actionSuccess && (
