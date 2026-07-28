@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/webhooks")
+@RequestMapping({"/api/v1/webhooks", "/webhooks"})
 public class WebhookReceiverController {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookReceiverController.class);
