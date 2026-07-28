@@ -64,11 +64,25 @@ public class KycController {
     }
 
     @PutMapping("/applicant")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Submit applicant information directly to Zoho CRM Deal (PUT)", description = "Updates all applicant fields directly on the Zoho CRM Deal record via PUT")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> submitApplicantInfoPut(
+            @Valid @RequestBody com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto requestDto,
+            Authentication authentication) {
+        return submitApplicantInfo(requestDto, authentication);
+    }
+
     @PostMapping("/applicant")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
-    @Operation(summary = "Submit applicant information directly to Zoho CRM Deal", description = "Updates all applicant fields directly on the Zoho CRM Deal record")
-    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> submitApplicantInfo(
+    @Operation(summary = "Submit applicant information directly to Zoho CRM Deal (POST)", description = "Updates all applicant fields directly on the Zoho CRM Deal record via POST")
+    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> submitApplicantInfoPost(
             @Valid @RequestBody com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto requestDto,
+            Authentication authentication) {
+        return submitApplicantInfo(requestDto, authentication);
+    }
+
+    private ResponseEntity<ApiResponse<KycApplicationResponseDto>> submitApplicantInfo(
+            com.goodearth.postsales.kyc.dto.ApplicantInfoSubmitRequestDto requestDto,
             Authentication authentication) {
         long startTime = System.currentTimeMillis();
         String actorId = authentication != null ? authentication.getName() : "CLIENT";
@@ -83,7 +97,7 @@ public class KycController {
 
         KycApplicationResponseDto response = kycService.submitApplicantInfo(requestDto, actorId);
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Endpoint: PUT /api/v1/kyc/applicant, Execution Time: {}ms, Booking ID: {}", duration, requestDto.getBookingId());
+        log.info("Endpoint: /api/v1/kyc/applicant, Execution Time: {}ms, Booking ID: {}", duration, requestDto.getBookingId());
 
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
