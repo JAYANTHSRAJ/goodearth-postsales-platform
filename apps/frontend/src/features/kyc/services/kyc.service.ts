@@ -10,6 +10,7 @@ import {
   DocumentUploadResponseDto,
   DocumentDownloadResponseDto,
   KycValidationSummaryResponseDto,
+  OfferLetterStatusDto,
 } from '../types/kyc';
 
 export const kycService = {
@@ -90,6 +91,17 @@ export const kycService = {
   getFileUrl: (documentId: string, versionNumber?: number): string => {
     const query = versionNumber ? `?versionNumber=${versionNumber}` : '';
     const path = `/kyc/documents/${documentId}/file${query}`;
+    const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    return `${baseUrl}${path}`;
+  },
+
+  getOfferLetterStatus: (dealIdOrBookingId: string): Promise<OfferLetterStatusDto> => {
+    return api.get<OfferLetterStatusDto>(`/deals/${dealIdOrBookingId}/offer-letter/status`);
+  },
+
+  getOfferLetterFileUrl: (dealIdOrBookingId: string): string => {
+    const path = `/deals/${dealIdOrBookingId}/offer-letter/file`;
     const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
     return `${baseUrl}${path}`;

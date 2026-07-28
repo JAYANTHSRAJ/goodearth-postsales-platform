@@ -222,3 +222,12 @@ export interface KycValidationSummaryResponseDto {
   documentsMissingSlots: string[];
   missingItems: KycMissingItemDto[];
 }
+
+export interface OfferLetterStatusDto {
+  generated: boolean;
+  message: string;
+  fileUrl?: string;
+  fileName?: string;
+  dealId?: string;
+}
+
