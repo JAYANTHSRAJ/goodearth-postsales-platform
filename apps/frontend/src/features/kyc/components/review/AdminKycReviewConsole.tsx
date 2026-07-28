@@ -71,6 +71,11 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
 
   const documentSlots = kycData.documentSlots || [];
 
+  const isReviewableStatus =
+    kycData.status === 'UNDER_REVIEW' ||
+    kycData.status === 'SUBMITTED' ||
+    kycData.status === 'RESUBMITTED';
+
   // Admin Actions
   const handleApprove = async () => {
     setActionError(null);
@@ -225,27 +230,38 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           </button>
           <button
             onClick={handleApprove}
-            disabled={isSubmitting || kycData.status === 'APPROVED'}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
+            disabled={isSubmitting || kycData.status === 'DRAFT' || !isReviewableStatus}
+            title={kycData.status === 'DRAFT' ? 'This KYC application is still in DRAFT and has not been submitted by the buyer.' : 'Approve KYC Application'}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Approve
           </button>
           <button
             onClick={() => setActiveModal('GRANT_EDIT')}
-            disabled={isSubmitting}
-            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
+            disabled={isSubmitting || kycData.status === 'DRAFT'}
+            title={kycData.status === 'DRAFT' ? 'This KYC application is still in DRAFT and has not been submitted by the buyer.' : 'Grant Edit Access'}
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Edit3 className="w-3.5 h-3.5" /> Grant Edit Access
           </button>
           <button
             onClick={() => setActiveModal('REJECT')}
-            disabled={isSubmitting || kycData.status === 'REJECTED'}
-            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-50"
+            disabled={isSubmitting || kycData.status === 'DRAFT' || !isReviewableStatus}
+            title={kycData.status === 'DRAFT' ? 'This KYC application is still in DRAFT and has not been submitted by the buyer.' : 'Reject KYC Application'}
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <XCircle className="w-3.5 h-3.5" /> Reject
           </button>
         </div>
       </div>
+
+      {/* DRAFT Status Notice */}
+      {kycData.status === 'DRAFT' && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-semibold flex items-center gap-2 print:hidden shadow-sm">
+          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>This KYC application is still in DRAFT and has not been submitted by the buyer.</span>
+        </div>
+      )}
 
       {/* Notifications Banner */}
       {actionSuccess && (
