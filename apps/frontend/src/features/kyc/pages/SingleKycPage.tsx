@@ -17,7 +17,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Eye,
-  CreditCard,
 } from 'lucide-react';
 import KycApplicantFormSection from '../components/forms/KycApplicantFormSection';
 import KycDocumentSlotCard from '../components/documents/KycDocumentSlotCard';
@@ -41,12 +40,6 @@ export const SingleKycPage: React.FC = () => {
 
   // Read-only toggle view state for submitted applications
   const [showReadOnlyForm, setShowReadOnlyForm] = useState<boolean>(false);
-
-  // Offer Letter States
-  const [offerLetterModalOpen, setOfferLetterModalOpen] = useState<boolean>(false);
-  const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
-  const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
-  const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
 
   // Form Collapse / Expand Accordion States
   const [isHeaderOpen, setIsHeaderOpen] = useState<boolean>(true);
@@ -210,26 +203,6 @@ export const SingleKycPage: React.FC = () => {
     }
   };
 
-  const handleViewOfferLetter = async () => {
-    setOfferLetterWarning(null);
-    setOfferLetterLoading(true);
-    try {
-      const targetBooking = bookingId || initialData?.bookingId || 'DEFAULT_BOOKING';
-      const statusRes = await kycService.getOfferLetterStatus(targetBooking);
-      if (!statusRes.generated) {
-        setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
-      } else {
-        const fileUrl = kycService.getOfferLetterFileUrl(targetBooking);
-        setOfferLetterUrl(fileUrl);
-        setOfferLetterModalOpen(true);
-      }
-    } catch {
-      setOfferLetterWarning('Offer Letter has not been generated yet.');
-    } finally {
-      setOfferLetterLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -376,79 +349,14 @@ export const SingleKycPage: React.FC = () => {
               {showReadOnlyForm ? 'Hide Submitted KYC Details' : 'View Submitted KYC Details'}
             </button>
 
-            {currentStatus === 'APPROVED' && (
-              <div className="w-full pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3 text-left">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  <ShieldCheck className="w-4 h-4" /> Next Step: Offer Letter Stage
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleViewOfferLetter}
-                    disabled={offerLetterLoading}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {offerLetterLoading ? 'Checking Status...' : 'View Offer Letter'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate('/client/finance')}
-                    className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Proceed to Payments & Milestones
-                  </button>
-                </div>
-              </div>
-            )}
-
             <button
               type="button"
               onClick={() => navigate('/client/dashboard')}
-              className="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all mt-2"
+              className="w-full sm:w-auto px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </button>
-          </div>
-
-          {offerLetterWarning && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>{offerLetterWarning}</span>
-              </div>
-              <button onClick={() => setOfferLetterWarning(null)} className="text-amber-700 font-bold hover:text-amber-900 px-1">✕</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Offer Letter PDF Modal */}
-      {offerLetterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Offer Letter</h3>
-              </div>
-              <button
-                onClick={() => setOfferLetterModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-950 p-2">
-              <iframe
-                src={offerLetterUrl}
-                title="Offer Letter PDF"
-                className="w-full h-full rounded-2xl border-0"
-              />
-            </div>
           </div>
         </div>
       )}

@@ -16,6 +16,8 @@ import {
   Mail,
   Building,
   Eye,
+  AlertCircle,
+  ShieldAlert,
 } from 'lucide-react';
 import kycService from '../../kyc/services/kyc.service';
 import { KycApplicationResponseDto, DocumentSlotDto } from '../../kyc/types/kyc';
@@ -26,6 +28,7 @@ import { AdminKycReviewConsole } from '../../kyc/components/review/AdminKycRevie
 type DashboardTab =
   | 'overview'
   | 'kyc'
+  | 'offer_letter'
   | 'payments'
   | 'construction'
   | 'documents'
@@ -46,12 +49,38 @@ export const BuyerDashboardPage: React.FC = () => {
   // Document Preview State
   const [previewSlot, setPreviewSlot] = useState<DocumentSlotDto | null>(null);
 
+  // Offer Letter States
+  const [offerLetterModalOpen, setOfferLetterModalOpen] = useState<boolean>(false);
+  const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
+  const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
+  const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
+
   // Modal states for KYC Admin Actions
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
   const [modalReason, setModalReason] = useState<string>('');
   const [modalNote, setModalNote] = useState<string>('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleViewOfferLetter = async () => {
+    setOfferLetterWarning(null);
+    setOfferLetterLoading(true);
+    try {
+      const targetBooking = bookingId || kycData?.bookingId || 'DEFAULT_BOOKING';
+      const statusRes = await kycService.getOfferLetterStatus(targetBooking);
+      if (!statusRes.generated) {
+        setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
+      } else {
+        const fileUrl = kycService.getOfferLetterFileUrl(targetBooking);
+        setOfferLetterUrl(fileUrl);
+        setOfferLetterModalOpen(true);
+      }
+    } catch {
+      setOfferLetterWarning('Offer Letter has not been generated yet.');
+    } finally {
+      setOfferLetterLoading(false);
+    }
+  };
 
   const fetchKycData = async () => {
     if (!bookingId) {
@@ -206,17 +235,22 @@ export const BuyerDashboardPage: React.FC = () => {
 
       {/* Tabs Bar */}
       <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto">
-        {(['overview', 'kyc', 'payments', 'construction', 'documents', 'selections', 'support', 'timeline'] as const).map((tab) => (
+        {(['overview', 'kyc', 'offer_letter', 'payments', 'construction', 'documents', 'selections', 'support', 'timeline'] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap capitalize ${
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'offer_letter' && kycData?.status === 'APPROVED') {
+                handleViewOfferLetter();
+              }
+            }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === tab
                 ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            {tab}
+            {tab === 'offer_letter' ? 'View Offer Letter' : tab === 'kyc' ? 'KYC' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -290,6 +324,66 @@ export const BuyerDashboardPage: React.FC = () => {
           ) : (
             <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center text-xs font-semibold text-slate-500">
               KYC Not Submitted
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* OFFER LETTER TAB */}
+      {activeTab === 'offer_letter' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-600" /> Official Offer Letter
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                View and review your generated property allotment and milestone offer letter.
+              </p>
+            </div>
+            {kycData?.status === 'APPROVED' && (
+              <button
+                onClick={handleViewOfferLetter}
+                disabled={offerLetterLoading}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 shrink-0"
+              >
+                <FileText className="w-4 h-4" />
+                {offerLetterLoading ? 'Checking Status...' : 'View Offer Letter'}
+              </button>
+            )}
+          </div>
+
+          {kycData?.status !== 'APPROVED' ? (
+            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-center space-y-2">
+              <ShieldAlert className="w-8 h-8 text-amber-500 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">KYC Approval Required</h4>
+              <p className="text-xs text-slate-500">
+                Offer Letter generation unlocks after your KYC application is reviewed and approved by GoodEarth Admin.
+              </p>
+            </div>
+          ) : offerLetterWarning ? (
+            <div className="p-6 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>{offerLetterWarning}</span>
+              </div>
+              <button onClick={handleViewOfferLetter} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs">
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="p-6 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Offer Letter Ready</div>
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Your official allotment and milestone Offer Letter document is ready for viewing.</div>
+              </div>
+              <button
+                onClick={handleViewOfferLetter}
+                disabled={offerLetterLoading}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all shrink-0"
+              >
+                <Eye className="w-4 h-4" /> Open PDF Viewer
+              </button>
             </div>
           )}
         </div>
@@ -528,6 +622,33 @@ export const BuyerDashboardPage: React.FC = () => {
           fileName={previewSlot.currentVersion.fileName || 'Document.pdf'}
           fileUrl={kycService.getFileUrl(previewSlot.documentId, previewSlot.currentVersion.versionNumber)}
         />
+      )}
+
+      {/* Offer Letter PDF Viewer Modal */}
+      {offerLetterModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Offer Letter</h3>
+              </div>
+              <button
+                onClick={() => setOfferLetterModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 dark:bg-slate-950 p-2">
+              <iframe
+                src={offerLetterUrl}
+                title="Offer Letter PDF"
+                className="w-full h-full rounded-2xl border-0"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
