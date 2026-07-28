@@ -54,13 +54,29 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
       : []),
     {
       id: 'APPROVED',
-      label: 'Approved',
+      label: 'KYC Approved',
       description: verifiedAt
         ? `Approved on ${new Date(verifiedAt).toLocaleDateString()}${verifiedBy ? ` by ${verifiedBy}` : ''}`
         : 'Final verification & GoodEarth Admin approval',
       icon: ShieldCheck,
       isCompleted: status === 'APPROVED',
+      isCurrent: false,
+    },
+    {
+      id: 'OFFER_LETTER',
+      label: 'Offer Letter Stage',
+      description: status === 'APPROVED' ? 'Offer Letter generation & verification' : 'Unlocks after KYC Approval',
+      icon: ShieldCheck,
+      isCompleted: status === 'APPROVED',
       isCurrent: status === 'APPROVED',
+    },
+    {
+      id: 'PAYMENTS',
+      label: 'Payments & Milestones Stage',
+      description: status === 'APPROVED' ? 'Next step after Offer Letter completion' : 'Locked until Offer Letter stage',
+      icon: Clock,
+      isCompleted: false,
+      isCurrent: false,
     },
   ];
 
