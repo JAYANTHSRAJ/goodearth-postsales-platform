@@ -23,4 +23,6 @@ public interface ZohoKycSyncService {
     void retryFailedCrmAttachments();
 
     boolean verifyDealExists(String dealIdOrBookingId);
+
+    String resolveDealRecordIdByDealName(String dealName);
 }
