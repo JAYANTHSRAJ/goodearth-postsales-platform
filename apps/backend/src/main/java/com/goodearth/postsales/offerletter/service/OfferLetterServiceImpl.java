@@ -191,22 +191,25 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             }
 
             String crmApiUrl = properties.getCrmApiUrl();
-            String url = crmApiUrl + "/Units/" + unitRecordId;
-            log.info("[OFFER_LETTER_UNIT_TRACE] 4. Exact GET URL sent to Zoho: {}", url);
+            String url = crmApiUrl + "/Products/" + unitRecordId;
+            log.info("[OFFER_LETTER_UNIT_TRACE] 4. Exact GET URL sent to Zoho Products module: {}", url);
 
             Map<?, ?> response = null;
             try {
                 response = apiClient.get(url, Map.class);
                 log.info("[OFFER_LETTER_UNIT_TRACE] 5. COMPLETE Zoho Response JSON from GET {}: {}", url, response);
             } catch (Exception apiEx) {
-                log.error("[OFFER_LETTER_UNIT_TRACE] 5. Zoho API HTTP Request Error for URL {}: {}", url, apiEx.getMessage(), apiEx);
-                String fallbackUrl = crmApiUrl + "/Products/" + unitRecordId;
-                log.info("[OFFER_LETTER_UNIT_TRACE] 5b. Attempting fallback GET URL: {}", fallbackUrl);
+                log.warn("[OFFER_LETTER_UNIT_TRACE] 5. GET /Products/{} failed: {}", unitRecordId, apiEx.getMessage());
+            }
+
+            if (response == null || !response.containsKey("data") || (response.get("data") instanceof List<?> list && list.isEmpty())) {
+                String fallbackUrl = crmApiUrl + "/Units/" + unitRecordId;
+                log.info("[OFFER_LETTER_UNIT_TRACE] 5b. /Products/ returned null/empty/204. Attempting fallback GET URL: {}", fallbackUrl);
                 try {
                     response = apiClient.get(fallbackUrl, Map.class);
                     log.info("[OFFER_LETTER_UNIT_TRACE] 5c. COMPLETE Zoho Response JSON from fallback GET {}: {}", fallbackUrl, response);
                 } catch (Exception fallbackEx) {
-                    log.error("[OFFER_LETTER_UNIT_TRACE] Fallback GET URL {} also failed: {}", fallbackUrl, fallbackEx.getMessage());
+                    log.error("[OFFER_LETTER_UNIT_TRACE] Fallback GET URL {} failed: {}", fallbackUrl, fallbackEx.getMessage());
                 }
             }
 
