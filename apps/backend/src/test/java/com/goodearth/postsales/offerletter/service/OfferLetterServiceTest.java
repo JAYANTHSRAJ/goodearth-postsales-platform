@@ -58,73 +58,27 @@ public class OfferLetterServiceTest {
     }
 
     @Test
-    @DisplayName("buildOfferLetterDto extracts CRM fields into OfferLetterDto")
+    @DisplayName("buildOfferLetterDto extracts CRM fields from Units module into OfferLetterDto")
     void testBuildOfferLetterDto() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
         Map<String, Object> crmDeal = Map.of(
                 "id", targetRecordId,
                 "Deal_Name", "CADENCE-A001",
-                "Project_Name", "Good Earth Cadence",
-                "Unit_Name", "CADENCE-A001",
-                "First_Applicant", "Nishtha Bhatia",
-                "Cost_of_unit", "37619048",
-                "GST_Amount", "1880952",
-                "Cost_of_home", "39500000"
-        );
-        Map<String, Object> crmResponse = Map.of("data", List.of(crmDeal));
-
-        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
-                .thenReturn(crmResponse);
-
-        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
-
-        assertNotNull(dto);
-        assertEquals("CADENCE-A001", dto.getUnitName());
-        assertEquals("Good Earth Cadence", dto.getProjectName());
-        assertEquals("INR 3,76,19,048", dto.getCostOfUnitFormatted());
-        assertEquals("INR 18,80,952", dto.getGstAmountFormatted());
-        assertEquals("INR 3,95,00,000", dto.getCostOfHomeFormatted());
-        assertFalse(dto.getMilestones().isEmpty());
-    }
-
-    @Test
-    @DisplayName("Table 1 and Table 2 fetch directly from Zoho CRM Units module fields")
-    void testBuildOfferLetterDto_WithUnitsModuleData() {
-        String dealId = "CADENCE-A001";
-        String targetRecordId = "6638590000147048029";
-        String unitRecordId = "6638590000147099999";
-
-        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
-        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
-
-        Map<String, Object> crmDeal = Map.of(
-                "id", targetRecordId,
-                "Deal_Name", "motif16",
-                "Unit_Name", Map.of("id", unitRecordId, "name", "motif16"),
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
                 "First_Applicant", "Nishtha Bhatia"
         );
-
-        Map<String, Object> crmUnit = Map.ofEntries(
-                Map.entry("id", unitRecordId),
-                Map.entry("Project_Site", "Good Earth Cadence"),
-                Map.entry("Unit_Name", "motif16"),
-                Map.entry("Carpet_Area", "149.01"),
-                Map.entry("SBA", "224.35"),
-                Map.entry("Exclusive_Common_Area", "115.55"),
-                Map.entry("Common_area_allotted_to_the_association_Sqm_B", "69.44"),
-                Map.entry("UDS", "40.24"),
-                Map.entry("Total_UDS_A_B", "225.23"),
-                Map.entry("Exclusive_Use_Areas_Balcony_or_Verandah", "29.65"),
-                Map.entry("Exclusive_Use_Areas_Open_Terrace_to_the_allottee", "2.77"),
-                Map.entry("Car_Parking_Space", 2),
-                Map.entry("Cost_of_Unit", 37619048),
-                Map.entry("GST_at_5", 1880952),
-                Map.entry("Cost_of_Home_Inc_GST_A", 39500000),
-                Map.entry("Maintenance_Deposit", 200000)
+        Map<String, Object> crmUnit = Map.of(
+                "id", unitRecordId,
+                "Project_Site", "Good Earth Cadence",
+                "Product_Name", "CADENCE-A001",
+                "Unit_Price", "40000000",
+                "GST_at_5", "2000000",
+                "Cost_of_Home_Inc_GST_A", "42000000"
         );
 
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
@@ -135,22 +89,139 @@ public class OfferLetterServiceTest {
         OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
 
         assertNotNull(dto);
-        assertEquals("motif16", dto.getUnitName());
+        assertEquals("CADENCE-A001", dto.getUnitName());
         assertEquals("Good Earth Cadence", dto.getProjectName());
-        assertEquals("149.01", dto.getCarpetAreaSqm());
-        assertEquals("224.35", dto.getSuperBuiltUpAreaSqm());
-        assertEquals("115.55", dto.getExclusiveCommonAreaSqm());
-        assertEquals("69.44", dto.getAssociationCommonAreaSqm());
-        assertEquals("40.24", dto.getUdsAllotteeSqm());
-        assertEquals("225.23", dto.getTotalUdsSqm());
-        assertEquals("29.65", dto.getExclusiveBalconySqm());
-        assertEquals("2.77", dto.getOpenTerraceSqm());
+        assertEquals("INR 4,00,00,000", dto.getCostOfUnitFormatted());
+        assertEquals("INR 20,00,000", dto.getGstAmountFormatted());
+        assertEquals("INR 4,20,00,000", dto.getCostOfHomeFormatted());
+        assertFalse(dto.getMilestones().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Table 1 and Table 2 fetch directly from Zoho CRM Units module fields using field_labels.xlsx API names")
+    void testBuildOfferLetterDto_WithUnitsModuleData() {
+        String dealId = "CADENCE-A001";
+        String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-A001",
+                "Unit_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
+                "First_Applicant", "John Doe"
+        );
+
+        Map<String, Object> crmUnit = Map.ofEntries(
+                Map.entry("id", unitRecordId),
+                Map.entry("Project_Site", "Good Earth Cadence"),
+                Map.entry("Product_Name", "CADENCE-A001"),
+                Map.entry("Carpet_Area", "150.00"),
+                Map.entry("Built_up_Area", "225.00"),
+                Map.entry("Exclusive_Common_Area_to_the_allottee", "110.00"),
+                Map.entry("Exclusive_Common_Area_to_the_association", "70.00"),
+                Map.entry("UDS_to_the_allotee", "45.00"),
+                Map.entry("Total_UDS_A_B", "225.00"),
+                Map.entry("Exclusive_Balcony_Verandah_use_areas2", "30.00"),
+                Map.entry("Exclusive_open_terrace_use_areas_to_the_allotee2", "5.00"),
+                Map.entry("Covered_Car_Parks", 2),
+                Map.entry("Unit_Price", 40000000),
+                Map.entry("GST_at_5", 2000000),
+                Map.entry("Cost_of_Home_Inc_GST_A", 42000000),
+                Map.entry("Maintenance_Deposit", 250000)
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+
+        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
+
+        assertNotNull(dto);
+        assertEquals("CADENCE-A001", dto.getUnitName());
+        assertEquals("Good Earth Cadence", dto.getProjectName());
+        assertEquals("150.00", dto.getCarpetAreaSqm());
+        assertEquals("225.00", dto.getSuperBuiltUpAreaSqm());
+        assertEquals("110.00", dto.getExclusiveCommonAreaSqm());
+        assertEquals("70.00", dto.getAssociationCommonAreaSqm());
+        assertEquals("45.00", dto.getUdsAllotteeSqm());
+        assertEquals("225.00", dto.getTotalUdsSqm());
+        assertEquals("30.00", dto.getExclusiveBalconySqm());
+        assertEquals("5.00", dto.getOpenTerraceSqm());
         assertEquals("2", dto.getCoveredCarParks());
 
-        assertEquals("INR 3,76,19,048", dto.getCostOfUnitFormatted());
-        assertEquals("INR 18,80,952", dto.getGstAmountFormatted());
-        assertEquals("INR 3,95,00,000", dto.getCostOfHomeFormatted());
-        assertEquals("INR 2,00,000", dto.getMaintenanceDepositsFormatted());
+        assertEquals("INR 4,00,00,000", dto.getCostOfUnitFormatted());
+        assertEquals("INR 20,00,000", dto.getGstAmountFormatted());
+        assertEquals("INR 4,20,00,000", dto.getCostOfHomeFormatted());
+        assertEquals("INR 2,50,000", dto.getMaintenanceDepositsFormatted());
+    }
+
+    @Test
+    @DisplayName("Empty CRM Unit fields should remain empty without inserting sample values")
+    void testBuildOfferLetterDto_WithEmptyCrmFields() {
+        String dealId = "CADENCE-EMPTY";
+        String targetRecordId = "6638590000147048030";
+        String unitRecordId = "6638590000147099998";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-EMPTY",
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-EMPTY")
+        );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId);
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+
+        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
+
+        assertNotNull(dto);
+        assertEquals("", dto.getCarpetAreaSqm());
+        assertEquals("", dto.getSuperBuiltUpAreaSqm());
+        assertEquals("", dto.getExclusiveCommonAreaSqm());
+        assertEquals("", dto.getAssociationCommonAreaSqm());
+        assertEquals("", dto.getUdsAllotteeSqm());
+        assertEquals("", dto.getTotalUdsSqm());
+        assertEquals("", dto.getExclusiveBalconySqm());
+        assertEquals("", dto.getOpenTerraceSqm());
+        assertEquals("", dto.getCoveredCarParks());
+        assertEquals("", dto.getCostOfUnitFormatted());
+        assertEquals("", dto.getGstAmountFormatted());
+        assertEquals("", dto.getCostOfHomeFormatted());
+        assertEquals("", dto.getMaintenanceDepositsFormatted());
+    }
+
+    @Test
+    @DisplayName("Offer Letter generation aborts with CustomException if linked Unit record cannot be retrieved")
+    void testBuildOfferLetterDto_ThrowsExceptionWhenUnitRecordNotFound() {
+        String dealId = "CADENCE-NO-UNIT";
+        String targetRecordId = "6638590000147048031";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-NO-UNIT"
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+
+        com.goodearth.postsales.common.exception.CustomException exception = assertThrows(
+                com.goodearth.postsales.common.exception.CustomException.class,
+                () -> offerLetterService.buildOfferLetterDto(dealId)
+        );
+
+        assertTrue(exception.getMessage().contains("Unable to retrieve linked Unit record from Zoho CRM"));
     }
 
     @Test
@@ -158,12 +229,21 @@ public class OfferLetterServiceTest {
     void testStreamOfferLetterPdf() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
-        Map<String, Object> crmDeal = Map.of("id", targetRecordId, "Deal_Name", "CADENCE-A001");
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-A001",
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001")
+        );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId, "Product_Name", "CADENCE-A001");
+
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
                 .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
 
         byte[] fakePdfBytes = "%PDF-1.4 Fake PDF Content".getBytes();
         when(pdfGenerator.generatePdf(any(OfferLetterDto.class))).thenReturn(fakePdfBytes);
@@ -181,16 +261,22 @@ public class OfferLetterServiceTest {
     void testDynamicApplicants_1Applicant() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
         Map<String, Object> crmDeal = Map.of(
                 "id", targetRecordId,
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
                 "Title_A", "Ms.",
                 "First_Applicant", "Nishtha Bhatia"
         );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId, "Product_Name", "CADENCE-A001");
+
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
                 .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
 
         OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
 
@@ -206,18 +292,24 @@ public class OfferLetterServiceTest {
     void testDynamicApplicants_2Applicants() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
         Map<String, Object> crmDeal = Map.of(
                 "id", targetRecordId,
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
                 "Title_A", "Ms.",
                 "First_Applicant", "Nishtha Bhatia",
                 "Title_C", "Mr.",
                 "Second_Applicant", "Aman Uzuwaal"
         );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId, "Product_Name", "CADENCE-A001");
+
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
                 .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
 
         OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
 
@@ -234,11 +326,13 @@ public class OfferLetterServiceTest {
     void testDynamicApplicants_3Applicants() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
         Map<String, Object> crmDeal = Map.of(
                 "id", targetRecordId,
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
                 "Title_A", "Ms.",
                 "First_Applicant", "Nishtha Bhatia",
                 "Title_C", "Mr.",
@@ -246,8 +340,12 @@ public class OfferLetterServiceTest {
                 "Title_T", "Mr.",
                 "Third_Applicant", "David Doe"
         );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId, "Product_Name", "CADENCE-A001");
+
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
                 .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
 
         OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
 
@@ -265,6 +363,7 @@ public class OfferLetterServiceTest {
     void testDynamicApplicants_4Applicants_FutureSupport() {
         String dealId = "CADENCE-A001";
         String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
         when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
 
@@ -277,10 +376,15 @@ public class OfferLetterServiceTest {
 
         Map<String, Object> crmDeal = Map.of(
                 "id", targetRecordId,
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001"),
                 "Applicants", applicantsSubform
         );
+        Map<String, Object> crmUnit = Map.of("id", unitRecordId, "Product_Name", "CADENCE-A001");
+
         when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
                 .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
 
         OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
 

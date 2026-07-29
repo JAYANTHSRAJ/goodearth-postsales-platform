@@ -275,24 +275,24 @@
 <!-- Running Page Footer -->
 <div class="footer">
     <div class="footer-text">
-        <span th:text="${offer.companyName != null ? offer.companyName : 'GoodEarth Eco Communities Pvt Ltd'}">GoodEarth Eco Communities Pvt Ltd</span>
-        | <strong>RERA No:</strong> <span th:text="${offer.reraNo != null ? offer.reraNo : 'PRM/KA/RERA/1251/310/PR/070125/007359'}">PRM/KA/RERA/1251/310/PR/070125/007359</span>
+        <span th:text="${offer.companyName}"></span>
+        | <strong>RERA No:</strong> <span th:text="${offer.reraNo}"></span>
     </div>
     <div class="footer-bar"></div>
 </div>
 
 <!-- Main Document Content -->
 <div class="document-title">
-    OFFER LETTER – <span th:text="${offer.projectName != null ? offer.projectName : 'GOOD EARTH CADENCE'}">GOOD EARTH CADENCE</span>
+    OFFER LETTER – <span th:text="${offer.projectName}"></span>
 </div>
 
 <div class="to-block">
     <div>To,</div>
-    <div class="applicant-name" th:each="app : ${offer.applicants}" th:text="${app.formattedNameWithSalutation}">Ms. Nishtha Bhatia</div>
+    <div class="applicant-name" th:each="app : ${offer.applicants}" th:text="${app.formattedNameWithSalutation}"></div>
 </div>
 
 <div class="intro-text">
-    We are happy to offer you Unit No <strong th:text="${offer.unitName}">CADENCE-A001</strong>, an Apartment unit in <strong th:text="${offer.projectName}">Good Earth Cadence</strong>. Please find below details of our offer pertaining to the type of home, areas, deposits and payment schedule.
+    We are happy to offer you Unit No <strong th:text="${offer.unitName}"></strong>, an Apartment unit in <strong th:text="${offer.projectName}"></strong>. Please find below details of our offer pertaining to the type of home, areas, deposits and payment schedule.
 </div>
 
 <!-- Table 1: Unit & Provisional Allotment Details -->
@@ -305,43 +305,43 @@
     <tbody>
         <tr>
             <td style="width: 65%;">Unit Name</td>
-            <td th:text="${offer.unitName}">CADENCE-A001</td>
+            <td th:text="${offer.unitName}"></td>
         </tr>
         <tr>
             <td>Carpet Area (Sqm)</td>
-            <td th:text="${offer.carpetAreaSqm}">149.01</td>
+            <td th:text="${offer.carpetAreaSqm}"></td>
         </tr>
         <tr>
             <td>Super Built-up Area (Sqm)</td>
-            <td th:text="${offer.superBuiltUpAreaSqm}">224.35</td>
+            <td th:text="${offer.superBuiltUpAreaSqm}"></td>
         </tr>
         <tr>
             <td>Exclusive common area to the allottee (Sqm) - A</td>
-            <td th:text="${offer.exclusiveCommonAreaSqm}">115.55</td>
+            <td th:text="${offer.exclusiveCommonAreaSqm}"></td>
         </tr>
         <tr>
             <td>Common area allotted to the association (Sqm)-B</td>
-            <td th:text="${offer.associationCommonAreaSqm}">69.44</td>
+            <td th:text="${offer.associationCommonAreaSqm}"></td>
         </tr>
         <tr>
             <td>UDS to the allotee (Sqm) - C</td>
-            <td th:text="${offer.udsAllotteeSqm}">40.24</td>
+            <td th:text="${offer.udsAllotteeSqm}"></td>
         </tr>
         <tr>
             <td class="font-bold">Total UDS (Sqm) - A+B+C</td>
-            <td class="font-bold" th:text="${offer.totalUdsSqm}">225.23</td>
+            <td class="font-bold" th:text="${offer.totalUdsSqm}"></td>
         </tr>
         <tr>
             <td>Exclusive Balcony/Verandah use areas (Sqm)</td>
-            <td th:text="${offer.exclusiveBalconySqm}">29.65</td>
+            <td th:text="${offer.exclusiveBalconySqm}"></td>
         </tr>
         <tr>
             <td>Open terrace use areas to the allottee (Sqm).</td>
-            <td th:text="${offer.openTerraceSqm}">2.77</td>
+            <td th:text="${offer.openTerraceSqm}"></td>
         </tr>
         <tr>
             <td>Covered car parks (Nos)</td>
-            <td th:text="${offer.coveredCarParks}">2</td>
+            <td th:text="${offer.coveredCarParks}"></td>
         </tr>
     </tbody>
 </table>
@@ -356,19 +356,19 @@
     <tbody>
         <tr>
             <td style="width: 65%;">Cost of unit</td>
-            <td th:text="${offer.costOfUnitFormatted}">INR 3,76,19,048</td>
+            <td th:text="${offer.costOfUnitFormatted}"></td>
         </tr>
         <tr>
             <td>GST - ( GST at <span th:text="${offer.gstRate != null ? offer.gstRate : '5%'}">5%</span>)</td>
-            <td th:text="${offer.gstAmountFormatted}">INR 18,80,952</td>
+            <td th:text="${offer.gstAmountFormatted}"></td>
         </tr>
         <tr>
             <td class="font-bold">Cost of home (including GST)</td>
-            <td class="font-bold" th:text="${offer.costOfHomeFormatted}">INR 3,95,00,000</td>
+            <td class="font-bold" th:text="${offer.costOfHomeFormatted}"></td>
         </tr>
         <tr>
             <td class="font-bold">Maintenance Deposits</td>
-            <td class="font-bold" th:text="${offer.maintenanceDepositsFormatted}">INR 2,00,000</td>
+            <td class="font-bold" th:text="${offer.maintenanceDepositsFormatted}"></td>
         </tr>
     </tbody>
 </table>

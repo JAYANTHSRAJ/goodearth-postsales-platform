@@ -22,7 +22,7 @@ public class IndianCurrencyFormatter {
      */
     public static String formatCurrency(BigDecimal amount) {
         if (amount == null) {
-            return "INR 0";
+            return "";
         }
         BigDecimal rounded = amount.setScale(0, RoundingMode.HALF_UP);
         long value = rounded.longValue();
@@ -54,14 +54,14 @@ public class IndianCurrencyFormatter {
 
     public static String formatCurrency(Double amount) {
         if (amount == null) {
-            return "INR 0";
+            return "";
         }
         return formatCurrency(BigDecimal.valueOf(amount));
     }
 
     public static String formatCurrency(Long amount) {
         if (amount == null) {
-            return "INR 0";
+            return "";
         }
         return formatCurrency(BigDecimal.valueOf(amount));
     }
@@ -70,7 +70,10 @@ public class IndianCurrencyFormatter {
      * Converts an amount into Indian English Words, e.g. "Rupees Three Crore Ninety Five Lakh Only".
      */
     public static String convertToWords(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+        if (amount == null) {
+            return "";
+        }
+        if (amount.compareTo(BigDecimal.ZERO) == 0) {
             return "Rupees Zero Only";
         }
 

@@ -149,159 +149,167 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     private Map<?, ?> fetchUnitMapFromCrm(Map<?, ?> dealMap) {
         try {
             String unitRecordId = null;
-            if (dealMap.containsKey("Unit_Name") && dealMap.get("Unit_Name") instanceof Map<?, ?> unitLookup) {
-                if (unitLookup.get("id") != null) {
-                    unitRecordId = unitLookup.get("id").toString();
+            String resolvedLookupKey = null;
+            String[] lookupKeys = {"Unit_Name", "Unit", "Product_Name", "Products", "Product", "Saarang_Plot_Deal_Id", "Unit_Lookup", "Unit_Details", "Unit_ID", "Unit_Record_ID", "Linked_Unit_ID"};
+
+            for (String key : lookupKeys) {
+                if (dealMap.containsKey(key) && dealMap.get(key) != null) {
+                    Object obj = dealMap.get(key);
+                    if (obj instanceof Map<?, ?> lookupMap && lookupMap.get("id") != null) {
+                        unitRecordId = lookupMap.get("id").toString();
+                        resolvedLookupKey = key;
+                        break;
+                    } else if (!(obj instanceof Map)) {
+                        String val = obj.toString().trim();
+                        if (val.matches("\\d{15,20}")) {
+                            unitRecordId = val;
+                            resolvedLookupKey = key;
+                            break;
+                        }
+                    }
                 }
-            } else if (dealMap.containsKey("Unit") && dealMap.get("Unit") instanceof Map<?, ?> unitLookup) {
-                if (unitLookup.get("id") != null) {
-                    unitRecordId = unitLookup.get("id").toString();
-                }
-            } else if (dealMap.containsKey("Saarang_Plot_Deal_Id") && dealMap.get("Saarang_Plot_Deal_Id") instanceof Map<?, ?> lookup) {
-                if (lookup.get("id") != null) {
-                    unitRecordId = lookup.get("id").toString();
-                }
-            } else {
-                unitRecordId = getString(dealMap, "Unit_ID", "Unit_Record_ID", "Linked_Unit_ID");
             }
+
+            log.info("[OFFER_LETTER_TRACE_v2] 2. Unit Lookup: Resolved Unit Record ID: '{}' via key: '{}'", unitRecordId, resolvedLookupKey);
 
             if (unitRecordId != null && !unitRecordId.isBlank()) {
                 String crmApiUrl = properties.getCrmApiUrl();
                 String url = crmApiUrl + "/Units/" + unitRecordId;
-                log.info("[OFFER_LETTER_TRACE] Service -> Fetching Unit details from CRM Units module: {}", url);
+                log.info("[OFFER_LETTER_TRACE_v2] 3. GET /Units/{}: Fetching Unit details from CRM URL: {}", unitRecordId, url);
                 Map<?, ?> response = apiClient.get(url, Map.class);
                 if (response != null && response.get("data") instanceof List<?> list && !list.isEmpty()) {
                     if (list.get(0) instanceof Map<?, ?> unitData) {
-                        log.info("[OFFER_LETTER_TRACE] Service -> Successfully retrieved Unit record from CRM Units module.");
+                        log.info("[OFFER_LETTER_TRACE_v2] Complete unitMap returned from Zoho CRM Units module for Unit ID {}: {}", unitRecordId, unitData);
                         return unitData;
                     }
                 }
+                log.warn("[OFFER_LETTER_TRACE_v2] GET /Units/{} returned empty or null data list", unitRecordId);
+            } else {
+                log.warn("[OFFER_LETTER_TRACE_v2] Unit Record ID could not be resolved from dealMap lookup keys.");
             }
         } catch (Exception ex) {
-            log.warn("[OFFER_LETTER_TRACE] Service -> Unable to fetch Unit from CRM Units module by ID, using embedded deal data: {}", ex.getMessage());
+            log.warn("[OFFER_LETTER_TRACE_v2] Service -> Exception fetching Unit from CRM Units module: {}", ex.getMessage(), ex);
         }
         return null;
     }
 
     private OfferLetterDto mapCrmDealToOfferLetterDto(String identifier, String targetRecordId, Map<?, ?> dealMap) {
+        log.info("[OFFER_LETTER_TRACE_v2] Backend Code Version: 2026-07-29T15:40:00");
+        log.info("[OFFER_LETTER_TRACE_v2] 1. Deal Lookup: Target Record ID: {}, Identifier: {}", targetRecordId, identifier);
+        log.info("[OFFER_LETTER_TRACE_v2] Raw Deal Map returned from Zoho CRM Deals module: {}", dealMap);
+
         String dealName = getStringWithDefault(dealMap, identifier, "Deal_Name", "deal_name", "Name");
 
-        // Identify & fetch linked Unit record from CRM Units module
+        // Identify & fetch linked Unit record from CRM Units module as SOLE source of truth
         Map<?, ?> unitMap = fetchUnitMapFromCrm(dealMap);
-        Map<?, ?> primaryUnitSource = (unitMap != null && !unitMap.isEmpty()) ? unitMap : dealMap;
-
-        // Table 1 - Details of unit and provisional allotment (Mapped from Field_Catalogue.xlsx Units module)
-        String projectName = getStringFromObjectOrMap(primaryUnitSource, "Project_Site", "Project_Site_Text", "Project_Name", "Project");
-        if (projectName == null || projectName.isBlank()) {
-            projectName = getStringFromObjectOrMap(dealMap, "Project_Site", "Project_Site_Text", "Project_Name", "Project");
-        }
-        if (projectName == null || projectName.isBlank()) {
-            projectName = "Good Earth Cadence";
+        if (unitMap == null || unitMap.isEmpty()) {
+            log.error("[OFFER_LETTER_TRACE_v2] FATAL: Unable to retrieve linked Unit record from Zoho CRM for Deal ID: {}", targetRecordId);
+            throw new CustomException("Unable to retrieve linked Unit record from Zoho CRM. Offer Letter generation aborted.", HttpStatus.NOT_FOUND);
         }
 
-        String unitName = getStringFromObjectOrMap(primaryUnitSource, "Unit_Name", "Unit_Number", "Unit_No_as_per_plan_sanction", "Unit");
-        if (unitName == null || unitName.isBlank()) {
-            unitName = getStringFromObjectOrMap(dealMap, "Unit_Name", "Unit_Number", "Unit_No_as_per_plan_sanction", "Unit");
-        }
-        if (unitName == null || unitName.isBlank()) {
-            unitName = dealName;
-        }
+        log.info("[OFFER_LETTER_TRACE_v2] 4. Primary Unit Source selected: UNITS_MODULE_RECORD (unitMap ID: {})", unitMap.get("id"));
 
-        String offerNo = getStringWithDefault(dealMap, unitName + "-290625", "Offer_Letter_No", "Offer_No");
-        String offerDate = getStringWithDefault(dealMap, LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), "Offer_Letter_Date", "Offer_Date");
+        // Table 1 - Details of unit and provisional allotment (Mapped ONLY from unitMap)
+        String projectName = getStringFromObjectOrMap(unitMap, "Project_Site");
+        if (projectName == null) projectName = "";
+
+        String unitName = getStringFromObjectOrMap(unitMap, "Product_Name");
+        if (unitName == null) unitName = "";
+
+        String offerNo = getString(dealMap, "Offer_Letter_No", "Offer_No");
+        if (offerNo == null || offerNo.isBlank()) {
+            offerNo = getStringFromObjectOrMap(unitMap, "Product_Code", "Product_Name");
+        }
+        if (offerNo == null) offerNo = "";
+
+        String offerDate = getString(dealMap, "Offer_Letter_Date", "Offer_Date");
+        if (offerDate == null || offerDate.isBlank()) {
+            offerDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }
 
         // Applicants
         List<OfferLetterApplicantDto> applicants = extractApplicants(dealMap);
 
-        // Table 1 Fields from Field_Catalogue.xlsx
-        String carpetArea = getStringWithDefault(primaryUnitSource, getString(dealMap, "Carpet_Area", "Carpet_Area_Sqm", "carpet_area"),
-                "Carpet_Area", "Carpet_Area_Sqm", "carpet_area");
-        if (carpetArea == null || carpetArea.isBlank()) carpetArea = "149.01";
+        // Table 1 Fields directly from field_labels.xlsx (ONLY from unitMap)
+        String carpetArea = getString(unitMap, "Carpet_Area");
+        if (carpetArea == null) carpetArea = "";
 
-        String superBuiltUp = getStringWithDefault(primaryUnitSource, getString(dealMap, "SBA", "Super_Built_up_Area_Sqm", "Super_Builtup_Area"),
-                "SBA", "Super_Built_up_Area_Sqm", "Super_Builtup_Area", "super_builtup_area");
-        if (superBuiltUp == null || superBuiltUp.isBlank()) superBuiltUp = "224.35";
+        String superBuiltUp = getString(unitMap, "Built_up_area1", "Built_up_Area");
+        if (superBuiltUp == null) superBuiltUp = "";
 
-        String areaA = getStringWithDefault(primaryUnitSource, getString(dealMap, "Exclusive_Common_Area", "Exclusive_common_area_to_the_allottee_Sqm_A"),
-                "Exclusive_Common_Area", "Exclusive_common_area_to_the_allottee_Sqm_A", "Exclusive_Common_Area_A");
-        if (areaA == null || areaA.isBlank()) areaA = "115.55";
+        String areaA = getString(unitMap, "Exclusive_Common_Area_to_the_allottee");
+        if (areaA == null) areaA = "";
 
-        String areaB = getStringWithDefault(primaryUnitSource, getString(dealMap, "Common_area_allotted_to_the_association_Sqm_B", "Association_Common_Area"),
-                "Common_area_allotted_to_the_association_Sqm_B", "Association_Common_Area_B", "Association_Common_Area");
-        if (areaB == null || areaB.isBlank()) areaB = "69.44";
+        String areaB = getString(unitMap, "Exclusive_Common_Area_to_the_association", "Common_Area_allotted_to_association");
+        if (areaB == null) areaB = "";
 
-        String areaC = getStringWithDefault(primaryUnitSource, getString(dealMap, "UDS", "UDS_to_the_allotee_Sqm_C"),
-                "UDS", "UDS_to_the_allotee_Sqm_C", "UDS_C", "UDS_Allottee");
-        if (areaC == null || areaC.isBlank()) areaC = "40.24";
+        String areaC = getString(unitMap, "UDS_to_the_allotee");
+        if (areaC == null) areaC = "";
 
-        String totalUds = getStringWithDefault(primaryUnitSource, getString(dealMap, "Total_UDS_A_B", "Total_UDS_Sqm"),
-                "Total_UDS_A_B", "Total_UDS_Sqm", "Total_UDS");
-        if (totalUds == null || totalUds.isBlank()) totalUds = "225.23";
+        String totalUds = getString(unitMap, "Total_UDS", "Total_UDS_A_B", "Total_UDS_Area");
+        if (totalUds == null) totalUds = "";
 
-        String balcony = getStringWithDefault(primaryUnitSource, getString(dealMap, "Exclusive_Use_Areas_Balcony_or_Verandah", "Exclusive_Balcony_Verandah_use_areas_Sqm"),
-                "Exclusive_Use_Areas_Balcony_or_Verandah", "Exclusive_Balcony_Verandah_use_areas_Sqm", "Exclusive_Balcony_Area");
-        if (balcony == null || balcony.isBlank()) balcony = "29.65";
+        String balcony = getString(unitMap, "Exclusive_Balcony_Verandah_use_areas2");
+        if (balcony == null) balcony = "";
 
-        String terrace = getStringWithDefault(primaryUnitSource, getString(dealMap, "Exclusive_Use_Areas_Open_Terrace_to_the_allottee", "Open_terrace_use_areas_to_the_allottee_Sqm"),
-                "Exclusive_Use_Areas_Open_Terrace_to_the_allottee", "Exclusive_Terrace_Area", "Open_terrace_use_areas_to_the_allottee_Sqm");
-        if (terrace == null || terrace.isBlank()) terrace = "2.77";
+        String terrace = getString(unitMap, "Exclusive_open_terrace_use_areas_to_the_allotee2");
+        if (terrace == null) terrace = "";
 
-        String carParks = getStringWithDefault(primaryUnitSource, getString(dealMap, "Car_Parking_Space", "Covered_car_parks_Nos"),
-                "Car_Parking_Space", "Covered_car_parks_Nos", "Covered_Car_Parks");
-        if (carParks == null || carParks.isBlank()) carParks = "2";
+        String carParks = getString(unitMap, "Covered_Car_Parks");
+        if (carParks == null) carParks = "";
 
-        // Table 2 - Sale Price Details (Mapped from Field_Catalogue.xlsx Units module)
-        BigDecimal costOfUnit = getBigDecimal(primaryUnitSource, "Cost_of_Unit", "Unit_Price", "Cost_of_unit", "Unit_Cost", "Amount");
-        if (costOfUnit == null || costOfUnit.compareTo(BigDecimal.ZERO) == 0) {
-            costOfUnit = getBigDecimal(dealMap, "Cost_of_Unit", "Unit_Price", "Cost_of_unit", "Unit_Cost", "Amount");
-        }
-        if (costOfUnit == null || costOfUnit.compareTo(BigDecimal.ZERO) == 0) {
-            costOfUnit = new BigDecimal("37619048");
-        }
+        // Table 2 - Sale Price Details directly from field_labels.xlsx (ONLY from unitMap)
+        BigDecimal costOfUnit = getBigDecimal(unitMap, "Unit_Price");
 
-        BigDecimal gstAmount = getBigDecimal(primaryUnitSource, "GST_at_5", "GST_of_unit", "GST_Amount", "GST");
-        if (gstAmount == null || gstAmount.compareTo(BigDecimal.ZERO) == 0) {
-            gstAmount = getBigDecimal(dealMap, "GST_at_5", "GST_of_unit", "GST_Amount", "GST");
-        }
-        if (gstAmount == null || gstAmount.compareTo(BigDecimal.ZERO) == 0) {
-            gstAmount = costOfUnit.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
-        }
+        BigDecimal gstAmount = getBigDecimal(unitMap, "GST_at_5", "GST", "GST_Value");
 
-        BigDecimal costOfHome = getBigDecimal(primaryUnitSource, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B", "Cost_of_home", "Total_Cost");
-        if (costOfHome == null || costOfHome.compareTo(BigDecimal.ZERO) == 0) {
-            costOfHome = getBigDecimal(dealMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B", "Cost_of_home", "Total_Cost");
-        }
-        if (costOfHome == null || costOfHome.compareTo(BigDecimal.ZERO) == 0) {
-            costOfHome = costOfUnit.add(gstAmount);
-        }
+        BigDecimal costOfHome = getBigDecimal(unitMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B");
 
-        BigDecimal maintenanceDeposits = getBigDecimal(primaryUnitSource, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_Deposits");
-        if (maintenanceDeposits == null || maintenanceDeposits.compareTo(BigDecimal.ZERO) == 0) {
-            maintenanceDeposits = getBigDecimal(dealMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_Deposits");
-        }
-        if (maintenanceDeposits == null || maintenanceDeposits.compareTo(BigDecimal.ZERO) == 0) {
-            maintenanceDeposits = new BigDecimal("200000");
-        }
+        BigDecimal maintenanceDeposits = getBigDecimal(unitMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
 
-        String amountInWords = IndianCurrencyFormatter.convertToWords(costOfHome);
+        String amountInWords = costOfHome != null ? IndianCurrencyFormatter.convertToWords(costOfHome) : "";
+
+        log.info("[OFFER_LETTER_TRACE_v2] Extracted Table 1 & Table 2 Values from primaryUnitSource:");
+        log.info(" - Unit Record ID: {}", unitMap != null ? unitMap.get("id") : "N/A (fallback to Deal)");
+        log.info(" - Unit Name: '{}'", unitName);
+        log.info(" - Project Site: '{}'", projectName);
+        log.info(" - Carpet Area: '{}'", carpetArea);
+        log.info(" - Built-up Area: '{}'", superBuiltUp);
+        log.info(" - Exclusive Common Area: '{}'", areaA);
+        log.info(" - Common Area: '{}'", areaB);
+        log.info(" - UDS: '{}'", areaC);
+        log.info(" - Total UDS: '{}'", totalUds);
+        log.info(" - Balcony: '{}'", balcony);
+        log.info(" - Terrace: '{}'", terrace);
+        log.info(" - Covered Car Parks: '{}'", carParks);
+        log.info(" - Unit Price: '{}'", costOfUnit);
+        log.info(" - GST: '{}'", gstAmount);
+        log.info(" - Cost of Home: '{}'", costOfHome);
+        log.info(" - Maintenance Deposit: '{}'", maintenanceDeposits);
 
         // Dynamic Payment Schedule (Milestones)
         List<OfferLetterMilestoneDto> milestones = extractMilestones(dealMap, costOfUnit, gstAmount, costOfHome);
 
         // Milestone Totals
-        BigDecimal totalUnitAmount = BigDecimal.ZERO;
-        BigDecimal totalGstAmount = BigDecimal.ZERO;
-        BigDecimal totalInstallmentAmount = BigDecimal.ZERO;
+        BigDecimal totalUnitAmount = null;
+        BigDecimal totalGstAmount = null;
+        BigDecimal totalInstallmentAmount = null;
 
         for (OfferLetterMilestoneDto m : milestones) {
-            if (m.getUnitTotalAmount() != null) totalUnitAmount = totalUnitAmount.add(m.getUnitTotalAmount());
-            if (m.getGstAmount() != null) totalGstAmount = totalGstAmount.add(m.getGstAmount());
-            if (m.getInstallmentAmount() != null) totalInstallmentAmount = totalInstallmentAmount.add(m.getInstallmentAmount());
+            if (m.getUnitTotalAmount() != null) {
+                totalUnitAmount = (totalUnitAmount == null ? BigDecimal.ZERO : totalUnitAmount).add(m.getUnitTotalAmount());
+            }
+            if (m.getGstAmount() != null) {
+                totalGstAmount = (totalGstAmount == null ? BigDecimal.ZERO : totalGstAmount).add(m.getGstAmount());
+            }
+            if (m.getInstallmentAmount() != null) {
+                totalInstallmentAmount = (totalInstallmentAmount == null ? BigDecimal.ZERO : totalInstallmentAmount).add(m.getInstallmentAmount());
+            }
         }
 
-        if (totalUnitAmount.compareTo(BigDecimal.ZERO) == 0) totalUnitAmount = costOfUnit;
-        if (totalGstAmount.compareTo(BigDecimal.ZERO) == 0) totalGstAmount = gstAmount;
-        if (totalInstallmentAmount.compareTo(BigDecimal.ZERO) == 0) totalInstallmentAmount = costOfHome;
+        if (totalUnitAmount == null) totalUnitAmount = costOfUnit;
+        if (totalGstAmount == null) totalGstAmount = gstAmount;
+        if (totalInstallmentAmount == null) totalInstallmentAmount = costOfHome;
 
         // Bank Remittance Details
         OfferLetterBankDetailsDto escrowBank = OfferLetterBankDetailsDto.builder()
@@ -320,7 +328,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .ifscCode(getStringWithDefault(dealMap, "HDFC0000523", "Current_IFSC_Code"))
                 .build();
 
-        return OfferLetterDto.builder()
+        OfferLetterDto dto = OfferLetterDto.builder()
                 .offerLetterNo(offerNo)
                 .offerLetterDate(offerDate)
                 .projectName(projectName)
@@ -336,29 +344,50 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .openTerraceSqm(terrace)
                 .coveredCarParks(carParks)
                 .costOfUnit(costOfUnit)
-                .costOfUnitFormatted(IndianCurrencyFormatter.formatCurrency(costOfUnit))
+                .costOfUnitFormatted(costOfUnit != null ? IndianCurrencyFormatter.formatCurrency(costOfUnit) : "")
                 .gstRate("5%")
                 .gstAmount(gstAmount)
-                .gstAmountFormatted(IndianCurrencyFormatter.formatCurrency(gstAmount))
+                .gstAmountFormatted(gstAmount != null ? IndianCurrencyFormatter.formatCurrency(gstAmount) : "")
                 .costOfHome(costOfHome)
-                .costOfHomeFormatted(IndianCurrencyFormatter.formatCurrency(costOfHome))
+                .costOfHomeFormatted(costOfHome != null ? IndianCurrencyFormatter.formatCurrency(costOfHome) : "")
                 .maintenanceDeposits(maintenanceDeposits)
-                .maintenanceDepositsFormatted(IndianCurrencyFormatter.formatCurrency(maintenanceDeposits))
+                .maintenanceDepositsFormatted(maintenanceDeposits != null ? IndianCurrencyFormatter.formatCurrency(maintenanceDeposits) : "")
                 .amountInWords(amountInWords)
                 .milestones(milestones)
                 .totalMilestonePercent("100%")
                 .totalUnitCost(totalUnitAmount)
-                .totalUnitCostFormatted(IndianCurrencyFormatter.formatCurrency(totalUnitAmount))
+                .totalUnitCostFormatted(totalUnitAmount != null ? IndianCurrencyFormatter.formatCurrency(totalUnitAmount) : "")
                 .totalGstAmount(totalGstAmount)
-                .totalGstAmountFormatted(IndianCurrencyFormatter.formatCurrency(totalGstAmount))
+                .totalGstAmountFormatted(totalGstAmount != null ? IndianCurrencyFormatter.formatCurrency(totalGstAmount) : "")
                 .totalInstallmentCost(totalInstallmentAmount)
-                .totalInstallmentCostFormatted(IndianCurrencyFormatter.formatCurrency(totalInstallmentAmount))
+                .totalInstallmentCostFormatted(totalInstallmentAmount != null ? IndianCurrencyFormatter.formatCurrency(totalInstallmentAmount) : "")
                 .escrowBankDetails(escrowBank)
                 .currentBankDetails(currentBank)
                 .validityDays(7)
                 .companyName("GoodEarth Eco Communities Pvt Ltd")
                 .reraNo("PRM/KA/RERA/1251/310/PR/070125/007359")
                 .build();
+
+        log.info("[OFFER_LETTER_TRACE_v2] 5. Values immediately before OfferLetterDto is returned:");
+        log.info(" - Offer No: '{}'", dto.getOfferLetterNo());
+        log.info(" - Offer Date: '{}'", dto.getOfferLetterDate());
+        log.info(" - Unit Name: '{}'", dto.getUnitName());
+        log.info(" - Project Name: '{}'", dto.getProjectName());
+        log.info(" - Carpet Area Sqm: '{}'", dto.getCarpetAreaSqm());
+        log.info(" - Super Built-up Area Sqm: '{}'", dto.getSuperBuiltUpAreaSqm());
+        log.info(" - Exclusive Common Area Sqm: '{}'", dto.getExclusiveCommonAreaSqm());
+        log.info(" - Association Common Area Sqm: '{}'", dto.getAssociationCommonAreaSqm());
+        log.info(" - UDS Allottee Sqm: '{}'", dto.getUdsAllotteeSqm());
+        log.info(" - Total UDS Sqm: '{}'", dto.getTotalUdsSqm());
+        log.info(" - Exclusive Balcony Sqm: '{}'", dto.getExclusiveBalconySqm());
+        log.info(" - Open Terrace Sqm: '{}'", dto.getOpenTerraceSqm());
+        log.info(" - Covered Car Parks: '{}'", dto.getCoveredCarParks());
+        log.info(" - Cost of Unit Formatted: '{}'", dto.getCostOfUnitFormatted());
+        log.info(" - GST Amount Formatted: '{}'", dto.getGstAmountFormatted());
+        log.info(" - Cost of Home Formatted: '{}'", dto.getCostOfHomeFormatted());
+        log.info(" - Maintenance Deposits Formatted: '{}'", dto.getMaintenanceDepositsFormatted());
+
+        return dto;
     }
 
     private List<OfferLetterApplicantDto> extractApplicants(Map<?, ?> dealMap) {
@@ -459,10 +488,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 full = ((first != null ? first : "") + " " + (last != null ? last : "")).trim();
             }
 
-            // Default fallback for Primary applicant if no CRM name is present in mock test payload
-            if (count == 1 && (full == null || full.isBlank())) {
-                full = "Nishtha Bhatia";
-            }
+
 
             if (full != null && !full.isBlank()) {
                 String email = getString(dealMap, spec.emailKeys);
@@ -620,9 +646,9 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             String dueDate = (String) d[3];
 
             BigDecimal pctRatio = new BigDecimal(pct).divide(new BigDecimal(100), 4, RoundingMode.HALF_UP);
-            BigDecimal uAmt = unitTotal.multiply(pctRatio).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal gAmt = gstTotal.multiply(pctRatio).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal iAmt = uAmt.add(gAmt);
+            BigDecimal uAmt = unitTotal != null ? unitTotal.multiply(pctRatio).setScale(0, RoundingMode.HALF_UP) : null;
+            BigDecimal gAmt = gstTotal != null ? gstTotal.multiply(pctRatio).setScale(0, RoundingMode.HALF_UP) : null;
+            BigDecimal iAmt = (uAmt != null || gAmt != null) ? (uAmt != null ? uAmt : BigDecimal.ZERO).add(gAmt != null ? gAmt : BigDecimal.ZERO) : null;
 
             list.add(OfferLetterMilestoneDto.builder()
                     .sNo(sNo)
@@ -630,11 +656,11 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                     .paymentPercent(pct + "%")
                     .dueDate(dueDate)
                     .unitTotalAmount(uAmt)
-                    .unitTotalAmountFormatted(IndianCurrencyFormatter.formatCurrency(uAmt))
+                    .unitTotalAmountFormatted(uAmt != null ? IndianCurrencyFormatter.formatCurrency(uAmt) : "")
                     .gstAmount(gAmt)
-                    .gstAmountFormatted(IndianCurrencyFormatter.formatCurrency(gAmt))
+                    .gstAmountFormatted(gAmt != null ? IndianCurrencyFormatter.formatCurrency(gAmt) : "")
                     .installmentAmount(iAmt)
-                    .installmentAmountFormatted(IndianCurrencyFormatter.formatCurrency(iAmt))
+                    .installmentAmountFormatted(iAmt != null ? IndianCurrencyFormatter.formatCurrency(iAmt) : "")
                     .build());
         }
         return list;

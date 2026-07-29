@@ -12,18 +12,18 @@ public class IndianCurrencyFormatterTest {
     @Test
     @DisplayName("formatCurrency formats numbers according to Indian numbering system")
     void testFormatCurrency() {
-        assertEquals("INR 3,76,19,048", IndianCurrencyFormatter.formatCurrency(new BigDecimal("37619048")));
-        assertEquals("INR 18,80,952", IndianCurrencyFormatter.formatCurrency(new BigDecimal("1880952")));
-        assertEquals("INR 3,95,00,000", IndianCurrencyFormatter.formatCurrency(new BigDecimal("39500000")));
-        assertEquals("INR 2,00,000", IndianCurrencyFormatter.formatCurrency(new BigDecimal("200000")));
+        assertEquals("INR 1,23,45,678", IndianCurrencyFormatter.formatCurrency(new BigDecimal("12345678")));
+        assertEquals("INR 5,00,000", IndianCurrencyFormatter.formatCurrency(new BigDecimal("500000")));
+        assertEquals("INR 1,00,00,000", IndianCurrencyFormatter.formatCurrency(new BigDecimal("10000000")));
+        assertEquals("INR 3,00,000", IndianCurrencyFormatter.formatCurrency(new BigDecimal("300000")));
     }
 
     @Test
     @DisplayName("convertToWords converts BigDecimal into Indian Rupee words")
     void testConvertToWords() {
-        assertEquals("Rupees Three Crore Ninety Five Lakh Only",
-                IndianCurrencyFormatter.convertToWords(new BigDecimal("39500000")));
-        assertEquals("Rupees Two Lakh Only",
-                IndianCurrencyFormatter.convertToWords(new BigDecimal("200000")));
+        assertEquals("Rupees One Crore Only",
+                IndianCurrencyFormatter.convertToWords(new BigDecimal("10000000")));
+        assertEquals("Rupees Three Lakh Only",
+                IndianCurrencyFormatter.convertToWords(new BigDecimal("300000")));
     }
 }

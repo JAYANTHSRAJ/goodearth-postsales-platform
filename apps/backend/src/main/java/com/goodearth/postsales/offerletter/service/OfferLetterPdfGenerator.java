@@ -31,14 +31,32 @@ public class OfferLetterPdfGenerator {
             throw new CustomException("OfferLetterDto cannot be null for PDF generation.", HttpStatus.BAD_REQUEST);
         }
 
-        log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Starting generatePdf for Offer No: {}", dto.getOfferLetterNo());
+        log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator Code Version: 2026-07-29T15:35:00");
+        log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator -> Starting generatePdf for Offer No: {}", dto.getOfferLetterNo());
         long startTime = System.currentTimeMillis();
         try {
-            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 1: Setting up Thymeleaf Context...");
+            log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator -> Step 1: Setting up Thymeleaf Context...");
             Context context = new Context();
             context.setVariable("offer", dto);
 
-            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2: Processing Thymeleaf HTML template 'offer-letter'...");
+            log.info("[OFFER_LETTER_TRACE_v2] 6. Values inside Thymeleaf Context before rendering:");
+            log.info(" - offer.unitName: '{}'", dto.getUnitName());
+            log.info(" - offer.projectName: '{}'", dto.getProjectName());
+            log.info(" - offer.carpetAreaSqm: '{}'", dto.getCarpetAreaSqm());
+            log.info(" - offer.superBuiltUpAreaSqm: '{}'", dto.getSuperBuiltUpAreaSqm());
+            log.info(" - offer.exclusiveCommonAreaSqm: '{}'", dto.getExclusiveCommonAreaSqm());
+            log.info(" - offer.associationCommonAreaSqm: '{}'", dto.getAssociationCommonAreaSqm());
+            log.info(" - offer.udsAllotteeSqm: '{}'", dto.getUdsAllotteeSqm());
+            log.info(" - offer.totalUdsSqm: '{}'", dto.getTotalUdsSqm());
+            log.info(" - offer.exclusiveBalconySqm: '{}'", dto.getExclusiveBalconySqm());
+            log.info(" - offer.openTerraceSqm: '{}'", dto.getOpenTerraceSqm());
+            log.info(" - offer.coveredCarParks: '{}'", dto.getCoveredCarParks());
+            log.info(" - offer.costOfUnitFormatted: '{}'", dto.getCostOfUnitFormatted());
+            log.info(" - offer.gstAmountFormatted: '{}'", dto.getGstAmountFormatted());
+            log.info(" - offer.costOfHomeFormatted: '{}'", dto.getCostOfHomeFormatted());
+            log.info(" - offer.maintenanceDepositsFormatted: '{}'", dto.getMaintenanceDepositsFormatted());
+
+            log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator -> Step 2: Processing Thymeleaf HTML template 'offer-letter'...");
             String htmlContent = templateEngine.process("offer-letter", context);
             log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2 Complete. Rendered HTML length: {} characters",
                     htmlContent != null ? htmlContent.length() : 0);
