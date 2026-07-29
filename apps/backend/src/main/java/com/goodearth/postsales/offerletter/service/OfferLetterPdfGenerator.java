@@ -31,28 +31,37 @@ public class OfferLetterPdfGenerator {
             throw new CustomException("OfferLetterDto cannot be null for PDF generation.", HttpStatus.BAD_REQUEST);
         }
 
+        log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Starting generatePdf for Offer No: {}", dto.getOfferLetterNo());
         long startTime = System.currentTimeMillis();
         try {
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 1: Setting up Thymeleaf Context...");
             Context context = new Context();
             context.setVariable("offer", dto);
 
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2: Rendering Thymeleaf HTML template 'offer-letter'...");
             String htmlContent = templateEngine.process("offer-letter", context);
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2 Complete. Rendered HTML length: {} characters",
+                    htmlContent != null ? htmlContent.length() : 0);
 
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 3: Initializing OpenHTMLToPDF PdfRendererBuilder...");
             ByteArrayOutputStream os = new ByteArrayOutputStream();
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             builder.withHtmlContent(htmlContent, null);
             builder.toStream(os);
+
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 4: Executing OpenHTMLToPDF builder.run()...");
             builder.run();
 
             byte[] pdfBytes = os.toByteArray();
             long duration = System.currentTimeMillis() - startTime;
-            log.info("[OFFER_LETTER_GEN] Generated PDF for Deal: {} | Size: {} bytes | Execution Time: {}ms",
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 5 Complete: PDF generated successfully for Deal: {} | Size: {} bytes | Duration: {}ms",
                     dto.getOfferLetterNo(), pdfBytes.length, duration);
 
             return pdfBytes;
-        } catch (Exception ex) {
-            log.error("[OFFER_LETTER_GEN] Error rendering PDF for Deal {}: {}", dto.getOfferLetterNo(), ex.getMessage(), ex);
+        } catch (Throwable ex) {
+            log.error("[OFFER_LETTER_TRACE] CRITICAL ERROR in PDFGenerator for Deal {}: {}",
+                    dto.getOfferLetterNo(), ex.getMessage(), ex);
             throw new CustomException("Failed to generate Offer Letter PDF: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }

@@ -78,19 +78,21 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
     @Override
     public OfferLetterDto buildOfferLetterDto(String dealIdOrBookingId) {
+        log.info("[OFFER_LETTER_TRACE] Service -> Entering buildOfferLetterDto for identifier: {}", dealIdOrBookingId);
         if (dealIdOrBookingId == null || dealIdOrBookingId.trim().isEmpty()) {
             throw new CustomException("Deal ID or Booking Reference is required.", HttpStatus.BAD_REQUEST);
         }
 
         String cleanIdentifier = dealIdOrBookingId.trim();
         String targetRecordId = zohoKycSyncService.resolveDealRecordIdByDealName(cleanIdentifier);
+        log.info("[OFFER_LETTER_TRACE] Service -> Resolved Deal Record ID: {}", targetRecordId);
         if (targetRecordId == null) {
             throw new CustomException("Deal record not found in CRM for identifier: " + cleanIdentifier, HttpStatus.NOT_FOUND);
         }
 
         try {
             String url = properties.getCrmApiUrl() + "/Deals/" + targetRecordId;
-            log.info("[OFFER_LETTER] Fetching Deal data from Zoho CRM: {}", url);
+            log.info("[OFFER_LETTER_TRACE] Service -> Fetching Deal data from Zoho CRM: {}", url);
             Map<?, ?> response = apiClient.get(url, Map.class);
 
             Map<?, ?> dealMap = null;
@@ -104,28 +106,38 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 throw new CustomException("No data returned from CRM for Deal ID: " + targetRecordId, HttpStatus.NOT_FOUND);
             }
 
-            return mapCrmDealToOfferLetterDto(cleanIdentifier, targetRecordId, dealMap);
+            log.info("[OFFER_LETTER_TRACE] Service -> CRM deal data retrieved successfully. Mapping to OfferLetterDto...");
+            OfferLetterDto dto = mapCrmDealToOfferLetterDto(cleanIdentifier, targetRecordId, dealMap);
+            log.info("[OFFER_LETTER_TRACE] Service -> OfferLetterDto built successfully for Offer No: {}", dto.getOfferLetterNo());
+            return dto;
 
         } catch (CustomException ce) {
+            log.error("[OFFER_LETTER_TRACE] CustomException in buildOfferLetterDto for {}: {}", cleanIdentifier, ce.getMessage());
             throw ce;
-        } catch (Exception ex) {
-            log.error("[OFFER_LETTER] Exception fetching Deal data for {}: {}", cleanIdentifier, ex.getMessage(), ex);
+        } catch (Throwable ex) {
+            log.error("[OFFER_LETTER_TRACE] Exception fetching Deal data from CRM for {}: {}", cleanIdentifier, ex.getMessage(), ex);
             throw new CustomException("Failed to fetch Deal data from CRM: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }
 
     @Override
     public byte[] generateOfferLetterPdf(String dealIdOrBookingId) {
+        log.info("[OFFER_LETTER_TRACE] Service -> Entering generateOfferLetterPdf for identifier: {}", dealIdOrBookingId);
         OfferLetterDto dto = buildOfferLetterDto(dealIdOrBookingId);
-        return pdfGenerator.generatePdf(dto);
+        log.info("[OFFER_LETTER_TRACE] Service -> Invoking pdfGenerator.generatePdf for Offer No: {}", dto.getOfferLetterNo());
+        byte[] pdfBytes = pdfGenerator.generatePdf(dto);
+        log.info("[OFFER_LETTER_TRACE] Service -> pdfGenerator.generatePdf returned {} bytes", pdfBytes != null ? pdfBytes.length : 0);
+        return pdfBytes;
     }
 
     @Override
     public KycDocumentStreamDto streamOfferLetterPdf(String dealIdOrBookingId, String actorId) {
+        log.info("[OFFER_LETTER_TRACE] Service -> Entering streamOfferLetterPdf for identifier: {}, actorId: {}", dealIdOrBookingId, actorId);
         String cleanIdentifier = dealIdOrBookingId.trim();
         byte[] pdfBytes = generateOfferLetterPdf(cleanIdentifier);
         String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
 
+        log.info("[OFFER_LETTER_TRACE] Service -> Constructed KycDocumentStreamDto for file: {}, Size: {} bytes", fileName, pdfBytes.length);
         return KycDocumentStreamDto.builder()
                 .fileName(fileName)
                 .mimeType("application/pdf")

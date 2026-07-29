@@ -55,19 +55,30 @@ public class OfferLetterController {
             @PathVariable String dealIdOrBookingId,
             Authentication authentication) {
 
+        log.info("[OFFER_LETTER_TRACE] Controller Entry -> GET /deals/{}/offer-letter/file | Actor: {}",
+                dealIdOrBookingId, authentication != null ? authentication.getName() : "ANONYMOUS");
+
         long startTime = System.currentTimeMillis();
         String actorId = authentication != null ? authentication.getName() : "ADMIN";
 
-        KycDocumentStreamDto streamDto = offerLetterService.streamOfferLetterPdf(dealIdOrBookingId, actorId);
-        long duration = System.currentTimeMillis() - startTime;
+        try {
+            log.info("[OFFER_LETTER_TRACE] Invoking OfferLetterService.streamOfferLetterPdf for identifier: {}", dealIdOrBookingId);
+            KycDocumentStreamDto streamDto = offerLetterService.streamOfferLetterPdf(dealIdOrBookingId, actorId);
+            long duration = System.currentTimeMillis() - startTime;
 
-        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter, Execution Time: {}ms, File: {}, Size: {} bytes",
-                dealIdOrBookingId, duration, streamDto.getFileName(), streamDto.getFileSize());
+            log.info("[OFFER_LETTER_TRACE] Service completed successfully. File: {}, Size: {} bytes, Duration: {}ms",
+                    streamDto.getFileName(), streamDto.getFileSize(), duration);
+            log.info("[OFFER_LETTER_TRACE] Controller -> Returning ResponseEntity byte[] stream with HTTP 200 OK");
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + streamDto.getFileName() + "\"")
-                .contentType(MediaType.parseMediaType(streamDto.getMimeType()))
-                .contentLength(streamDto.getFileSize())
-                .body(streamDto.getContent());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + streamDto.getFileName() + "\"")
+                    .contentType(MediaType.parseMediaType(streamDto.getMimeType()))
+                    .contentLength(streamDto.getFileSize())
+                    .body(streamDto.getContent());
+        } catch (Throwable t) {
+            log.error("[OFFER_LETTER_TRACE] FATAL EXCEPTION in Controller streamOfferLetterFile for identifier {}: {}",
+                    dealIdOrBookingId, t.getMessage(), t);
+            throw t;
+        }
     }
 }
