@@ -21,8 +21,6 @@ public class OfferLetterDto {
 
     @Builder.Default
     private List<OfferLetterApplicantDto> applicants = new ArrayList<>();
-    private String primaryApplicantFormatted;
-    private String secondaryApplicantFormatted;
 
     // Unit & Area Details (Table 1)
     private String carpetAreaSqm;

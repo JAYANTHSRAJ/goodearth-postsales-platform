@@ -288,8 +288,7 @@
 
 <div class="to-block">
     <div>To,</div>
-    <div class="applicant-name" th:text="${offer.primaryApplicantFormatted != null ? offer.primaryApplicantFormatted : 'Ms. Nishtha Bhatia'}">Ms. Nishtha Bhatia</div>
-    <div class="applicant-name" th:if="${offer.secondaryApplicantFormatted != null}" th:text="${offer.secondaryApplicantFormatted}">Mr. Aman Uzuwaal</div>
+    <div class="applicant-name" th:each="app : ${offer.applicants}" th:text="${app.formattedNameWithSalutation}">Ms. Nishtha Bhatia</div>
 </div>
 
 <div class="intro-text">
@@ -505,8 +504,9 @@
     <table class="signature-table">
         <tr>
             <td class="sig-left">
-                <div style="margin-bottom: 25px;">First applicant</div>
-                <div style="margin-top: 35px;" th:if="${offer.secondaryApplicantFormatted != null}">Second applicant</div>
+                <div th:each="app, iterStat : ${offer.applicants}" th:style="${iterStat.first ? 'margin-bottom: 25px;' : 'margin-top: 35px;'}" style="page-break-inside: avoid;">
+                    <div th:text="${app.label != null ? app.label : (app.signatureLabel != null ? app.signatureLabel : 'Applicant')}">First applicant</div>
+                </div>
             </td>
             <td class="sig-right">
                 <div>For <span th:text="${offer.companyName != null ? offer.companyName : 'GoodEarth Eco Communities Pvt Ltd'}">GoodEarth Eco Communities Pvt Ltd</span></div>

@@ -165,8 +165,6 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
         // Applicants
         List<OfferLetterApplicantDto> applicants = extractApplicants(dealMap);
-        String primaryFormatted = applicants.size() > 0 ? applicants.get(0).getSalutation() + " " + applicants.get(0).getFullName() : "Ms. Nishtha Bhatia";
-        String secondaryFormatted = applicants.size() > 1 ? applicants.get(1).getSalutation() + " " + applicants.get(1).getFullName() : null;
 
         // Area Details
         String carpetArea = getStringWithDefault(dealMap, "149.01", "Carpet_Area_Sqm", "Carpet_Area", "carpet_area");
@@ -251,8 +249,6 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .projectName(projectName)
                 .unitName(unitName)
                 .applicants(applicants)
-                .primaryApplicantFormatted(primaryFormatted)
-                .secondaryApplicantFormatted(secondaryFormatted)
                 .carpetAreaSqm(carpetArea)
                 .superBuiltUpAreaSqm(superBuiltUp)
                 .exclusiveCommonAreaSqm(areaA)
@@ -291,40 +287,177 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     private List<OfferLetterApplicantDto> extractApplicants(Map<?, ?> dealMap) {
         List<OfferLetterApplicantDto> result = new ArrayList<>();
 
-        // Primary
-        String titleA = getStringWithDefault(dealMap, "Ms.", "Title_A", "Applicant_Title");
-        String firstA = getString(dealMap, "First_Name_A", "Applicant_First_Name");
-        String lastA = getString(dealMap, "Last_Name_A", "Applicant_Last_Name");
-        String nameA = getString(dealMap, "First_Applicant", "Applicant_Name", "Contact_Name");
-        if (nameA == null && (firstA != null || lastA != null)) {
-            nameA = ((firstA != null ? firstA : "") + " " + (lastA != null ? lastA : "")).trim();
+        // 1. Check for CRM Subform / Array of Applicants
+        String[] subformKeys = {"Applicants", "Applicant_Details", "Co_Applicants", "Joint_Applicants", "Subform_Applicants"};
+        for (String k : subformKeys) {
+            if (dealMap.containsKey(k) && dealMap.get(k) instanceof List<?> list && !list.isEmpty()) {
+                int index = 1;
+                for (Object item : list) {
+                    if (item instanceof Map<?, ?> rowMap) {
+                        String type = getStringWithDefault(rowMap, index == 1 ? "PRIMARY" : ("CO_APPLICANT_" + index), "Applicant_Type", "Type", "Role");
+                        String salutation = getStringWithDefault(rowMap, index == 1 ? "Ms." : "Mr.", "Salutation", "Title", "Applicant_Title");
+                        String firstName = getString(rowMap, "First_Name", "Applicant_First_Name", "First_Name_A");
+                        String lastName = getString(rowMap, "Last_Name", "Applicant_Last_Name", "Last_Name_A");
+                        String fullName = getString(rowMap, "Full_Name", "Applicant_Name", "Name", "Contact_Name");
+                        if ((fullName == null || fullName.isBlank()) && (firstName != null || lastName != null)) {
+                            fullName = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+                        }
+                        String email = getString(rowMap, "Email", "Applicant_Email");
+                        String mobile = getString(rowMap, "Phone", "Mobile", "Applicant_Phone_number");
+                        String address = getString(rowMap, "Address", "Permanent_Address");
+
+                        String ordinalLabel = getOrdinalLabel(index);
+                        String sigLabel = getSignatureRoleLabel(index, type);
+
+                        if (fullName != null && !fullName.isBlank()) {
+                            result.add(OfferLetterApplicantDto.builder()
+                                    .applicantType(type)
+                                    .salutation(salutation)
+                                    .firstName(firstName)
+                                    .lastName(lastName)
+                                    .fullName(fullName)
+                                    .email(email)
+                                    .mobile(mobile)
+                                    .address(address)
+                                    .label(ordinalLabel)
+                                    .signatureLabel(sigLabel)
+                                    .build());
+                            index++;
+                        }
+                    }
+                }
+                if (!result.isEmpty()) {
+                    return result;
+                }
+            }
         }
-        if (nameA == null || nameA.isBlank()) nameA = "Nishtha Bhatia";
 
-        result.add(OfferLetterApplicantDto.builder()
-                .salutation(titleA)
-                .fullName(nameA)
-                .label("First applicant")
-                .build());
+        // 2. Dynamic positional applicant extraction for Primary (A), Secondary (C), Third (T), 4th, 5th, etc.
+        ApplicantFieldSpec[] positionalSpecs = new ApplicantFieldSpec[]{
+                new ApplicantFieldSpec("PRIMARY", "First applicant", "Primary Applicant", "Ms.",
+                        new String[]{"Title_A", "Applicant_Title", "Title_1"},
+                        new String[]{"First_Name_A", "Applicant_First_Name", "First_Name_1"},
+                        new String[]{"Last_Name_A", "Applicant_Last_Name", "Last_Name_1"},
+                        new String[]{"First_Applicant", "Applicant_Name", "Contact_Name", "Name_1"},
+                        new String[]{"Applicant_Email", "Email_A", "Email_1"},
+                        new String[]{"Applicant_Phone_number", "Phone_A", "Mobile_1"},
+                        new String[]{"Permanent_Address_A", "Address_1"}),
 
-        // Secondary
-        String titleC = getStringWithDefault(dealMap, "Mr.", "Title_C", "CoApplicant_Title");
-        String firstC = getString(dealMap, "First_Name_C", "Co_applicant_First_Name");
-        String lastC = getString(dealMap, "Last_Name_C", "Co_applicant_Last_Name");
-        String nameC = getString(dealMap, "Second_Applicant", "Co_applicant_Name");
-        if (nameC == null && (firstC != null || lastC != null)) {
-            nameC = ((firstC != null ? firstC : "") + " " + (lastC != null ? lastC : "")).trim();
-        }
+                new ApplicantFieldSpec("CO_APPLICANT", "Second applicant", "Co Applicant", "Mr.",
+                        new String[]{"Title_C", "CoApplicant_Title", "Title_2"},
+                        new String[]{"First_Name_C", "Co_applicant_First_Name", "First_Name_2"},
+                        new String[]{"Last_Name_C", "Co_applicant_Last_Name", "Last_Name_2"},
+                        new String[]{"Second_Applicant", "Co_applicant_Name", "Name_2"},
+                        new String[]{"Co_Applicant_Email", "Email_C", "Email_2"},
+                        new String[]{"Co_Applicant_Phone", "Phone_C", "Mobile_2"},
+                        new String[]{"Permanent_Address_C", "Address_2"}),
 
-        if (nameC != null && !nameC.isBlank()) {
-            result.add(OfferLetterApplicantDto.builder()
-                    .salutation(titleC)
-                    .fullName(nameC)
-                    .label("Second applicant")
-                    .build());
+                new ApplicantFieldSpec("THIRD_APPLICANT", "Third applicant", "Third Applicant", "Mr.",
+                        new String[]{"Title_T", "Third_Applicant_Title", "Title_3"},
+                        new String[]{"First_Name_T", "Third_Applicant_First_Name", "First_Name_3"},
+                        new String[]{"Last_Name_T", "Third_Applicant_Last_Name", "Last_Name_3"},
+                        new String[]{"Third_Applicant", "Third_Applicant_Name", "Name_3"},
+                        new String[]{"Third_Applicant_Email", "Email_T", "Email_3"},
+                        new String[]{"Third_Applicant_Phone", "Phone_T", "Mobile_3"},
+                        new String[]{"Permanent_Address_T", "Address_3"}),
+
+                new ApplicantFieldSpec("FOURTH_APPLICANT", "Fourth applicant", "Fourth Applicant", "Mr.",
+                        new String[]{"Title_4", "Fourth_Applicant_Title"},
+                        new String[]{"First_Name_4", "Fourth_Applicant_First_Name"},
+                        new String[]{"Last_Name_4", "Fourth_Applicant_Last_Name"},
+                        new String[]{"Fourth_Applicant", "Fourth_Applicant_Name", "Name_4"},
+                        new String[]{"Fourth_Applicant_Email", "Email_4"},
+                        new String[]{"Fourth_Applicant_Phone", "Phone_4"},
+                        new String[]{"Permanent_Address_4"})
+        };
+
+        int count = 1;
+        for (ApplicantFieldSpec spec : positionalSpecs) {
+            String title = getStringWithDefault(dealMap, spec.defaultTitle, spec.titleKeys);
+            String first = getString(dealMap, spec.firstNameKeys);
+            String last = getString(dealMap, spec.lastNameKeys);
+            String full = getString(dealMap, spec.fullNameKeys);
+
+            if (full == null && (first != null || last != null)) {
+                full = ((first != null ? first : "") + " " + (last != null ? last : "")).trim();
+            }
+
+            // Default fallback for Primary applicant if no CRM name is present in mock test payload
+            if (count == 1 && (full == null || full.isBlank())) {
+                full = "Nishtha Bhatia";
+            }
+
+            if (full != null && !full.isBlank()) {
+                String email = getString(dealMap, spec.emailKeys);
+                String mobile = getString(dealMap, spec.mobileKeys);
+                String address = getString(dealMap, spec.addressKeys);
+
+                result.add(OfferLetterApplicantDto.builder()
+                        .applicantType(spec.type)
+                        .salutation(title)
+                        .firstName(first)
+                        .lastName(last)
+                        .fullName(full)
+                        .email(email)
+                        .mobile(mobile)
+                        .address(address)
+                        .label(spec.label)
+                        .signatureLabel(spec.signatureLabel)
+                        .build());
+                count++;
+            }
         }
 
         return result;
+    }
+
+    private String getOrdinalLabel(int index) {
+        switch (index) {
+            case 1: return "First applicant";
+            case 2: return "Second applicant";
+            case 3: return "Third applicant";
+            case 4: return "Fourth applicant";
+            case 5: return "Fifth applicant";
+            default: return "Applicant " + index;
+        }
+    }
+
+    private String getSignatureRoleLabel(int index, String type) {
+        if ("PRIMARY".equalsIgnoreCase(type) || index == 1) return "Primary Applicant";
+        if ("CO_APPLICANT".equalsIgnoreCase(type) || index == 2) return "Co Applicant";
+        if ("THIRD_APPLICANT".equalsIgnoreCase(type) || index == 3) return "Third Applicant";
+        if ("FOURTH_APPLICANT".equalsIgnoreCase(type) || index == 4) return "Fourth Applicant";
+        return "Applicant " + index;
+    }
+
+    private static class ApplicantFieldSpec {
+        final String type;
+        final String label;
+        final String signatureLabel;
+        final String defaultTitle;
+        final String[] titleKeys;
+        final String[] firstNameKeys;
+        final String[] lastNameKeys;
+        final String[] fullNameKeys;
+        final String[] emailKeys;
+        final String[] mobileKeys;
+        final String[] addressKeys;
+
+        ApplicantFieldSpec(String type, String label, String signatureLabel, String defaultTitle,
+                           String[] titleKeys, String[] firstNameKeys, String[] lastNameKeys,
+                           String[] fullNameKeys, String[] emailKeys, String[] mobileKeys, String[] addressKeys) {
+            this.type = type;
+            this.label = label;
+            this.signatureLabel = signatureLabel;
+            this.defaultTitle = defaultTitle;
+            this.titleKeys = titleKeys;
+            this.firstNameKeys = firstNameKeys;
+            this.lastNameKeys = lastNameKeys;
+            this.fullNameKeys = fullNameKeys;
+            this.emailKeys = emailKeys;
+            this.mobileKeys = mobileKeys;
+            this.addressKeys = addressKeys;
+        }
     }
 
     private List<OfferLetterMilestoneDto> extractMilestones(
