@@ -147,10 +147,21 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     }
 
     private Map<?, ?> fetchUnitMapFromCrm(Map<?, ?> dealMap) {
+        log.info("[OFFER_LETTER_UNIT_TRACE] 1. COMPLETE Deal JSON returned from Zoho CRM: {}", dealMap);
+        log.info("[OFFER_LETTER_UNIT_TRACE] 2. Product_Name lookup object: {}", dealMap != null ? dealMap.get("Product_Name") : "null");
+        log.info("[OFFER_LETTER_UNIT_TRACE] 2b. Unit_Name lookup object: {}", dealMap != null ? dealMap.get("Unit_Name") : "null");
+        log.info("[OFFER_LETTER_UNIT_TRACE] 2c. Unit lookup object: {}", dealMap != null ? dealMap.get("Unit") : "null");
+
+        if (dealMap == null || dealMap.isEmpty()) {
+            log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: dealMap is null or empty.");
+            return null;
+        }
+
         try {
             String unitRecordId = null;
             String resolvedLookupKey = null;
-            String[] lookupKeys = {"Unit_Name", "Unit", "Product_Name", "Products", "Product", "Saarang_Plot_Deal_Id", "Unit_Lookup", "Unit_Details", "Unit_ID", "Unit_Record_ID", "Linked_Unit_ID"};
+            Object resolvedLookupObject = null;
+            String[] lookupKeys = {"Product_Name", "Unit_Name", "Unit", "Products", "Product", "Saarang_Plot_Deal_Id", "Unit_Lookup", "Unit_Details", "Unit_ID", "Unit_Record_ID", "Linked_Unit_ID"};
 
             for (String key : lookupKeys) {
                 if (dealMap.containsKey(key) && dealMap.get(key) != null) {
@@ -158,38 +169,87 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                     if (obj instanceof Map<?, ?> lookupMap && lookupMap.get("id") != null) {
                         unitRecordId = lookupMap.get("id").toString();
                         resolvedLookupKey = key;
+                        resolvedLookupObject = obj;
                         break;
                     } else if (!(obj instanceof Map)) {
                         String val = obj.toString().trim();
                         if (val.matches("\\d{15,20}")) {
                             unitRecordId = val;
                             resolvedLookupKey = key;
+                            resolvedLookupObject = obj;
                             break;
                         }
                     }
                 }
             }
 
-            log.info("[OFFER_LETTER_TRACE_v2] 2. Unit Lookup: Resolved Unit Record ID: '{}' via key: '{}'", unitRecordId, resolvedLookupKey);
+            log.info("[OFFER_LETTER_UNIT_TRACE] 3. Extracted Unit Record ID: '{}' via key: '{}', object: {}", unitRecordId, resolvedLookupKey, resolvedLookupObject);
 
-            if (unitRecordId != null && !unitRecordId.isBlank()) {
-                String crmApiUrl = properties.getCrmApiUrl();
-                String url = crmApiUrl + "/Units/" + unitRecordId;
-                log.info("[OFFER_LETTER_TRACE_v2] 3. GET /Units/{}: Fetching Unit details from CRM URL: {}", unitRecordId, url);
-                Map<?, ?> response = apiClient.get(url, Map.class);
-                if (response != null && response.get("data") instanceof List<?> list && !list.isEmpty()) {
-                    if (list.get(0) instanceof Map<?, ?> unitData) {
-                        log.info("[OFFER_LETTER_TRACE_v2] Complete unitMap returned from Zoho CRM Units module for Unit ID {}: {}", unitRecordId, unitData);
-                        return unitData;
-                    }
-                }
-                log.warn("[OFFER_LETTER_TRACE_v2] GET /Units/{} returned empty or null data list", unitRecordId);
-            } else {
-                log.warn("[OFFER_LETTER_TRACE_v2] Unit Record ID could not be resolved from dealMap lookup keys.");
+            if (unitRecordId == null || unitRecordId.isBlank()) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: Unit Record ID could not be resolved from dealMap. Reason: unitRecordId == null or isBlank()");
+                return null;
             }
+
+            String crmApiUrl = properties.getCrmApiUrl();
+            String url = crmApiUrl + "/Units/" + unitRecordId;
+            log.info("[OFFER_LETTER_UNIT_TRACE] 4. Exact GET URL sent to Zoho: {}", url);
+
+            Map<?, ?> response = null;
+            try {
+                response = apiClient.get(url, Map.class);
+                log.info("[OFFER_LETTER_UNIT_TRACE] 5. COMPLETE Zoho Response JSON from GET {}: {}", url, response);
+            } catch (Exception apiEx) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] 5. Zoho API HTTP Request Error for URL {}: {}", url, apiEx.getMessage(), apiEx);
+                String fallbackUrl = crmApiUrl + "/Products/" + unitRecordId;
+                log.info("[OFFER_LETTER_UNIT_TRACE] 5b. Attempting fallback GET URL: {}", fallbackUrl);
+                try {
+                    response = apiClient.get(fallbackUrl, Map.class);
+                    log.info("[OFFER_LETTER_UNIT_TRACE] 5c. COMPLETE Zoho Response JSON from fallback GET {}: {}", fallbackUrl, response);
+                } catch (Exception fallbackEx) {
+                    log.error("[OFFER_LETTER_UNIT_TRACE] Fallback GET URL {} also failed: {}", fallbackUrl, fallbackEx.getMessage());
+                }
+            }
+
+            if (response == null) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: Zoho response is null (response == null).");
+                return null;
+            }
+
+            if (!response.containsKey("data")) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: Zoho response does not contain 'data' key (!response.containsKey(\"data\")). Full response: {}", response);
+                return null;
+            }
+
+            Object dataObj = response.get("data");
+            log.info("[OFFER_LETTER_UNIT_TRACE] 7. response.data exists? true | data type: {} | data value: {}",
+                    dataObj != null ? dataObj.getClass().getName() : "null", dataObj);
+
+            if (!(dataObj instanceof List<?> list)) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: response.data is not a List (!(dataObj instanceof List)). Type: {}", dataObj != null ? dataObj.getClass().getName() : "null");
+                return null;
+            }
+
+            log.info("[OFFER_LETTER_UNIT_TRACE] 7. response.data size: {}", list.size());
+            if (list.isEmpty()) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: response.data is an empty list (list.isEmpty()).");
+                return null;
+            }
+
+            Object firstItem = list.get(0);
+            log.info("[OFFER_LETTER_UNIT_TRACE] 7. First record in response.data: {}", firstItem);
+
+            if (!(firstItem instanceof Map<?, ?> unitData)) {
+                log.error("[OFFER_LETTER_UNIT_TRACE] FAILURE: First item in response.data is not a Map.");
+                return null;
+            }
+
+            log.info("[OFFER_LETTER_UNIT_TRACE] SUCCESS: Successfully parsed unitMap for Unit ID {}: {}", unitRecordId, unitData);
+            return unitData;
+
         } catch (Exception ex) {
-            log.warn("[OFFER_LETTER_TRACE_v2] Service -> Exception fetching Unit from CRM Units module: {}", ex.getMessage(), ex);
+            log.error("[OFFER_LETTER_UNIT_TRACE] EXCEPTION in fetchUnitMapFromCrm: {}", ex.getMessage(), ex);
         }
+
         return null;
     }
 
