@@ -624,32 +624,14 @@ export const BuyerDashboardPage: React.FC = () => {
         />
       )}
 
-      {/* Offer Letter PDF Viewer Modal */}
-      {offerLetterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Official Offer Letter</h3>
-              </div>
-              <button
-                onClick={() => setOfferLetterModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 bg-slate-100 dark:bg-slate-950 p-2">
-              <iframe
-                src={offerLetterUrl}
-                title="Offer Letter PDF"
-                className="w-full h-full rounded-2xl border-0"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Offer Letter Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={offerLetterModalOpen}
+        onClose={() => setOfferLetterModalOpen(false)}
+        fileName={`Offer_Letter_${bookingId || kycData?.bookingId || 'CADENCE'}.pdf`}
+        fileUrl={offerLetterUrl}
+        mimeType="application/pdf"
+      />
     </div>
   );
 };
