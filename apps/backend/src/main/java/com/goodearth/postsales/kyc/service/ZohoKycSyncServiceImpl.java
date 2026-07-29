@@ -95,22 +95,38 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             return resolvedId;
         }
 
-        // 4. Search Tier 2: Prefix criteria (Deal_Name:starts_with:X)
-        String rawCriteriaTier2 = String.format("(Deal_Name:starts_with:%s)", cleanDealName);
-        resolvedId = executeZohoDealSearch(rawCriteriaTier2, cleanDealName, true);
+        // 4. Search Tier 2: Booking_ID criteria (Booking_ID:equals:X)
+        String rawCriteriaTier2 = String.format("(Booking_ID:equals:%s)", cleanDealName);
+        resolvedId = executeZohoDealSearch(rawCriteriaTier2, cleanDealName, false);
         if (resolvedId != null) {
             cache.put(cleanDealName, resolvedId);
             return resolvedId;
         }
 
-        // 5. Search Tier 3: Word Search API (/Deals/search?word=X)
+        // 5. Search Tier 3: Product_Name / Unit Name criteria (Product_Name:equals:X)
+        String rawCriteriaTier3 = String.format("(Product_Name:equals:%s)", cleanDealName);
+        resolvedId = executeZohoDealSearch(rawCriteriaTier3, cleanDealName, false);
+        if (resolvedId != null) {
+            cache.put(cleanDealName, resolvedId);
+            return resolvedId;
+        }
+
+        // 6. Search Tier 4: Prefix criteria (Deal_Name:starts_with:X)
+        String rawCriteriaTier4 = String.format("(Deal_Name:starts_with:%s)", cleanDealName);
+        resolvedId = executeZohoDealSearch(rawCriteriaTier4, cleanDealName, true);
+        if (resolvedId != null) {
+            cache.put(cleanDealName, resolvedId);
+            return resolvedId;
+        }
+
+        // 7. Search Tier 5: Word Search API (/Deals/search?word=X)
         resolvedId = executeZohoDealWordSearch(cleanDealName);
         if (resolvedId != null) {
             cache.put(cleanDealName, resolvedId);
             return resolvedId;
         }
 
-        log.error("[KYC_SYNC] Search Status: FAILED | Reason: 0 Deals matched all search tiers for Booking ID / Deal Name: {}", cleanDealName);
+        log.error("[KYC_SYNC] Search Status: FAILED | Reason: 0 Deals matched all search tiers for Booking ID / Deal Name / Unit Name: {}", cleanDealName);
         return null;
     }
 
@@ -172,16 +188,35 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 String strName = returnedDealName != null ? returnedDealName.toString().trim() : "";
                 String strBkg = returnedBookingId != null ? returnedBookingId.toString().trim() : "";
 
+                // Extract linked Unit / Product lookup name if present
+                String strUnit = "";
+                String[] unitKeys = {"Product_Name", "Unit_Name", "Unit", "Products", "Product"};
+                for (String key : unitKeys) {
+                    if (dealMap.containsKey(key) && dealMap.get(key) != null) {
+                        Object unitObj = dealMap.get(key);
+                        if (unitObj instanceof Map<?, ?> lookupMap && lookupMap.get("name") != null) {
+                            strUnit = lookupMap.get("name").toString().trim();
+                            break;
+                        } else if (!(unitObj instanceof Map)) {
+                            strUnit = unitObj.toString().trim();
+                            break;
+                        }
+                    }
+                }
+
                 boolean matches = cleanDealName.equalsIgnoreCase(strName) ||
-                        cleanDealName.equalsIgnoreCase(strBkg);
+                        cleanDealName.equalsIgnoreCase(strBkg) ||
+                        (!strUnit.isBlank() && cleanDealName.equalsIgnoreCase(strUnit));
 
                 if (!matches && allowPartialMatch) {
                     matches = strName.toLowerCase().contains(cleanDealName.toLowerCase()) ||
-                            strBkg.toLowerCase().contains(cleanDealName.toLowerCase());
+                            strBkg.toLowerCase().contains(cleanDealName.toLowerCase()) ||
+                            (!strUnit.isBlank() && strUnit.toLowerCase().contains(cleanDealName.toLowerCase()));
                 }
 
                 if (matches) {
-                    log.info("[KYC_SYNC] Resolved Deal Record ID = {} (Deal_Name: {}, Booking_ID: {})", recordId, strName, strBkg);
+                    log.info("[KYC_SYNC] Resolved Deal Record ID = {} (Deal_Name: '{}', Booking_ID: '{}', Unit_Name: '{}')",
+                            recordId, strName, strBkg, strUnit);
                     return recordId;
                 }
             }

@@ -257,6 +257,42 @@ public class OfferLetterServiceTest {
     }
 
     @Test
+    @DisplayName("streamOfferLetterPdf resolves 'motif16' Unit Name, fetches linked Unit, and generates PDF")
+    void testStreamOfferLetterPdf_WithMotif16UnitName() {
+        String identifier = "motif16";
+        String targetRecordId = "6638590000147048099";
+        String unitRecordId = "6638590000147099999";
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(identifier)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "Deal - Motif 16",
+                "Product_Name", Map.of("id", unitRecordId, "name", "motif16")
+        );
+        Map<String, Object> crmUnit = Map.of(
+                "id", unitRecordId,
+                "Product_Name", "motif16",
+                "Project_Site", "Good Earth Motif"
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+
+        byte[] fakePdfBytes = "%PDF-1.4 Fake PDF Content for Motif 16".getBytes();
+        when(pdfGenerator.generatePdf(any(OfferLetterDto.class))).thenReturn(fakePdfBytes);
+
+        KycDocumentStreamDto streamDto = offerLetterService.streamOfferLetterPdf(identifier, "ADMIN");
+
+        assertNotNull(streamDto);
+        assertEquals("Offer_Letter_motif16.pdf", streamDto.getFileName());
+        assertEquals("application/pdf", streamDto.getMimeType());
+        assertArrayEquals(fakePdfBytes, streamDto.getContent());
+    }
+
+    @Test
     @DisplayName("CASE 1: 1 Applicant dynamically extracted and formatted")
     void testDynamicApplicants_1Applicant() {
         String dealId = "CADENCE-A001";
