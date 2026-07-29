@@ -92,6 +92,68 @@ public class OfferLetterServiceTest {
     }
 
     @Test
+    @DisplayName("Table 1 and Table 2 fetch directly from Zoho CRM Units module fields")
+    void testBuildOfferLetterDto_WithUnitsModuleData() {
+        String dealId = "CADENCE-A001";
+        String targetRecordId = "6638590000147048029";
+        String unitRecordId = "6638590000147099999";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "motif16",
+                "Unit_Name", Map.of("id", unitRecordId, "name", "motif16"),
+                "First_Applicant", "Nishtha Bhatia"
+        );
+
+        Map<String, Object> crmUnit = Map.ofEntries(
+                Map.entry("id", unitRecordId),
+                Map.entry("Project_Site", "Good Earth Cadence"),
+                Map.entry("Unit_Name", "motif16"),
+                Map.entry("Carpet_Area", "149.01"),
+                Map.entry("SBA", "224.35"),
+                Map.entry("Exclusive_Common_Area", "115.55"),
+                Map.entry("Common_area_allotted_to_the_association_Sqm_B", "69.44"),
+                Map.entry("UDS", "40.24"),
+                Map.entry("Total_UDS_A_B", "225.23"),
+                Map.entry("Exclusive_Use_Areas_Balcony_or_Verandah", "29.65"),
+                Map.entry("Exclusive_Use_Areas_Open_Terrace_to_the_allottee", "2.77"),
+                Map.entry("Car_Parking_Space", 2),
+                Map.entry("Cost_of_Unit", 37619048),
+                Map.entry("GST_at_5", 1880952),
+                Map.entry("Cost_of_Home_Inc_GST_A", 39500000),
+                Map.entry("Maintenance_Deposit", 200000)
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+
+        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
+
+        assertNotNull(dto);
+        assertEquals("motif16", dto.getUnitName());
+        assertEquals("Good Earth Cadence", dto.getProjectName());
+        assertEquals("149.01", dto.getCarpetAreaSqm());
+        assertEquals("224.35", dto.getSuperBuiltUpAreaSqm());
+        assertEquals("115.55", dto.getExclusiveCommonAreaSqm());
+        assertEquals("69.44", dto.getAssociationCommonAreaSqm());
+        assertEquals("40.24", dto.getUdsAllotteeSqm());
+        assertEquals("225.23", dto.getTotalUdsSqm());
+        assertEquals("29.65", dto.getExclusiveBalconySqm());
+        assertEquals("2.77", dto.getOpenTerraceSqm());
+        assertEquals("2", dto.getCoveredCarParks());
+
+        assertEquals("INR 3,76,19,048", dto.getCostOfUnitFormatted());
+        assertEquals("INR 18,80,952", dto.getGstAmountFormatted());
+        assertEquals("INR 3,95,00,000", dto.getCostOfHomeFormatted());
+        assertEquals("INR 2,00,000", dto.getMaintenanceDepositsFormatted());
+    }
+
+    @Test
     @DisplayName("streamOfferLetterPdf delegates to pdfGenerator and returns stream DTO")
     void testStreamOfferLetterPdf() {
         String dealId = "CADENCE-A001";
