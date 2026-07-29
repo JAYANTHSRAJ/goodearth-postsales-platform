@@ -38,7 +38,7 @@ public class OfferLetterPdfGenerator {
             Context context = new Context();
             context.setVariable("offer", dto);
 
-            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2: Rendering Thymeleaf HTML template 'offer-letter'...");
+            log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2: Processing Thymeleaf HTML template 'offer-letter'...");
             String htmlContent = templateEngine.process("offer-letter", context);
             log.info("[OFFER_LETTER_TRACE] PDFGenerator -> Step 2 Complete. Rendered HTML length: {} characters",
                     htmlContent != null ? htmlContent.length() : 0);

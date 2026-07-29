@@ -10,10 +10,10 @@
             margin-bottom: 22mm;
             margin-left: 15mm;
             margin-right: 15mm;
-            @top-left {
+            @top-center {
                 content: element(header);
             }
-            @bottom-left {
+            @bottom-center {
                 content: element(footer);
             }
         }
@@ -146,9 +146,12 @@
             page-break-inside: auto;
         }
 
+        table.data-table thead {
+            display: table-header-group;
+        }
+
         table.data-table tr {
             page-break-inside: avoid;
-            page-break-after: auto;
         }
 
         table.data-table th.table-header {
@@ -247,9 +250,9 @@
     <table class="header-table">
         <tr>
             <td class="logo-container">
-                <!-- SVG / Styled Logo -->
+                <!-- Styled Logo -->
                 <div class="logo-text-main">
-                    <span style="color:#2b7bb9;">&#9678;</span> GoodEarth
+                    <span style="color:#2b7bb9;">&#9679;</span> GoodEarth
                 </div>
                 <div class="logo-text-sub">building sustainable communities</div>
             </td>
