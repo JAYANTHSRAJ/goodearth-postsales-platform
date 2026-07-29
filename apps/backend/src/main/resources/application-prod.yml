@@ -73,7 +73,7 @@ management:
       show-details: always
       show-components: always
       probes:
-        enabled: true
+        enabled: false
   health:
     mail:
       enabled: false

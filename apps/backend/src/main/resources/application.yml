@@ -19,7 +19,7 @@ management:
   endpoint:
     health:
       probes:
-        enabled: true
+        enabled: false
 
   health:
     mail:
