@@ -146,6 +146,40 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .build();
     }
 
+    private String resolveReferencedModuleApiName(String lookupKey) {
+        if (lookupKey == null || lookupKey.isBlank()) return null;
+        try {
+            String crmApiUrl = properties.getCrmApiUrl();
+            String metadataUrl = crmApiUrl + "/settings/fields?module=Deals";
+            log.info("[CRM_METADATA_TRACE] Fetching Deals field metadata from: {}", metadataUrl);
+            Map<?, ?> response = apiClient.get(metadataUrl, Map.class);
+            log.info("[CRM_METADATA_TRACE] Deals fields metadata response: {}", response);
+
+            if (response != null && response.get("fields") instanceof List<?> fields) {
+                for (Object item : fields) {
+                    if (item instanceof Map<?, ?> fieldMap) {
+                        Object apiNameObj = fieldMap.get("api_name");
+                        if (apiNameObj != null && apiNameObj.toString().equalsIgnoreCase(lookupKey)) {
+                            log.info("[CRM_METADATA_TRACE] Found metadata field for '{}': {}", lookupKey, fieldMap);
+                            Object lookupObj = fieldMap.get("lookup");
+                            if (lookupObj instanceof Map<?, ?> lookupMap) {
+                                Object moduleObj = lookupMap.get("module");
+                                if (moduleObj instanceof Map<?, ?> moduleMap && moduleMap.get("api_name") != null) {
+                                    String moduleApiName = moduleMap.get("api_name").toString();
+                                    log.info("[CRM_METADATA_TRACE] Resolved Referenced Module API Name = '{}' for field '{}'", moduleApiName, lookupKey);
+                                    return moduleApiName;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[CRM_METADATA_TRACE] Exception resolving field metadata for '{}': {}", lookupKey, ex.getMessage());
+        }
+        return null;
+    }
+
     private Map<?, ?> fetchUnitMapFromCrm(Map<?, ?> dealMap) {
         log.info("[OFFER_LETTER_UNIT_TRACE] 1. COMPLETE Deal JSON returned from Zoho CRM: {}", dealMap);
         log.info("[OFFER_LETTER_UNIT_TRACE] 2. Product_Name lookup object: {}", dealMap != null ? dealMap.get("Product_Name") : "null");
@@ -190,21 +224,28 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 return null;
             }
 
+            // Dynamically resolve referenced module API name from CRM metadata
+            String moduleApiName = resolveReferencedModuleApiName(resolvedLookupKey);
+            if (moduleApiName == null || moduleApiName.isBlank()) {
+                moduleApiName = "Products";
+            }
+
             String crmApiUrl = properties.getCrmApiUrl();
-            String url = crmApiUrl + "/Products/" + unitRecordId;
-            log.info("[OFFER_LETTER_UNIT_TRACE] 4. Exact GET URL sent to Zoho Products module: {}", url);
+            String url = crmApiUrl + "/" + moduleApiName + "/" + unitRecordId;
+            log.info("[OFFER_LETTER_UNIT_TRACE] 4. Exact GET URL sent to Zoho based on metadata (Module: {}): {}", moduleApiName, url);
 
             Map<?, ?> response = null;
             try {
                 response = apiClient.get(url, Map.class);
                 log.info("[OFFER_LETTER_UNIT_TRACE] 5. COMPLETE Zoho Response JSON from GET {}: {}", url, response);
             } catch (Exception apiEx) {
-                log.warn("[OFFER_LETTER_UNIT_TRACE] 5. GET /Products/{} failed: {}", unitRecordId, apiEx.getMessage());
+                log.warn("[OFFER_LETTER_UNIT_TRACE] 5. GET /" + moduleApiName + "/{} failed: {}", unitRecordId, apiEx.getMessage());
             }
 
             if (response == null || !response.containsKey("data") || (response.get("data") instanceof List<?> list && list.isEmpty())) {
-                String fallbackUrl = crmApiUrl + "/Units/" + unitRecordId;
-                log.info("[OFFER_LETTER_UNIT_TRACE] 5b. /Products/ returned null/empty/204. Attempting fallback GET URL: {}", fallbackUrl);
+                String fallbackModuleName = moduleApiName.equalsIgnoreCase("Products") ? "Units" : "Products";
+                String fallbackUrl = crmApiUrl + "/" + fallbackModuleName + "/" + unitRecordId;
+                log.info("[OFFER_LETTER_UNIT_TRACE] 5b. Primary module '{}' returned null/empty/204. Attempting fallback GET URL: {}", moduleApiName, fallbackUrl);
                 try {
                     response = apiClient.get(fallbackUrl, Map.class);
                     log.info("[OFFER_LETTER_UNIT_TRACE] 5c. COMPLETE Zoho Response JSON from fallback GET {}: {}", fallbackUrl, response);
