@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Offer Letter</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin-top: 28mm;
+            margin-bottom: 22mm;
+            margin-left: 15mm;
+            margin-right: 15mm;
+            @top-left {
+                content: element(header);
+            }
+            @bottom-left {
+                content: element(footer);
+            }
+        }
+
+        div.header {
+            position: running(header);
+            width: 100%;
+            border-bottom: 1px solid #ffffff;
+            padding-bottom: 5px;
+        }
+
+        div.footer {
+            position: running(footer);
+            width: 100%;
+            font-size: 9pt;
+            color: #333333;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        .footer-text {
+            padding-bottom: 4px;
+            font-size: 8.5pt;
+        }
+
+        .footer-bar {
+            height: 14px;
+            background-color: #1b5286;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 9.5pt;
+            line-height: 1.35;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header Table layout */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+            border: none;
+            padding: 0;
+        }
+
+        .logo-container {
+            width: 60%;
+        }
+
+        .logo-text-main {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #1b5286;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text-sub {
+            font-size: 8pt;
+            color: #1b5286;
+            margin-top: -2px;
+        }
+
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #1b5286;
+            font-size: 8.5pt;
+        }
+
+        .meta-table tr:first-child th,
+        .meta-table tr:first-child td {
+            background-color: #1b5286;
+            color: #ffffff;
+            font-weight: normal;
+            text-align: left;
+            padding: 4px 8px;
+            border: 1px solid #1b5286;
+        }
+
+        .meta-table tr:last-child th,
+        .meta-table tr:last-child td {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 4px 8px;
+            border: 1px solid #1b5286;
+            font-weight: normal;
+        }
+
+        /* Document Title */
+        .document-title {
+            text-align: center;
+            font-size: 13pt;
+            font-weight: bold;
+            color: #1b5286;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* To Block */
+        .to-block {
+            margin-bottom: 12px;
+            font-size: 9.5pt;
+        }
+
+        .to-block .applicant-name {
+            font-weight: normal;
+            margin-top: 2px;
+        }
+
+        .intro-text {
+            margin-bottom: 14px;
+            text-align: justify;
+        }
+
+        /* Table Design */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+            font-size: 8.5pt;
+            page-break-inside: auto;
+        }
+
+        table.data-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        table.data-table th.table-header {
+            background-color: #1b5286;
+            color: #ffffff;
+            font-size: 9pt;
+            font-weight: normal;
+            text-align: left;
+            padding: 5px 8px;
+            border: 1px solid #1b5286;
+        }
+
+        table.data-table th.col-header {
+            background-color: #ffffff;
+            color: #000000;
+            font-weight: bold;
+            text-align: left;
+            padding: 5px 6px;
+            border: 1px solid #707070;
+            font-size: 8.5pt;
+        }
+
+        table.data-table td {
+            border: 1px solid #707070;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+
+        /* Terms Section */
+        .validity-text {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-size: 9pt;
+        }
+
+        .terms-title {
+            font-weight: bold;
+            font-size: 9.5pt;
+            margin-top: 10px;
+            margin-bottom: 6px;
+        }
+
+        ol.terms-list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        ol.terms-list li {
+            margin-bottom: 6px;
+            text-align: justify;
+            font-size: 8.5pt;
+            line-height: 1.3;
+        }
+
+        /* Signatures Layout */
+        .signature-section {
+            margin-top: 35px;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+        }
+
+        .signature-table td {
+            border: none;
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .sig-left {
+            width: 50%;
+        }
+
+        .sig-right {
+            width: 50%;
+            text-align: left;
+        }
+
+        .sig-space {
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Running Page Header -->
+<div class="header">
+    <table class="header-table">
+        <tr>
+            <td class="logo-container">
+                <!-- SVG / Styled Logo -->
+                <div class="logo-text-main">
+                    <span style="color:#2b7bb9;">&#9678;</span> GoodEarth
+                </div>
+                <div class="logo-text-sub">building sustainable communities</div>
+            </td>
+            <td style="width: 40%; vertical-align: top;">
+                <table class="meta-table">
+                    <tr>
+                        <th style="width: 45%;">Offer Letter No:</th>
+                        <td th:text="${offer.offerLetterNo}">CADENCE-A001-290625</td>
+                    </tr>
+                    <tr>
+                        <th style="width: 45%;">Offer Letter Date:</th>
+                        <td th:text="${offer.offerLetterDate}">09/07/2026</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- Running Page Footer -->
+<div class="footer">
+    <div class="footer-text">
+        <span th:text="${offer.companyName != null ? offer.companyName : 'GoodEarth Eco Communities Pvt Ltd'}">GoodEarth Eco Communities Pvt Ltd</span>
+        | <strong>RERA No:</strong> <span th:text="${offer.reraNo != null ? offer.reraNo : 'PRM/KA/RERA/1251/310/PR/070125/007359'}">PRM/KA/RERA/1251/310/PR/070125/007359</span>
+    </div>
+    <div class="footer-bar"></div>
+</div>
+
+<!-- Main Document Content -->
+<div class="document-title">
+    OFFER LETTER – <span th:text="${offer.projectName != null ? offer.projectName : 'GOOD EARTH CADENCE'}">GOOD EARTH CADENCE</span>
+</div>
+
+<div class="to-block">
+    <div>To,</div>
+    <div class="applicant-name" th:text="${offer.primaryApplicantFormatted != null ? offer.primaryApplicantFormatted : 'Ms. Nishtha Bhatia'}">Ms. Nishtha Bhatia</div>
+    <div class="applicant-name" th:if="${offer.secondaryApplicantFormatted != null}" th:text="${offer.secondaryApplicantFormatted}">Mr. Aman Uzuwaal</div>
+</div>
+
+<div class="intro-text">
+    We are happy to offer you Unit No <strong th:text="${offer.unitName}">CADENCE-A001</strong>, an Apartment unit in <strong th:text="${offer.projectName}">Good Earth Cadence</strong>. Please find below details of our offer pertaining to the type of home, areas, deposits and payment schedule.
+</div>
+
+<!-- Table 1: Unit & Provisional Allotment Details -->
+<table class="data-table">
+    <thead>
+        <tr>
+            <th colspan="2" class="table-header">Table 1 - Details of the unit and provisional allotment</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 65%;">Unit Name</td>
+            <td th:text="${offer.unitName}">CADENCE-A001</td>
+        </tr>
+        <tr>
+            <td>Carpet Area (Sqm)</td>
+            <td th:text="${offer.carpetAreaSqm}">149.01</td>
+        </tr>
+        <tr>
+            <td>Super Built-up Area (Sqm)</td>
+            <td th:text="${offer.superBuiltUpAreaSqm}">224.35</td>
+        </tr>
+        <tr>
+            <td>Exclusive common area to the allottee (Sqm) - A</td>
+            <td th:text="${offer.exclusiveCommonAreaSqm}">115.55</td>
+        </tr>
+        <tr>
+            <td>Common area allotted to the association (Sqm)-B</td>
+            <td th:text="${offer.associationCommonAreaSqm}">69.44</td>
+        </tr>
+        <tr>
+            <td>UDS to the allotee (Sqm) - C</td>
+            <td th:text="${offer.udsAllotteeSqm}">40.24</td>
+        </tr>
+        <tr>
+            <td class="font-bold">Total UDS (Sqm) - A+B+C</td>
+            <td class="font-bold" th:text="${offer.totalUdsSqm}">225.23</td>
+        </tr>
+        <tr>
+            <td>Exclusive Balcony/Verandah use areas (Sqm)</td>
+            <td th:text="${offer.exclusiveBalconySqm}">29.65</td>
+        </tr>
+        <tr>
+            <td>Open terrace use areas to the allottee (Sqm).</td>
+            <td th:text="${offer.openTerraceSqm}">2.77</td>
+        </tr>
+        <tr>
+            <td>Covered car parks (Nos)</td>
+            <td th:text="${offer.coveredCarParks}">2</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 2: Sale Price Details -->
+<table class="data-table">
+    <thead>
+        <tr>
+            <th colspan="2" class="table-header">Table 2 - Sale price details</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 65%;">Cost of unit</td>
+            <td th:text="${offer.costOfUnitFormatted}">INR 3,76,19,048</td>
+        </tr>
+        <tr>
+            <td>GST - ( GST at <span th:text="${offer.gstRate != null ? offer.gstRate : '5%'}">5%</span>)</td>
+            <td th:text="${offer.gstAmountFormatted}">INR 18,80,952</td>
+        </tr>
+        <tr>
+            <td class="font-bold">Cost of home (including GST)</td>
+            <td class="font-bold" th:text="${offer.costOfHomeFormatted}">INR 3,95,00,000</td>
+        </tr>
+        <tr>
+            <td class="font-bold">Maintenance Deposits</td>
+            <td class="font-bold" th:text="${offer.maintenanceDepositsFormatted}">INR 2,00,000</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 3: Dynamic Payment Schedule -->
+<table class="data-table">
+    <thead>
+        <tr>
+            <th colspan="7" class="table-header">Table 3 - Payment schedule</th>
+        </tr>
+        <tr>
+            <th class="col-header text-center" style="width: 5%;">S. No</th>
+            <th class="col-header" style="width: 32%;">Payment milestone name</th>
+            <th class="col-header" style="width: 11%;">Payment percent</th>
+            <th class="col-header" style="width: 12%;">Payment due date</th>
+            <th class="col-header" style="width: 14%;">Unit total amount</th>
+            <th class="col-header" style="width: 12%;">GST</th>
+            <th class="col-header" style="width: 14%;">Installment</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="m : ${offer.milestones}">
+            <td class="text-center" th:text="${m.sNo}">1</td>
+            <td th:text="${m.milestoneName}">On Booking</td>
+            <td th:text="${m.paymentPercent}">5%</td>
+            <td th:text="${m.dueDate}">Jul-2025</td>
+            <td th:text="${m.unitTotalAmountFormatted}">INR 18,80,952</td>
+            <td th:text="${m.gstAmountFormatted}">INR 94,048</td>
+            <td th:text="${m.installmentAmountFormatted}">INR 19,75,000</td>
+        </tr>
+        <!-- Totals and Summary Rows -->
+        <tr>
+            <td colspan="2" class="font-bold">Cost of the home</td>
+            <td class="font-bold" th:text="${offer.totalMilestonePercent != null ? offer.totalMilestonePercent : '100%'}">100%</td>
+            <td></td>
+            <td class="font-bold" th:text="${offer.totalUnitCostFormatted}">INR 3,76,19,048</td>
+            <td class="font-bold" th:text="${offer.totalGstAmountFormatted}">INR 18,80,952</td>
+            <td class="font-bold" th:text="${offer.totalInstallmentCostFormatted}">INR 3,95,00,000</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="font-bold">Amount in Words</td>
+            <td colspan="4" class="font-bold" th:text="${offer.amountInWords}">Rupees Three Crore Ninety Five Lakh Only</td>
+        </tr>
+        <tr>
+            <td colspan="5">On or before registration (Total cost towards deposits)</td>
+            <td colspan="2" class="font-bold" th:text="${offer.maintenanceDepositsFormatted}">INR 2,00,000</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 4: Bank Remittance (Unit Cost) -->
+<table class="data-table" th:if="${offer.escrowBankDetails != null}">
+    <thead>
+        <tr>
+            <th colspan="2" class="table-header">Table 4 - Bank remittance details for payment of unit cost</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 35%;">Beneficiary’s name</td>
+            <td th:text="${offer.escrowBankDetails.beneficiaryName}">GEECPL - GOOD EARTH CADENCE COLLECTION ESCROW ACCOUNT</td>
+        </tr>
+        <tr>
+            <td>Beneficiary account no</td>
+            <td th:text="${offer.escrowBankDetails.beneficiaryAccountNo}">57500001653570</td>
+        </tr>
+        <tr>
+            <td>Bank name</td>
+            <td th:text="${offer.escrowBankDetails.bankName}">HDFC Bank Ltd</td>
+        </tr>
+        <tr>
+            <td>Bank address</td>
+            <td th:text="${offer.escrowBankDetails.bankAddress}">Richmond Road, Bengaluru</td>
+        </tr>
+        <tr>
+            <td>IFSC code</td>
+            <td th:text="${offer.escrowBankDetails.ifscCode}">HDFC0000523</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 5: Bank Remittance (GST & Maintenance) -->
+<table class="data-table" th:if="${offer.currentBankDetails != null}">
+    <thead>
+        <tr>
+            <th colspan="2" class="table-header">Table 5 - Bank remittance details for payment of GST &amp; Maintenance deposits</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 35%;">Beneficiary’s name</td>
+            <td th:text="${offer.currentBankDetails.beneficiaryName}">GEECPL GOOD EARTH CADENCE CURRENT ACCOUNT</td>
+        </tr>
+        <tr>
+            <td>Beneficiary account no</td>
+            <td th:text="${offer.currentBankDetails.beneficiaryAccountNo}">57500001654366</td>
+        </tr>
+        <tr>
+            <td>Bank name</td>
+            <td th:text="${offer.currentBankDetails.bankName}">HDFC Bank Ltd</td>
+        </tr>
+        <tr>
+            <td>Bank address</td>
+            <td th:text="${offer.currentBankDetails.bankAddress}">Richmond Road, Bengaluru</td>
+        </tr>
+        <tr>
+            <td>IFSC code</td>
+            <td th:text="${offer.currentBankDetails.ifscCode}">HDFC0000523</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Terms & Validity -->
+<div class="validity-text">
+    This offer letter is valid for a period of <span th:text="${offer.validityDays != null ? offer.validityDays : 7}">7</span> days from the date of offer with the respective terms and conditions.
+</div>
+
+<div class="terms-title">Terms and conditions:</div>
+<ol class="terms-list">
+    <li>The home layouts shown in the marketing brochures are mere indication of the project. GoodEarth reserves the right to change specifications, areas, details of floor plan and orientation of units for statutory or any other reasons.</li>
+    <li>The total unit cost covers the cost of project maintenance for one year. Notification regarding the commencement date of project maintenance will be sent to all owners, subject to project completion and possession.</li>
+    <li>In the event that the applicant wishes to withdraw the booking, the booking amount paid shall be forfeited.</li>
+    <li>The taxes levied on the above figures are as per the current regulations. Any changes in taxes will be borne by the buyer.</li>
+    <li>Statutory expenses like stamp duty, registration charges and legal/incidental expenses for registering the property (additional stamp duty if demanded by the Special Deputy Commissioner) shall be borne by the buyer.</li>
+    <li>Completion and delivery dates are indicative and are subject to ‘Force Majeure’ clause.</li>
+    <li>Invoices will be sent as per progress of work, and payments to be made once the invoice is received.</li>
+    <li>All payments should be made by way of account payee Demand Draft/ Cheque/ Direct deposit favoring: (All the Bank charges for outstation cheques / clearing to be borne by the buyer).</li>
+    <li>The buyer/ applicants are required to deduct TDS u/s 194 IA of the Income Tax Act (TDS on purchase of immovable property) either at the time of credit to the seller's account or at the time of payment, whichever is earlier. If there are multiple payments, TDS should be deducted on each payment. The buyer/ applicants must provide the seller with Form 16B (TDS certificate) for all deductions made, within 15 days of making the payment.</li>
+</ol>
+
+<!-- Signatures Area -->
+<div class="signature-section">
+    <table class="signature-table">
+        <tr>
+            <td class="sig-left">
+                <div style="margin-bottom: 25px;">First applicant</div>
+                <div style="margin-top: 35px;" th:if="${offer.secondaryApplicantFormatted != null}">Second applicant</div>
+            </td>
+            <td class="sig-right">
+                <div>For <span th:text="${offer.companyName != null ? offer.companyName : 'GoodEarth Eco Communities Pvt Ltd'}">GoodEarth Eco Communities Pvt Ltd</span></div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

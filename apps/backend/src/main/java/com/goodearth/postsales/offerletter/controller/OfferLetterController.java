@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping({"/api/v1/deals", "/deals"})
-@Tag(name = "Deal Offer Letter Operations", description = "APIs for checking Offer Letter milestone generation status and streaming PDF Offer Letters")
+@Tag(name = "Deal Offer Letter Operations", description = "APIs for dynamic Spring Boot Offer Letter PDF generation and streaming")
 public class OfferLetterController {
 
     private static final Logger log = LoggerFactory.getLogger(OfferLetterController.class);
@@ -33,7 +33,7 @@ public class OfferLetterController {
 
     @GetMapping("/{dealIdOrBookingId}/offer-letter/status")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
-    @Operation(summary = "Check Deal Offer Letter generation status", description = "Checks whether Generate_Milestone is enabled for the specified Deal")
+    @Operation(summary = "Check Deal Offer Letter generation status", description = "Checks whether Offer Letter is available for the specified Deal")
     public ResponseEntity<ApiResponse<OfferLetterStatusDto>> getOfferLetterStatus(
             @PathVariable String dealIdOrBookingId) {
 
@@ -41,15 +41,16 @@ public class OfferLetterController {
         OfferLetterStatusDto status = offerLetterService.getOfferLetterStatus(dealIdOrBookingId);
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter/status, Execution Time: {}ms, Generated: {}",
+        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter/status, Execution Time: {}ms, Available: {}",
                 dealIdOrBookingId, duration, status.isGenerated());
 
         return ResponseEntity.ok(new ApiResponse<>(status));
     }
 
-    @GetMapping("/{dealIdOrBookingId}/offer-letter/file")
+    @GetMapping(value = {"/{dealIdOrBookingId}/offer-letter", "/{dealIdOrBookingId}/offer-letter/file"},
+                produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
-    @Operation(summary = "Stream Offer Letter PDF binary inline", description = "Streams the generated Offer Letter PDF directly from Zoho CRM for authenticated admin viewing")
+    @Operation(summary = "Stream Offer Letter PDF binary inline", description = "Generates and streams the Offer Letter PDF dynamically directly from Spring Boot backend using live CRM data")
     public ResponseEntity<byte[]> streamOfferLetterFile(
             @PathVariable String dealIdOrBookingId,
             Authentication authentication) {
@@ -60,8 +61,8 @@ public class OfferLetterController {
         KycDocumentStreamDto streamDto = offerLetterService.streamOfferLetterPdf(dealIdOrBookingId, actorId);
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter/file, Execution Time: {}ms, File: {}",
-                dealIdOrBookingId, duration, streamDto.getFileName());
+        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter, Execution Time: {}ms, File: {}, Size: {} bytes",
+                dealIdOrBookingId, duration, streamDto.getFileName(), streamDto.getFileSize());
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + streamDto.getFileName() + "\"")
