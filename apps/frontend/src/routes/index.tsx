@@ -51,6 +51,7 @@ const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages
 
 // KYC Module Lazy Routes
 const SingleKycPage = withSuspense(() => import('../features/kyc/pages/SingleKycPage'), 'SingleKycPage');
+const ClientOfferLetterPage = withSuspense(() => import('../features/kyc/pages/ClientOfferLetterPage'), 'ClientOfferLetterPage');
 const AdminKycManagementPage = withSuspense(() => import('../features/kyc/pages/AdminKycManagementPage'), 'AdminKycManagementPage');
 
 const Unauthorized = withSuspense(() => import('../pages/Unauthorized'), 'Unauthorized');
@@ -178,6 +179,10 @@ export const router = createBrowserRouter([
               {
                 path: '/client/applicant-info',
                 element: <SingleKycPage />,
+              },
+              {
+                path: '/client/offer-letter',
+                element: <ClientOfferLetterPage />,
               },
               {
                 path: '/my-home',
