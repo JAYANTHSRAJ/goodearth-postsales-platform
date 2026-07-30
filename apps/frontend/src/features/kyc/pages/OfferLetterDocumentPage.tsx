@@ -5,9 +5,7 @@ import { OfferLetterStatusDto } from '../types/kyc';
 import { NativePdfCanvasViewer } from '../components/documents/NativePdfCanvasViewer';
 import { useAuthStore } from '../../../store/authStore';
 import {
-  FileText,
   Download,
-  Printer,
   Send,
   Share2,
   Calendar,
@@ -16,7 +14,6 @@ import {
   ArrowLeft,
   RefreshCw,
   AlertTriangle,
-  
   FileCheck2,
 } from 'lucide-react';
 
@@ -136,20 +133,6 @@ export const OfferLetterDocumentPage: React.FC = () => {
     }
   };
 
-  // Action: Print Document
-  const handlePrint = () => {
-    if (!pdfData) return;
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open(url, '_blank');
-    if (printWindow) {
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 800);
-    }
-  };
-
   // Action: Share Link (Admin only)
   const handleShare = () => {
     const currentUrl = window.location.href;
@@ -184,9 +167,9 @@ export const OfferLetterDocumentPage: React.FC = () => {
     <div className="flex flex-col h-full min-h-screen bg-slate-950 text-slate-100 font-sans p-3 md:p-6 lg:p-8">
       {/* Page Header Card */}
       <div className="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-5 md:p-6 shadow-2xl mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        {/* Left Section: Title & Metadata */}
+        {/* Left Section: GoodEarth Branding & Metadata */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap">
             <button
               onClick={() => navigate(-1)}
               className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition flex items-center gap-1.5 text-xs font-semibold"
@@ -195,10 +178,24 @@ export const OfferLetterDocumentPage: React.FC = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <FileText className="w-6 h-6 text-emerald-400" />
-              Official Offer Letter
-            </h1>
+
+            {/* Official GoodEarth Header Branding */}
+            <div className="flex items-center gap-3">
+              <img
+                src="https://goodearth.org.in/assets/1778746789898_wewsp.svg"
+                alt="GoodEarth - building sustainable communities"
+                className="h-10 md:h-12 w-auto object-contain bg-white/95 p-1.5 rounded-xl border border-slate-700 shadow-md"
+              />
+              <div className="flex flex-col">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                  Official Offer Letter
+                </h1>
+                <span className="text-[11px] font-semibold text-emerald-400 tracking-wide">
+                  building sustainable communities
+                </span>
+              </div>
+            </div>
+
             {statusInfo && (
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 ${
@@ -260,7 +257,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Section: Action Buttons */}
+        {/* Right Section: Action Buttons (Print Removed, Download PDF Preserved) */}
         <div className="flex items-center gap-3 flex-wrap shrink-0">
           {isAdminOrCrm && (
             <button
@@ -291,16 +288,6 @@ export const OfferLetterDocumentPage: React.FC = () => {
               <span>Share</span>
             </button>
           )}
-
-          <button
-            onClick={handlePrint}
-            disabled={!pdfData}
-            className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-xs flex items-center gap-2 transition border border-slate-700 disabled:opacity-40"
-            title="Print Document"
-          >
-            <Printer className="w-4 h-4 text-sky-400" />
-            <span>Print</span>
-          </button>
 
           <button
             onClick={handleDownloadPdf}
@@ -362,4 +349,3 @@ export const OfferLetterDocumentPage: React.FC = () => {
 };
 
 export default OfferLetterDocumentPage;
-
