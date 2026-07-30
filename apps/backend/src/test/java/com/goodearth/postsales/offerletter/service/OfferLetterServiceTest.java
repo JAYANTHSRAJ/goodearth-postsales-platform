@@ -4,8 +4,10 @@ import com.goodearth.postsales.integration.zoho.ZohoApiClient;
 import com.goodearth.postsales.integration.zoho.ZohoProperties;
 import com.goodearth.postsales.kyc.dto.KycDocumentStreamDto;
 import com.goodearth.postsales.kyc.service.ZohoKycSyncService;
+import com.goodearth.postsales.notification.service.EmailService;
 import com.goodearth.postsales.offerletter.dto.OfferLetterDto;
 import com.goodearth.postsales.offerletter.dto.OfferLetterStatusDto;
+import com.goodearth.postsales.offerletter.repository.OfferLetterAuditRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,11 +38,17 @@ public class OfferLetterServiceTest {
     @Mock
     private OfferLetterPdfGenerator pdfGenerator;
 
+    @Mock
+    private OfferLetterAuditRepository auditRepository;
+
+    @Mock
+    private EmailService emailService;
+
     private OfferLetterServiceImpl offerLetterService;
 
     @BeforeEach
     void setUp() {
-        offerLetterService = new OfferLetterServiceImpl(apiClient, properties, zohoKycSyncService, pdfGenerator);
+        offerLetterService = new OfferLetterServiceImpl(apiClient, properties, zohoKycSyncService, pdfGenerator, auditRepository, emailService);
     }
 
     @Test
@@ -48,6 +56,8 @@ public class OfferLetterServiceTest {
     void testGetOfferLetterStatus_WhenDealExists() {
         String dealId = "CADENCE-A001";
         when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn("6638590000147048029");
+        when(auditRepository.findByBookingIdOrDealRecordId(eq(dealId), eq("6638590000147048029")))
+                .thenReturn(java.util.Optional.of(com.goodearth.postsales.offerletter.entity.OfferLetterAudit.builder().sent(true).build()));
 
         OfferLetterStatusDto status = offerLetterService.getOfferLetterStatus(dealId);
 
