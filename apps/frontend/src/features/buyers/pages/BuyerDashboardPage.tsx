@@ -24,6 +24,7 @@ import { KycApplicationResponseDto, DocumentSlotDto } from '../../kyc/types/kyc'
 import { KycWorkflowTimeline } from '../../kyc/components/KycWorkflowTimeline';
 import DocumentPreviewModal from '../../kyc/components/documents/DocumentPreviewModal';
 import { AdminKycReviewConsole } from '../../kyc/components/review/AdminKycReviewConsole';
+import { useAuthStore } from '../../../store/authStore';
 
 type DashboardTab =
   | 'overview'
@@ -49,12 +50,16 @@ export const BuyerDashboardPage: React.FC = () => {
   // Document Preview State
   const [previewSlot, setPreviewSlot] = useState<DocumentSlotDto | null>(null);
 
+  const { user } = useAuthStore();
+  const canManageOfferLetter = !!user && user.role !== 'buyer';
+
   // Offer Letter States
   const [offerLetterModalOpen, setOfferLetterModalOpen] = useState<boolean>(false);
   const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
   const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
   const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
   const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
+  const [sendOfferLetterLoading, setSendOfferLetterLoading] = useState<boolean>(false);
 
   // Modal states for KYC Admin Actions
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
@@ -81,6 +86,24 @@ export const BuyerDashboardPage: React.FC = () => {
       setOfferLetterWarning('Your Offer Letter has not been shared yet.');
     } finally {
       setOfferLetterLoading(false);
+    }
+  };
+
+  const handleSendOfferLetter = async () => {
+    const targetBooking = bookingId || kycData?.bookingId;
+    if (!targetBooking) return;
+    setSendOfferLetterLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const res = await kycService.sendOfferLetter(targetBooking);
+      setIsOfferLetterSent(true);
+      setOfferLetterWarning(null);
+      setActionSuccess(res.message || 'Offer Letter sent successfully to buyer email and unlocked in Buyer Portal.');
+    } catch (err: any) {
+      setActionError(err?.message || 'Failed to send Offer Letter to buyer.');
+    } finally {
+      setSendOfferLetterLoading(false);
     }
   };
 
@@ -641,6 +664,9 @@ export const BuyerDashboardPage: React.FC = () => {
         fileName={`Offer_Letter_${bookingId || kycData?.bookingId || 'CADENCE'}.pdf`}
         fileUrl={offerLetterUrl}
         mimeType="application/pdf"
+        onSendOfferLetter={canManageOfferLetter ? handleSendOfferLetter : undefined}
+        sendOfferLetterLoading={sendOfferLetterLoading}
+        isOfferLetterSent={isOfferLetterSent}
       />
     </div>
   );
