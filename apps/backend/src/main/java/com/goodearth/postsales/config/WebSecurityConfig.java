@@ -83,7 +83,8 @@ public class WebSecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/actuator/**", "/health", "/api/v1/health", "/api/v1/admin/verification/**", "/admin/verification/**", "/verification/**").permitAll()
+                auth.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/actuator/**", "/health", "/api/v1/health", "/api/v1/admin/verification/**", "/admin/verification/**", "/verification/**").permitAll()
                     .requestMatchers(
                         "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/activation/**", "/api/v1/auth/password-reset/**",
                         "/api/v1/auth/activate", "/api/v1/resend-activation",
@@ -117,6 +118,11 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public org.springframework.web.filter.CorsFilter corsFilter() {
+        return new org.springframework.web.filter.CorsFilter(corsConfigurationSource());
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
@@ -132,16 +138,22 @@ public class WebSecurityConfig {
 
         if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
             for (String orig : allowedOrigins) {
-                if (orig != null && !orig.isBlank() && !origins.contains(orig.trim())) {
-                    origins.add(orig.trim());
+                if (orig != null && !orig.isBlank()) {
+                    String cleaned = orig.replace("[", "").replace("]", "").trim();
+                    for (String part : cleaned.split(",")) {
+                        String singleOrigin = part.trim();
+                        if (!singleOrigin.isEmpty() && !origins.contains(singleOrigin)) {
+                            origins.add(singleOrigin);
+                        }
+                    }
                 }
             }
         }
 
         config.setAllowedOriginPatterns(origins);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization", "Link", "X-Total-Count"));
+        config.setExposedHeaders(List.of("Authorization", "Link", "X-Total-Count", "X-Active-Unit-ID"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
