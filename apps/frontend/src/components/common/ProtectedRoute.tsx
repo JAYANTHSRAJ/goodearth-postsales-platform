@@ -30,9 +30,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
   if (user && user.role === 'buyer') {
     const isCompleted = user.onboardingStage === 'COMPLETED';
     const isKycRoute = location.pathname.startsWith('/client/kyc');
+    const isOfferLetterRoute = location.pathname.startsWith('/client/offer-letter');
+    const isApplicantInfoRoute = location.pathname.startsWith('/client/applicant-info');
 
-    // If onboarding is incomplete and user is not currently inside KYC portal, redirect to KYC
-    if (!isCompleted && !isKycRoute) {
+    // Allow access to KYC, Offer Letter, and Applicant Info routes for buyers
+    if (!isCompleted && !isKycRoute && !isOfferLetterRoute && !isApplicantInfoRoute) {
       return <Navigate to="/client/kyc" replace />;
     }
   }

@@ -1,4 +1,4 @@
-import React, { ComponentType, useEffect, useState } from 'react';
+import React, { ComponentType, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,7 +13,6 @@ import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
 import { clientService } from '../../services/client.service';
-import kycService from '../../features/kyc/services/kyc.service';
 
 interface NavItem {
   name: string;
@@ -32,9 +31,8 @@ const crmNavItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useUIStore();
   const { user } = useAuthStore();
-  const { activeUnit, setUnits } = useUnitStore();
+  const { setUnits } = useUnitStore();
   const location = useLocation();
-  const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
 
   const isClient = user?.role === 'buyer';
 
@@ -50,64 +48,11 @@ export const Sidebar: React.FC = () => {
         })
         .catch((e) => console.error('Failed to load owned units', e));
     }
-  }, [isClient, user]);
-
-  // Check Offer Letter status for buyer
-  useEffect(() => {
-    if (!isClient || !user) return;
-
-    let isMounted = true;
-    let lastChecked = 0;
-
-    const checkStatus = () => {
-      const now = Date.now();
-      if (now - lastChecked < 1000) return;
-      lastChecked = now;
-
-      const bookingId =
-        activeUnit?.unitName ||
-        activeUnit?.zohoDealName ||
-        activeUnit?.workflowId ||
-        activeUnit?.id ||
-        'current';
-
-      kycService
-        .getOfferLetterStatus(bookingId)
-        .then((res) => {
-          if (isMounted) {
-            setIsOfferLetterSent(Boolean(res?.sent));
-          }
-        })
-        .catch(() => {
-          if (isMounted) {
-            setIsOfferLetterSent(false);
-          }
-        });
-    };
-
-    checkStatus();
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        checkStatus();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [isClient, user, activeUnit]);
+  }, [isClient, user, setUnits]);
 
   const clientNavItems: NavItem[] = [
     { name: 'Applicant Information', path: '/client/applicant-info', icon: User, requiresUnit: false },
-    ...(isOfferLetterSent
-      ? [{ name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false }]
-      : []),
+    { name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false },
   ];
 
   const visibleNavItems = isClient ? clientNavItems : crmNavItems;
