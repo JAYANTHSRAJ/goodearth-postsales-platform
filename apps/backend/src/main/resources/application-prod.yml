@@ -74,6 +74,17 @@ management:
       show-components: always
       probes:
         enabled: false
+      status:
+        http-mapping:
+          down: 200
+          out-of-service: 200
+          fatal: 200
   health:
+    defaults:
+      enabled: false
+    db:
+      enabled: false
     mail:
       enabled: false
+    ping:
+      enabled: true
