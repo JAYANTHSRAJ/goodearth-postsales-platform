@@ -150,11 +150,18 @@ public class ZohoApiClient {
     }
 
     private void handleAndLogException(String method, String url, Exception ex) {
+        if (ex instanceof org.springframework.web.client.RestClientResponseException restEx) {
+            String responseBody = restEx.getResponseBodyAsString();
+            if (responseBody != null && (responseBody.contains("INVALID_QUERY") || responseBody.contains("not available for search"))) {
+                log.warn("Zoho CRM returned INVALID_QUERY (unsupported search field) - Method: {}, URL: {}, Response: {}", method, url, responseBody);
+                return;
+            }
+        }
+
         log.error("Zoho API Integration Error - Method: {}, URL: {}", method, url, ex);
 
         // 1. HTTP Status & response body
-        if (ex instanceof org.springframework.web.client.RestClientResponseException) {
-            org.springframework.web.client.RestClientResponseException restEx = (org.springframework.web.client.RestClientResponseException) ex;
+        if (ex instanceof org.springframework.web.client.RestClientResponseException restEx) {
             log.error("Zoho CRM returned HTTP Status: {} ({})", restEx.getStatusCode().value(), restEx.getStatusCode());
             log.error("Zoho response body: {}", restEx.getResponseBodyAsString());
         }

@@ -140,7 +140,12 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
             Map<?, ?> response = apiClient.get(searchUri, Map.class);
             return parseDealSearchResult(response, cleanDealName, allowPartialMatch);
         } catch (Exception ex) {
-            log.warn("[KYC_SYNC] Criteria search failed for {}: {}", rawCriteria, ex.getMessage());
+            String msg = ex.getMessage() != null ? ex.getMessage() : "";
+            if (msg.contains("INVALID_QUERY") || msg.contains("not available for search")) {
+                log.info("[KYC_SYNC] Criteria search skipped due to unsupported field for {}: {}", rawCriteria, msg);
+            } else {
+                log.warn("[KYC_SYNC] Criteria search failed for {}: {}", rawCriteria, msg);
+            }
             return null;
         }
     }
