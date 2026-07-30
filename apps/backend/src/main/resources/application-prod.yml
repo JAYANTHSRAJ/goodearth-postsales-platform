@@ -70,23 +70,14 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      show-details: when-authorized
       probes:
         enabled: true
-      status:
-        http-mapping:
-          DOWN: 200
-          OUT_OF_SERVICE: 200
-          FATAL: 200
-          UNKNOWN: 200
-          down: 200
-          out-of-service: 200
   health:
     defaults:
       enabled: true
     db:
-      enabled: false
+      enabled: true
     mail:
       enabled: false
     ping:
