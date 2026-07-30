@@ -51,7 +51,7 @@ export const Sidebar: React.FC = () => {
   }, [isClient, user, setUnits]);
 
   const clientNavItems: NavItem[] = [
-    { name: 'Applicant Information', path: '/client/applicant-info', icon: User, requiresUnit: false },
+    { name: 'KYC Information', path: '/client/kyc', icon: User, requiresUnit: false },
     { name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false },
   ];
 
