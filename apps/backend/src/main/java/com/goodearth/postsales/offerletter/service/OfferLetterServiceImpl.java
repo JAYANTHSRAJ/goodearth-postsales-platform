@@ -519,28 +519,28 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
         // Table 2 - Sale Price Details directly from field_labels.xlsx (checks dealMap FIRST as authoritative active deal source)
         BigDecimal costOfUnit = getBigDecimal(dealMap, "Unit_Price", "Amount", "Cost_of_Unit", "Sale_Price");
-        if (costOfUnit == null) {
+        if ((costOfUnit == null || costOfUnit.compareTo(BigDecimal.ZERO) <= 0) && unitMap != null) {
             costOfUnit = getBigDecimal(unitMap, "Unit_Price", "Amount");
         }
 
         BigDecimal gstAmount = getBigDecimal(dealMap, "GST_at_5", "GST", "GST_Value", "GST_Amount");
-        if (gstAmount == null) {
+        if ((gstAmount == null || gstAmount.compareTo(BigDecimal.ZERO) <= 0) && unitMap != null) {
             gstAmount = getBigDecimal(unitMap, "GST_at_5", "GST", "GST_Value");
         }
-        if (gstAmount == null && costOfUnit != null) {
+        if ((gstAmount == null || gstAmount.compareTo(BigDecimal.ZERO) <= 0) && costOfUnit != null) {
             gstAmount = costOfUnit.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
         }
 
         BigDecimal costOfHome = getBigDecimal(dealMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B", "Cost_of_Home");
-        if (costOfHome == null) {
+        if ((costOfHome == null || costOfHome.compareTo(BigDecimal.ZERO) <= 0) && unitMap != null) {
             costOfHome = getBigDecimal(unitMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B");
         }
-        if (costOfHome == null && costOfUnit != null) {
+        if ((costOfHome == null || costOfHome.compareTo(BigDecimal.ZERO) <= 0) && costOfUnit != null) {
             costOfHome = costOfUnit.add(gstAmount != null ? gstAmount : BigDecimal.ZERO);
         }
 
         BigDecimal maintenanceDeposits = getBigDecimal(dealMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
-        if (maintenanceDeposits == null) {
+        if ((maintenanceDeposits == null || maintenanceDeposits.compareTo(BigDecimal.ZERO) <= 0) && unitMap != null) {
             maintenanceDeposits = getBigDecimal(unitMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
         }
 
@@ -1040,8 +1040,12 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     private BigDecimal getBigDecimal(Map<?, ?> map, String... keys) {
         for (String k : keys) {
             if (map.containsKey(k) && map.get(k) != null) {
+                Object obj = map.get(k);
                 try {
-                    String str = map.get(k).toString().replaceAll("[^0-9.]", "");
+                    if (obj instanceof Number number) {
+                        return new BigDecimal(number.toString());
+                    }
+                    String str = obj.toString().trim();
                     if (!str.isEmpty()) {
                         return new BigDecimal(str);
                     }
