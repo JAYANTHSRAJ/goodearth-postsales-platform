@@ -184,7 +184,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
               <img
                 src="/assets/goodearth-logo.png"
                 alt="GoodEarth - building sustainable communities"
-                className="h-10 md:h-12 w-auto object-contain bg-white/95 p-1.5 rounded-xl border border-slate-700 shadow-md"
+                className="h-9 md:h-11 w-auto max-w-[200px] md:max-w-[240px] object-contain bg-white/95 px-2 py-1 rounded-xl border border-slate-700 shadow-md flex-shrink-0"
               />
               <div className="flex flex-col">
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
