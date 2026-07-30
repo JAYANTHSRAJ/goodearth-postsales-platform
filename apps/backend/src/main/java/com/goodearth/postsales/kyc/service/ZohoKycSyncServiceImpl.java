@@ -946,6 +946,7 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
 
     @Override
     @Scheduled(cron = "${app.zoho.sync.cron:0 */15 * * * *}")
+    @org.springframework.transaction.annotation.Transactional
     public void retryFailedCrmAttachments() {
         List<DocumentVersion> failedVersions = documentVersionRepository.findByCrmAttachmentSyncStatus("FAILED");
         if (failedVersions == null || failedVersions.isEmpty()) {
