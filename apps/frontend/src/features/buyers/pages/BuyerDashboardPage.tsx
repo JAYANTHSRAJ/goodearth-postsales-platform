@@ -54,6 +54,7 @@ export const BuyerDashboardPage: React.FC = () => {
   const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
   const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
   const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
+  const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
 
   // Modal states for KYC Admin Actions
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
@@ -68,15 +69,16 @@ export const BuyerDashboardPage: React.FC = () => {
     try {
       const targetBooking = bookingId || kycData?.bookingId || 'DEFAULT_BOOKING';
       const statusRes = await kycService.getOfferLetterStatus(targetBooking);
-      if (!statusRes.generated) {
-        setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
+      setIsOfferLetterSent(Boolean(statusRes.sent));
+      if (!statusRes.sent && !statusRes.generated) {
+        setOfferLetterWarning(statusRes.message || 'Your Offer Letter has not been shared yet.');
       } else {
         const fileUrl = kycService.getOfferLetterFileUrl(targetBooking);
         setOfferLetterUrl(fileUrl);
         setOfferLetterModalOpen(true);
       }
     } catch {
-      setOfferLetterWarning('Offer Letter has not been generated yet.');
+      setOfferLetterWarning('Your Offer Letter has not been shared yet.');
     } finally {
       setOfferLetterLoading(false);
     }
@@ -359,6 +361,14 @@ export const BuyerDashboardPage: React.FC = () => {
               <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">KYC Approval Required</h4>
               <p className="text-xs text-slate-500">
                 Offer Letter generation unlocks after your KYC application is reviewed and approved by GoodEarth Admin.
+              </p>
+            </div>
+          ) : !isOfferLetterSent ? (
+            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-center space-y-2">
+              <ShieldAlert className="w-8 h-8 text-amber-500 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Offer Letter Not Shared Yet</h4>
+              <p className="text-xs text-slate-500">
+                {offerLetterWarning || 'Your Offer Letter has not been shared yet.'}
               </p>
             </div>
           ) : offerLetterWarning ? (

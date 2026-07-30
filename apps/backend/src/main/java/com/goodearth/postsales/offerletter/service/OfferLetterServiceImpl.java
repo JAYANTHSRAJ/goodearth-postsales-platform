@@ -24,6 +24,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.goodearth.postsales.notification.service.EmailService;
+import com.goodearth.postsales.offerletter.entity.OfferLetterAudit;
+import com.goodearth.postsales.offerletter.repository.OfferLetterAuditRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @Service
 public class OfferLetterServiceImpl implements OfferLetterService {
 
@@ -33,16 +41,22 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     private final ZohoProperties properties;
     private final ZohoKycSyncService zohoKycSyncService;
     private final OfferLetterPdfGenerator pdfGenerator;
+    private final OfferLetterAuditRepository auditRepository;
+    private final EmailService emailService;
 
     public OfferLetterServiceImpl(
             ZohoApiClient apiClient,
             ZohoProperties properties,
             ZohoKycSyncService zohoKycSyncService,
-            OfferLetterPdfGenerator pdfGenerator) {
+            OfferLetterPdfGenerator pdfGenerator,
+            OfferLetterAuditRepository auditRepository,
+            EmailService emailService) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.zohoKycSyncService = zohoKycSyncService;
         this.pdfGenerator = pdfGenerator;
+        this.auditRepository = auditRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -57,6 +71,9 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             log.warn("[OFFER_LETTER] Deal record ID resolution failed for identifier: {}", cleanIdentifier);
             return new OfferLetterStatusDto(
                     false,
+                    false,
+                    null,
+                    null,
                     "Offer Letter is not available as Deal record was not found.",
                     null,
                     null,
@@ -64,15 +81,122 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             );
         }
 
+        Optional<OfferLetterAudit> auditOpt = auditRepository.findByBookingIdOrDealRecordId(cleanIdentifier, targetRecordId);
+        boolean isSent = auditOpt.map(OfferLetterAudit::isSent).orElse(false);
+        String sentAtStr = auditOpt.map(a -> a.getSentAt() != null ? a.getSentAt().toString() : null).orElse(null);
+        String sentByStr = auditOpt.map(OfferLetterAudit::getSentBy).orElse(null);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_CRM") || a.getAuthority().equals("ROLE_ADMIN"));
+
         String fileUrl = "/api/v1/deals/" + cleanIdentifier + "/offer-letter/file";
         String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
 
+        if (!isSent && !isAdmin) {
+            return new OfferLetterStatusDto(
+                    false,
+                    false,
+                    null,
+                    null,
+                    "Your Offer Letter has not been shared yet.",
+                    fileUrl,
+                    fileName,
+                    targetRecordId
+            );
+        }
+
         return new OfferLetterStatusDto(
                 true,
-                "Offer Letter is generated dynamically and available for viewing.",
+                isSent,
+                sentAtStr,
+                sentByStr,
+                isSent ? "Offer Letter is shared and available for viewing." : "Offer Letter is generated and ready for preview.",
                 fileUrl,
                 fileName,
                 targetRecordId
+        );
+    }
+
+    @Override
+    public OfferLetterStatusDto sendOfferLetter(String dealIdOrBookingId, String actorId) {
+        log.info("[SEND_OFFER_LETTER] Initiating send offer letter for: {} by actor: {}", dealIdOrBookingId, actorId);
+        if (dealIdOrBookingId == null || dealIdOrBookingId.trim().isEmpty()) {
+            throw new CustomException("Deal ID or Booking Reference is required.", HttpStatus.BAD_REQUEST);
+        }
+
+        String cleanIdentifier = dealIdOrBookingId.trim();
+        OfferLetterDto dto = buildOfferLetterDto(cleanIdentifier);
+        if (dto == null || dto.getApplicants() == null || dto.getApplicants().isEmpty()) {
+            throw new CustomException("Unable to build Offer Letter details for identifier: " + cleanIdentifier, HttpStatus.BAD_REQUEST);
+        }
+
+        OfferLetterApplicantDto primaryApplicant = dto.getApplicants().get(0);
+        String buyerEmail = primaryApplicant.getEmail();
+        String buyerName = primaryApplicant.getFullName();
+
+        if (buyerEmail == null || buyerEmail.trim().isEmpty()) {
+            log.error("[SEND_OFFER_LETTER] Buyer email is missing in CRM Deal details for identifier: {}", cleanIdentifier);
+            throw new CustomException("Buyer email address is missing in CRM deal details. Unable to send Offer Letter email.", HttpStatus.BAD_REQUEST);
+        }
+
+        byte[] pdfBytes = pdfGenerator.generatePdf(dto);
+        if (pdfBytes == null || pdfBytes.length == 0) {
+            throw new CustomException("Failed to generate Offer Letter PDF binary.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
+
+        String subject = "GoodEarth Offer Letter";
+        String body = String.format(
+                "Dear %s,\n\n" +
+                "Your Offer Letter has been shared by the GoodEarth team.\n" +
+                "The Offer Letter is attached to this email.\n" +
+                "You can also view and download it from your Buyer Portal.\n\n" +
+                "Regards,\n" +
+                "GoodEarth Team",
+                buyerName != null && !buyerName.isBlank() ? buyerName : "Buyer"
+        );
+
+        log.info("[SEND_OFFER_LETTER] Sending email with attached PDF to buyer: {} for deal: {}", buyerEmail, cleanIdentifier);
+        try {
+            emailService.sendEmailWithAttachment(buyerEmail, subject, body, fileName, pdfBytes, "application/pdf");
+        } catch (Exception ex) {
+            log.error("[SEND_OFFER_LETTER] Email delivery failed for {}: {}", buyerEmail, ex.getMessage(), ex);
+            throw new CustomException("Failed to send Offer Letter email to buyer: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
+        }
+
+        String targetRecordId = zohoKycSyncService.resolveDealRecordIdByDealName(cleanIdentifier);
+        OfferLetterAudit audit = auditRepository.findByBookingId(cleanIdentifier)
+                .orElse(OfferLetterAudit.builder()
+                        .bookingId(cleanIdentifier)
+                        .dealRecordId(targetRecordId)
+                        .build());
+
+        LocalDateTime now = LocalDateTime.now();
+        audit.setSent(true);
+        audit.setSentAt(now);
+        audit.setSentBy(actorId);
+        audit.setRecipientEmail(buyerEmail);
+        audit.setRecipientName(buyerName);
+        if (targetRecordId != null) {
+            audit.setDealRecordId(targetRecordId);
+        }
+        auditRepository.save(audit);
+
+        log.info("[SEND_OFFER_LETTER] Offer Letter audit saved successfully for deal: {} at {}", cleanIdentifier, now);
+
+        String fileUrl = "/api/v1/deals/" + cleanIdentifier + "/offer-letter/file";
+
+        return new OfferLetterStatusDto(
+                true,
+                true,
+                now.toString(),
+                actorId,
+                "Offer Letter has been sent successfully to " + buyerEmail,
+                fileUrl,
+                fileName,
+                targetRecordId != null ? targetRecordId : cleanIdentifier
         );
     }
 

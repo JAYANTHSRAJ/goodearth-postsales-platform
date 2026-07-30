@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Send } from 'lucide-react';
 import { useAuthStore } from '../../../../store/authStore';
 
 interface DocumentPreviewModalProps {
@@ -7,6 +8,9 @@ interface DocumentPreviewModalProps {
   fileName: string;
   fileUrl: string;
   mimeType?: string;
+  onSendOfferLetter?: () => Promise<void>;
+  sendOfferLetterLoading?: boolean;
+  isOfferLetterSent?: boolean;
 }
 
 export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
@@ -15,6 +19,9 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   fileName,
   fileUrl,
   mimeType = 'application/pdf',
+  onSendOfferLetter,
+  sendOfferLetterLoading = false,
+  isOfferLetterSent = false,
 }) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -105,6 +112,16 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             <p className="text-xs text-slate-400">Secure WorkDrive Binary Stream (Verified Proxy)</p>
           </div>
           <div className="flex items-center gap-3">
+            {onSendOfferLetter && (
+              <button
+                onClick={onSendOfferLetter}
+                disabled={sendOfferLetterLoading || isOfferLetterSent}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {isOfferLetterSent ? 'Offer Letter Sent' : sendOfferLetterLoading ? 'Sending Email...' : 'Send Offer Letter'}
+              </button>
+            )}
             <a
               href={objectUrl || fileUrl}
               target="_blank"

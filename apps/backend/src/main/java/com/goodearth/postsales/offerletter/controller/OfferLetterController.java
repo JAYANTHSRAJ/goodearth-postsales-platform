@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.bind.annotation.PostMapping;
+
 @RestController
 @RequestMapping({"/api/v1/deals", "/deals"})
 @Tag(name = "Deal Offer Letter Operations", description = "APIs for dynamic Spring Boot Offer Letter PDF generation and streaming")
@@ -44,6 +46,21 @@ public class OfferLetterController {
         log.info("Endpoint: GET /api/v1/deals/{}/offer-letter/status, Execution Time: {}ms, Available: {}",
                 dealIdOrBookingId, duration, status.isGenerated());
 
+        return ResponseEntity.ok(new ApiResponse<>(status));
+    }
+
+    @PostMapping("/{dealIdOrBookingId}/offer-letter/send")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
+    @Operation(summary = "Send Offer Letter to Buyer", description = "Marks Offer Letter as sent, enables Buyer Portal access, and emails PDF to buyer")
+    public ResponseEntity<ApiResponse<OfferLetterStatusDto>> sendOfferLetter(
+            @PathVariable String dealIdOrBookingId,
+            Authentication authentication) {
+
+        log.info("[OFFER_LETTER_TRACE] Controller Entry -> POST /deals/{}/offer-letter/send | Actor: {}",
+                dealIdOrBookingId, authentication != null ? authentication.getName() : "ANONYMOUS");
+
+        String actorId = authentication != null ? authentication.getName() : "ADMIN";
+        OfferLetterStatusDto status = offerLetterService.sendOfferLetter(dealIdOrBookingId, actorId);
         return ResponseEntity.ok(new ApiResponse<>(status));
     }
 

@@ -11,6 +11,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class OfferLetterStatusDto {
     private boolean generated;
+    private boolean sent;
+    private String sentAt;
+    private String sentBy;
     private String message;
     private String fileUrl;
     private String fileName;

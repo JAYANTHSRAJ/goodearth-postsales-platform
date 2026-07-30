@@ -78,4 +78,45 @@ public class Smtp2GoApiEmailService implements EmailService {
             throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }
+
+    @Override
+    public void sendEmailWithAttachment(String toEmail, String subject, String body, String fileName, byte[] attachmentBytes, String mimeType) {
+        log.info("Preparing to send SMTP2GO API email with attachment to: {} | Subject: {} | Attachment: {}", toEmail, subject, fileName);
+
+        if (apiKey == null || apiKey.trim().isEmpty() || fromEmail == null || fromEmail.trim().isEmpty()) {
+            log.warn("SMTP configuration missing or incomplete. Skipping email delivery.");
+            return;
+        }
+
+        String url = "https://api.smtp2go.com/v3/email/send";
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("api_key", apiKey);
+        payload.put("sender", fromEmail);
+        payload.put("to", Collections.singletonList(toEmail));
+        payload.put("subject", subject);
+        payload.put("text_body", body);
+
+        if (attachmentBytes != null && attachmentBytes.length > 0) {
+            String base64Data = java.util.Base64.getEncoder().encodeToString(attachmentBytes);
+            Map<String, String> attachmentMap = new HashMap<>();
+            attachmentMap.put("filename", fileName);
+            attachmentMap.put("fileblob", base64Data);
+            attachmentMap.put("mimetype", mimeType != null ? mimeType : "application/pdf");
+            payload.put("attachments", Collections.singletonList(attachmentMap));
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            log.info("SMTP2GO API email with attachment delivered successfully to {}. Response: {}", toEmail, response.getBody());
+        } catch (Exception ex) {
+            log.error("Failed to send SMTP2GO API email with attachment to: {} | Subject: {} | Error: {}", toEmail, subject, ex.getMessage(), ex);
+            throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
+        }
+    }
 }

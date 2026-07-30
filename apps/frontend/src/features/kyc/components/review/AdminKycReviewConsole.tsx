@@ -183,12 +183,16 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
     }
   };
 
+  const [sendOfferLetterLoading, setSendOfferLetterLoading] = useState<boolean>(false);
+  const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
+
   const handleViewOfferLetter = async () => {
     setOfferLetterWarning(null);
     setActionError(null);
     setOfferLetterLoading(true);
     try {
       const statusRes = await kycService.getOfferLetterStatus(kycData.bookingId);
+      setIsOfferLetterSent(Boolean(statusRes.sent));
       if (!statusRes.generated) {
         setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
       } else {
@@ -200,6 +204,21 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
       setOfferLetterWarning('Offer Letter has not been generated yet.');
     } finally {
       setOfferLetterLoading(false);
+    }
+  };
+
+  const handleSendOfferLetter = async () => {
+    setSendOfferLetterLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const res = await kycService.sendOfferLetter(kycData.bookingId);
+      setIsOfferLetterSent(true);
+      setActionSuccess(res.message || 'Offer Letter sent successfully to buyer email and unlocked in Buyer Portal.');
+    } catch (err: any) {
+      setActionError(err?.message || 'Failed to send Offer Letter to buyer.');
+    } finally {
+      setSendOfferLetterLoading(false);
     }
   };
 
@@ -964,6 +983,9 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
         fileName={`Offer_Letter_${kycData.bookingId}.pdf`}
         fileUrl={offerLetterUrl}
         mimeType="application/pdf"
+        onSendOfferLetter={handleSendOfferLetter}
+        sendOfferLetterLoading={sendOfferLetterLoading}
+        isOfferLetterSent={isOfferLetterSent}
       />
     </div>
   );

@@ -63,4 +63,34 @@ public class SmtpEmailServiceImpl implements EmailService {
             throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Override
+    public void sendEmailWithAttachment(String toEmail, String subject, String body, String fileName, byte[] attachmentBytes, String mimeType) {
+        log.info("Preparing to send SMTP email with attachment to: {} | Subject: {} | Attachment: {}", toEmail, subject, fileName);
+
+        if (mailSender == null) {
+            log.error("JavaMailSender is null. SMTP is not fully configured.");
+            throw new CustomException("Email delivery failed: SMTP JavaMailSender is not configured", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(body.replace("\n", "<br/>"), true);
+
+            if (attachmentBytes != null && attachmentBytes.length > 0) {
+                helper.addAttachment(fileName, new org.springframework.core.io.ByteArrayResource(attachmentBytes), mimeType != null ? mimeType : "application/pdf");
+            }
+
+            mailSender.send(message);
+            log.info("SMTP email with attachment delivered successfully to {}", toEmail);
+        } catch (Exception ex) {
+            log.error("Failed to send SMTP email with attachment to: {} | Subject: {} | Complete exception details:", toEmail, subject, ex);
+            throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

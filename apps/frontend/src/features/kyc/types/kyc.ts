@@ -225,6 +225,9 @@ export interface KycValidationSummaryResponseDto {
 
 export interface OfferLetterStatusDto {
   generated: boolean;
+  sent?: boolean;
+  sentAt?: string;
+  sentBy?: string;
   message: string;
   fileUrl?: string;
   fileName?: string;

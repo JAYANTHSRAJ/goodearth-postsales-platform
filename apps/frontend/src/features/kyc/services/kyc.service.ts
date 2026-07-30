@@ -100,6 +100,10 @@ export const kycService = {
     return api.get<OfferLetterStatusDto>(`/deals/${dealIdOrBookingId}/offer-letter/status`);
   },
 
+  sendOfferLetter: (dealIdOrBookingId: string): Promise<OfferLetterStatusDto> => {
+    return api.post<OfferLetterStatusDto>(`/deals/${dealIdOrBookingId}/offer-letter/send`);
+  },
+
   getOfferLetterFileUrl: (dealIdOrBookingId: string): string => {
     const path = `/deals/${dealIdOrBookingId}/offer-letter/file`;
     const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';

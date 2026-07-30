@@ -9,4 +9,5 @@ public interface OfferLetterService {
     OfferLetterDto buildOfferLetterDto(String dealIdOrBookingId);
     byte[] generateOfferLetterPdf(String dealIdOrBookingId);
     KycDocumentStreamDto streamOfferLetterPdf(String dealIdOrBookingId, String actorId);
+    OfferLetterStatusDto sendOfferLetter(String dealIdOrBookingId, String actorId);
 }
