@@ -196,7 +196,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
       if (!statusRes.generated) {
         setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
       } else {
-        const fileUrl = kycService.getOfferLetterFileUrl(kycData.bookingId);
+        const fileUrl = kycService.getOfferLetterFileUrl(kycData.bookingId) + '?t=' + Date.now();
         setOfferLetterUrl(fileUrl);
         setOfferLetterModalOpen(true);
       }
@@ -282,7 +282,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Approve
           </button>
-          {showOfferLetterButton && kycData.status === 'APPROVED' && (
+          {showOfferLetterButton && (
             <button
               onClick={handleViewOfferLetter}
               disabled={offerLetterLoading}

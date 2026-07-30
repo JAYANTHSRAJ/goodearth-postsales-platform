@@ -88,6 +88,9 @@ public class OfferLetterController {
             log.info("[OFFER_LETTER_TRACE] Controller -> Returning ResponseEntity byte[] stream with HTTP 200 OK");
 
             return ResponseEntity.ok()
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate, max-age=0")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header(HttpHeaders.EXPIRES, "0")
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + streamDto.getFileName() + "\"")
                     .contentType(MediaType.parseMediaType(streamDto.getMimeType()))
                     .contentLength(streamDto.getFileSize())

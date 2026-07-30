@@ -115,11 +115,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             {onSendOfferLetter && (
               <button
                 onClick={onSendOfferLetter}
-                disabled={sendOfferLetterLoading || isOfferLetterSent}
+                disabled={sendOfferLetterLoading}
                 className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
-                {isOfferLetterSent ? 'Offer Letter Sent' : sendOfferLetterLoading ? 'Sending Email...' : 'Send Offer Letter'}
+                {sendOfferLetterLoading ? 'Sending Email...' : isOfferLetterSent ? 'Resend Offer Letter' : 'Send Offer Letter'}
               </button>
             )}
             <a

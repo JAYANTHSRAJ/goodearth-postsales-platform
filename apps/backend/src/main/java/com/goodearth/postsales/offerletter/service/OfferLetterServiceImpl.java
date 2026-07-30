@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.goodearth.postsales.notification.service.EmailService;
 import com.goodearth.postsales.offerletter.entity.OfferLetterAudit;
@@ -87,8 +88,16 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         String sentByStr = auditOpt.map(OfferLetterAudit::getSentBy).orElse(null);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Set<String> allowedAdminRoles = Set.of(
+                "ROLE_SUPER_ADMIN", "SUPER_ADMIN",
+                "ROLE_CRM", "CRM",
+                "ROLE_ADMIN", "ADMIN",
+                "ROLE_FINANCE", "FINANCE",
+                "ROLE_DESIGN_STUDIO", "DESIGN_STUDIO",
+                "ROLE_PROJECT_MANAGER", "PROJECT_MANAGER"
+        );
         boolean isAdmin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_CRM") || a.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(a -> allowedAdminRoles.contains(a.getAuthority().toUpperCase()));
 
         String fileUrl = "/api/v1/deals/" + cleanIdentifier + "/offer-letter/file";
         String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
@@ -258,6 +267,28 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     public KycDocumentStreamDto streamOfferLetterPdf(String dealIdOrBookingId, String actorId) {
         log.info("[OFFER_LETTER_TRACE] Service -> Entering streamOfferLetterPdf for identifier: {}, actorId: {}", dealIdOrBookingId, actorId);
         String cleanIdentifier = dealIdOrBookingId.trim();
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Set<String> allowedAdminRoles = Set.of(
+                "ROLE_SUPER_ADMIN", "SUPER_ADMIN",
+                "ROLE_CRM", "CRM",
+                "ROLE_ADMIN", "ADMIN",
+                "ROLE_FINANCE", "FINANCE",
+                "ROLE_DESIGN_STUDIO", "DESIGN_STUDIO",
+                "ROLE_PROJECT_MANAGER", "PROJECT_MANAGER"
+        );
+        boolean isAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> allowedAdminRoles.contains(a.getAuthority().toUpperCase()));
+
+        if (!isAdmin && (actorId == null || actorId.equalsIgnoreCase("CLIENT"))) {
+            String targetRecordId = zohoKycSyncService.resolveDealRecordIdByDealName(cleanIdentifier);
+            Optional<OfferLetterAudit> auditOpt = auditRepository.findByBookingIdOrDealRecordId(cleanIdentifier, targetRecordId);
+            boolean isSent = auditOpt.map(OfferLetterAudit::isSent).orElse(false);
+            if (!isSent) {
+                throw new CustomException("Your Offer Letter has not been shared yet.", HttpStatus.FORBIDDEN);
+            }
+        }
+
         byte[] pdfBytes = generateOfferLetterPdf(cleanIdentifier);
         String fileName = "Offer_Letter_" + cleanIdentifier + ".pdf";
 
@@ -486,14 +517,32 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         String carParks = getString(unitMap, "Covered_Car_Parks");
         if (carParks == null) carParks = "";
 
-        // Table 2 - Sale Price Details directly from field_labels.xlsx (ONLY from unitMap)
-        BigDecimal costOfUnit = getBigDecimal(unitMap, "Unit_Price");
+        // Table 2 - Sale Price Details directly from field_labels.xlsx (checks dealMap FIRST as authoritative active deal source)
+        BigDecimal costOfUnit = getBigDecimal(dealMap, "Unit_Price", "Amount", "Cost_of_Unit", "Sale_Price");
+        if (costOfUnit == null) {
+            costOfUnit = getBigDecimal(unitMap, "Unit_Price", "Amount");
+        }
 
-        BigDecimal gstAmount = getBigDecimal(unitMap, "GST_at_5", "GST", "GST_Value");
+        BigDecimal gstAmount = getBigDecimal(dealMap, "GST_at_5", "GST", "GST_Value", "GST_Amount");
+        if (gstAmount == null) {
+            gstAmount = getBigDecimal(unitMap, "GST_at_5", "GST", "GST_Value");
+        }
+        if (gstAmount == null && costOfUnit != null) {
+            gstAmount = costOfUnit.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
+        }
 
-        BigDecimal costOfHome = getBigDecimal(unitMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B");
+        BigDecimal costOfHome = getBigDecimal(dealMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B", "Cost_of_Home");
+        if (costOfHome == null) {
+            costOfHome = getBigDecimal(unitMap, "Cost_of_Home_Inc_GST_A", "Final_Cost_of_the_Home_A_B");
+        }
+        if (costOfHome == null && costOfUnit != null) {
+            costOfHome = costOfUnit.add(gstAmount != null ? gstAmount : BigDecimal.ZERO);
+        }
 
-        BigDecimal maintenanceDeposits = getBigDecimal(unitMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
+        BigDecimal maintenanceDeposits = getBigDecimal(dealMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
+        if (maintenanceDeposits == null) {
+            maintenanceDeposits = getBigDecimal(unitMap, "Maintenance_Deposit", "Total_Cost_towards_Maint_Deposits_B", "Maintenance_for_One_year_Incl_GST");
+        }
 
         String amountInWords = costOfHome != null ? IndianCurrencyFormatter.convertToWords(costOfHome) : "";
 
@@ -798,7 +847,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
         // Try extracting subform array from CRM payload
         Object rawSubform = null;
-        String[] subformKeys = {"Payment_Schedule", "Payment_Milestones", "Stage_Milestones", "Milestone_Details", "Subform_1"};
+        String[] subformKeys = {"Payment_Schedule", "Payment_Milestones", "Stage_Milestones", "Milestone_Details", "Subform_1", "Payment_Details", "Milestones", "Payment_Milestone_Schedule", "Payment_Schedule_Details", "Subform_2", "Schedule"};
         for (String k : subformKeys) {
             if (dealMap.containsKey(k) && dealMap.get(k) instanceof List<?> list && !list.isEmpty()) {
                 rawSubform = list;
@@ -810,13 +859,60 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             int index = 1;
             for (Object item : list) {
                 if (item instanceof Map<?, ?> rowMap) {
-                    String name = getString(rowMap, "Payment_milestone_name", "Milestone_Name", "Stage_Name", "Name");
-                    String percentStr = getString(rowMap, "Payment_percent", "Percentage", "Percent");
-                    String dueDate = getString(rowMap, "Payment_due_date", "Due_Date");
+                    String name = getString(rowMap, "Payment_milestone_name", "Milestone_Name", "Stage_Name", "Name", "Milestone", "Milestone_Stage", "Payment_Stage", "Stage");
+                    String percentStr = getString(rowMap, "Payment_percent", "Percentage", "Percent", "Payment_Percentage", "Milestone_Percentage", "%", "Percent_Value");
+                    
+                    String dueDate = getString(rowMap, "Payment_due_date", "Due_Date", "Payment_Due_Date", "Target_Date", "Date", "Completion_Date", "Expected_Date", "Schedule_Date");
+                    if (dueDate == null || dueDate.isBlank()) {
+                        dueDate = getString(dealMap, "Due_Date_" + index, "Payment_Due_Date_" + index, "Milestone_" + index + "_Due_Date", "Stage_" + index + "_Due_Date");
+                    }
 
-                    BigDecimal unitAmt = getBigDecimal(rowMap, "Unit_total_amount", "Unit_Amount", "Amount");
-                    BigDecimal gstAmt = getBigDecimal(rowMap, "GST", "GST_Amount");
-                    BigDecimal instAmt = getBigDecimal(rowMap, "Installment", "Installment_Amount", "Total_Amount");
+                    BigDecimal rawUnitAmt = getBigDecimal(rowMap, "Unit_total_amount", "Unit_Amount", "Amount", "Unit_Cost", "Unit_Total_Amount");
+                    BigDecimal rawGstAmt = getBigDecimal(rowMap, "GST", "GST_Amount", "GST_Value", "Tax_Amount");
+                    BigDecimal rawInstAmt = getBigDecimal(rowMap, "Installment", "Installment_Amount", "Total_Amount", "Milestone_Amount", "Gross_Amount");
+
+                    BigDecimal percentVal = null;
+                    if (percentStr != null && !percentStr.isBlank()) {
+                        try {
+                            String pClean = percentStr.replaceAll("[^0-9.]", "");
+                            if (!pClean.isEmpty()) {
+                                percentVal = new BigDecimal(pClean);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    BigDecimal unitAmt = rawUnitAmt;
+                    BigDecimal gstAmt = rawGstAmt;
+                    BigDecimal instAmt = rawInstAmt;
+
+                    // If subform row has percentage but amounts are missing/unpopulated in CRM, compute dynamically from latest Deal totals
+                    if (percentVal != null && percentVal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal percentRatio = percentVal.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+                        if (unitAmt == null && totalUnitCost != null) {
+                            unitAmt = totalUnitCost.multiply(percentRatio).setScale(0, RoundingMode.HALF_UP);
+                        }
+                        if (gstAmt == null && totalGstAmount != null) {
+                            gstAmt = totalGstAmount.multiply(percentRatio).setScale(0, RoundingMode.HALF_UP);
+                        }
+                        if (instAmt == null) {
+                            if (totalCostOfHome != null) {
+                                instAmt = totalCostOfHome.multiply(percentRatio).setScale(0, RoundingMode.HALF_UP);
+                            } else if (unitAmt != null || gstAmt != null) {
+                                instAmt = (unitAmt != null ? unitAmt : BigDecimal.ZERO).add(gstAmt != null ? gstAmt : BigDecimal.ZERO);
+                            }
+                        }
+                    } else {
+                        if (instAmt == null && (unitAmt != null || gstAmt != null)) {
+                            instAmt = (unitAmt != null ? unitAmt : BigDecimal.ZERO).add(gstAmt != null ? gstAmt : BigDecimal.ZERO);
+                        }
+                        if (unitAmt != null && totalUnitCost != null && totalUnitCost.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal calcPct = unitAmt.multiply(new BigDecimal("100")).divide(totalUnitCost, 1, RoundingMode.HALF_UP);
+                            percentStr = calcPct.stripTrailingZeros().toPlainString() + "%";
+                        } else if (instAmt != null && totalCostOfHome != null && totalCostOfHome.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal calcPct = instAmt.multiply(new BigDecimal("100")).divide(totalCostOfHome, 1, RoundingMode.HALF_UP);
+                            percentStr = calcPct.stripTrailingZeros().toPlainString() + "%";
+                        }
+                    }
 
                     if (name != null) {
                         milestones.add(OfferLetterMilestoneDto.builder()
@@ -838,14 +934,14 @@ public class OfferLetterServiceImpl implements OfferLetterService {
 
         // If no subform list returned from CRM, build default dynamic schedule matching the 16 milestones reference
         if (milestones.isEmpty()) {
-            milestones = createReferenceMilestoneSchedule(totalUnitCost, totalGstAmount, totalCostOfHome);
+            milestones = createReferenceMilestoneSchedule(totalUnitCost, totalGstAmount, totalCostOfHome, dealMap);
         }
 
         return milestones;
     }
 
     private List<OfferLetterMilestoneDto> createReferenceMilestoneSchedule(
-            BigDecimal unitTotal, BigDecimal gstTotal, BigDecimal homeTotal) {
+            BigDecimal unitTotal, BigDecimal gstTotal, BigDecimal homeTotal, Map<?, ?> dealMap) {
 
         Object[][] defs = new Object[][]{
                 {1, "On Booking", 5, "Jul-2025"},
@@ -871,7 +967,20 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             int sNo = (Integer) d[0];
             String name = (String) d[1];
             int pct = (Integer) d[2];
-            String dueDate = (String) d[3];
+            String defaultDueDate = (String) d[3];
+
+            String dueDate = null;
+            if (dealMap != null) {
+                dueDate = getString(dealMap,
+                        "Due_Date_" + sNo,
+                        "Payment_Due_Date_" + sNo,
+                        "Milestone_" + sNo + "_Due_Date",
+                        "Stage_" + sNo + "_Due_Date",
+                        "Due_Date_Stage_" + sNo);
+            }
+            if (dueDate == null || dueDate.isBlank()) {
+                dueDate = defaultDueDate;
+            }
 
             BigDecimal pctRatio = new BigDecimal(pct).divide(new BigDecimal(100), 4, RoundingMode.HALF_UP);
             BigDecimal uAmt = unitTotal != null ? unitTotal.multiply(pctRatio).setScale(0, RoundingMode.HALF_UP) : null;
