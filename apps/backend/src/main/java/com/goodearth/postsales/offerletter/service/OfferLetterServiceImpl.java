@@ -894,14 +894,19 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         return list;
     }
 
+    private String sanitizeString(String input) {
+        if (input == null) return null;
+        return input.replaceAll("[\\r\\n]+", " ").replaceAll("\\s+", " ").trim();
+    }
+
     private String getStringWithDefault(Map<?, ?> map, String defaultVal, String... keys) {
         for (String k : keys) {
             if (map.containsKey(k) && map.get(k) != null) {
-                String val = map.get(k).toString().trim();
-                if (!val.isEmpty()) return val;
+                String val = sanitizeString(map.get(k).toString());
+                if (val != null && !val.isEmpty()) return val;
             }
         }
-        return defaultVal;
+        return sanitizeString(defaultVal);
     }
 
     private String getString(Map<?, ?> map, String... keys) {
@@ -913,10 +918,10 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             if (map.containsKey(k) && map.get(k) != null) {
                 Object obj = map.get(k);
                 if (obj instanceof Map<?, ?> subMap) {
-                    if (subMap.get("name") != null) return subMap.get("name").toString().trim();
+                    if (subMap.get("name") != null) return sanitizeString(subMap.get("name").toString());
                 } else {
-                    String str = obj.toString().trim();
-                    if (!str.isEmpty()) return str;
+                    String str = sanitizeString(obj.toString());
+                    if (str != null && !str.isEmpty()) return str;
                 }
             }
         }

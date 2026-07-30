@@ -380,12 +380,12 @@
             <th colspan="7" class="table-header">Table 3 - Payment schedule</th>
         </tr>
         <tr>
-            <th class="col-header text-center" style="width: 5%;">S. No</th>
-            <th class="col-header" style="width: 32%;">Payment milestone name</th>
-            <th class="col-header" style="width: 11%;">Payment percent</th>
-            <th class="col-header" style="width: 12%;">Payment due date</th>
-            <th class="col-header" style="width: 14%;">Unit total amount</th>
-            <th class="col-header" style="width: 12%;">GST</th>
+            <th class="col-header text-center" style="width: 4%;">S. No</th>
+            <th class="col-header" style="width: 40%;">Payment milestone name</th>
+            <th class="col-header" style="width: 9%;">Payment percent</th>
+            <th class="col-header" style="width: 11%;">Payment due date</th>
+            <th class="col-header" style="width: 12%;">Unit total amount</th>
+            <th class="col-header" style="width: 10%;">GST</th>
             <th class="col-header" style="width: 14%;">Installment</th>
         </tr>
     </thead>
@@ -399,8 +399,10 @@
             <td th:text="${m.gstAmountFormatted}">INR 94,048</td>
             <td th:text="${m.installmentAmountFormatted}">INR 19,75,000</td>
         </tr>
+    </tbody>
+    <tfoot>
         <!-- Totals and Summary Rows -->
-        <tr>
+        <tr style="page-break-inside: avoid;">
             <td colspan="2" class="font-bold">Cost of the home</td>
             <td class="font-bold" th:text="${offer.totalMilestonePercent != null ? offer.totalMilestonePercent : '100%'}">100%</td>
             <td></td>
@@ -408,15 +410,15 @@
             <td class="font-bold" th:text="${offer.totalGstAmountFormatted}">INR 18,80,952</td>
             <td class="font-bold" th:text="${offer.totalInstallmentCostFormatted}">INR 3,95,00,000</td>
         </tr>
-        <tr>
+        <tr style="page-break-inside: avoid;">
             <td colspan="3" class="font-bold">Amount in Words</td>
             <td colspan="4" class="font-bold" th:text="${offer.amountInWords}">Rupees Three Crore Ninety Five Lakh Only</td>
         </tr>
-        <tr>
+        <tr style="page-break-inside: avoid;">
             <td colspan="5">On or before registration (Total cost towards deposits)</td>
             <td colspan="2" class="font-bold" th:text="${offer.maintenanceDepositsFormatted}">INR 2,00,000</td>
         </tr>
-    </tbody>
+    </tfoot>
 </table>
 
 <!-- Table 4: Bank Remittance (Unit Cost) -->
