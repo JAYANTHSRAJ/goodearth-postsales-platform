@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
   XCircle,
@@ -30,6 +31,7 @@ interface AdminKycReviewConsoleProps {
 }
 
 export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ kycData, onRefresh, showOfferLetterButton = true }) => {
+  const navigate = useNavigate();
   // Modal Action States
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
   const [modalReason, setModalReason] = useState<string>('');
@@ -42,11 +44,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
   const [previewSlot, setPreviewSlot] = useState<DocumentSlotDto | null>(null);
 
   // Offer Letter Preview States
-  const [offerLetterModalOpen, setOfferLetterModalOpen] = useState<boolean>(false);
-  const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
-  const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
-  const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
-
+  
   // Collapsible section toggles
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     summary: true,
@@ -183,45 +181,12 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
     }
   };
 
-  const [sendOfferLetterLoading, setSendOfferLetterLoading] = useState<boolean>(false);
-  const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
-
-  const handleViewOfferLetter = async () => {
-    setOfferLetterWarning(null);
-    setActionError(null);
-    setOfferLetterLoading(true);
-    try {
-      const statusRes = await kycService.getOfferLetterStatus(kycData.bookingId);
-      setIsOfferLetterSent(Boolean(statusRes.sent));
-      if (!statusRes.generated) {
-        setOfferLetterWarning(statusRes.message || 'Offer Letter has not been generated yet.');
-      } else {
-        const fileUrl = kycService.getOfferLetterFileUrl(kycData.bookingId) + '?t=' + Date.now();
-        setOfferLetterUrl(fileUrl);
-        setOfferLetterModalOpen(true);
-      }
-    } catch (err: any) {
-      setOfferLetterWarning('Offer Letter has not been generated yet.');
-    } finally {
-      setOfferLetterLoading(false);
-    }
+  
+  const handleViewOfferLetter = () => {
+    navigate(`/buyers/${kycData.bookingId}/offer-letter`);
   };
 
-  const handleSendOfferLetter = async () => {
-    setSendOfferLetterLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
-    try {
-      const res = await kycService.sendOfferLetter(kycData.bookingId);
-      setIsOfferLetterSent(true);
-      setActionSuccess(res.message || 'Offer Letter sent successfully to buyer email and unlocked in Buyer Portal.');
-    } catch (err: any) {
-      setActionError(err?.message || 'Failed to send Offer Letter to buyer.');
-    } finally {
-      setSendOfferLetterLoading(false);
-    }
-  };
-
+  
   const handlePrint = () => {
     window.print();
   };
@@ -285,12 +250,11 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           {showOfferLetterButton && (
             <button
               onClick={handleViewOfferLetter}
-              disabled={offerLetterLoading}
-              title="View Deal Offer Letter PDF"
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+              title="View Offer Letter Page"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <FileText className="w-3.5 h-3.5" />
-              {offerLetterLoading ? 'Checking Status...' : 'View Offer Letter'}
+              View Offer Letter
             </button>
           )}
           <button
@@ -320,16 +284,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
         </div>
       )}
 
-      {/* Notifications & Warning Banners */}
-      {offerLetterWarning && (
-        <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold flex items-center justify-between print:hidden shadow-sm animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>{offerLetterWarning}</span>
-          </div>
-          <button onClick={() => setOfferLetterWarning(null)} className="text-amber-700 font-bold hover:text-amber-900 px-1">✕</button>
-        </div>
-      )}
+
 
       {/* Notifications Banner */}
       {actionSuccess && (
@@ -976,17 +931,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
         />
       )}
 
-      {/* Offer Letter Document Preview Modal */}
-      <DocumentPreviewModal
-        isOpen={offerLetterModalOpen}
-        onClose={() => setOfferLetterModalOpen(false)}
-        fileName={`Offer_Letter_${kycData.bookingId}.pdf`}
-        fileUrl={offerLetterUrl}
-        mimeType="application/pdf"
-        onSendOfferLetter={handleSendOfferLetter}
-        sendOfferLetterLoading={sendOfferLetterLoading}
-        isOfferLetterSent={isOfferLetterSent}
-      />
+
     </div>
   );
 };

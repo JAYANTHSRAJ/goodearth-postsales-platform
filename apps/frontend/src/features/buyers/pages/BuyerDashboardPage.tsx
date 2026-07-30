@@ -16,7 +16,6 @@ import {
   Mail,
   Building,
   Eye,
-  AlertCircle,
   ShieldAlert,
 } from 'lucide-react';
 import kycService from '../../kyc/services/kyc.service';
@@ -51,16 +50,8 @@ export const BuyerDashboardPage: React.FC = () => {
   const [previewSlot, setPreviewSlot] = useState<DocumentSlotDto | null>(null);
 
   const { user } = useAuthStore();
-  const canManageOfferLetter = !!user && user.role !== 'buyer';
-
-  // Offer Letter States
-  const [offerLetterModalOpen, setOfferLetterModalOpen] = useState<boolean>(false);
-  const [offerLetterUrl, setOfferLetterUrl] = useState<string>('');
-  const [offerLetterLoading, setOfferLetterLoading] = useState<boolean>(false);
-  const [offerLetterWarning, setOfferLetterWarning] = useState<string | null>(null);
-  const [isOfferLetterSent, setIsOfferLetterSent] = useState<boolean>(false);
-  const [sendOfferLetterLoading, setSendOfferLetterLoading] = useState<boolean>(false);
-
+  const [isOfferLetterSent] = useState<boolean>(true);
+  
   // Modal states for KYC Admin Actions
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
   const [modalReason, setModalReason] = useState<string>('');
@@ -68,45 +59,13 @@ export const BuyerDashboardPage: React.FC = () => {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleViewOfferLetter = async () => {
-    setOfferLetterWarning(null);
-    setOfferLetterLoading(true);
-    try {
-      const targetBooking = bookingId || kycData?.bookingId || 'DEFAULT_BOOKING';
-      const statusRes = await kycService.getOfferLetterStatus(targetBooking);
-      setIsOfferLetterSent(Boolean(statusRes.sent));
-      if (!statusRes.sent && !statusRes.generated) {
-        setOfferLetterWarning(statusRes.message || 'Your Offer Letter has not been shared yet.');
-      } else {
-        const fileUrl = kycService.getOfferLetterFileUrl(targetBooking);
-        setOfferLetterUrl(fileUrl);
-        setOfferLetterModalOpen(true);
-      }
-    } catch {
-      setOfferLetterWarning('Your Offer Letter has not been shared yet.');
-    } finally {
-      setOfferLetterLoading(false);
-    }
+  const handleViewOfferLetter = () => {
+    const targetBooking = bookingId || kycData?.bookingId || 'motif16';
+    const targetPath = user?.role.toLowerCase() === 'buyer' ? '/client/offer-letter' : `/buyers/${targetBooking}/offer-letter`;
+    navigate(targetPath);
   };
 
-  const handleSendOfferLetter = async () => {
-    const targetBooking = bookingId || kycData?.bookingId;
-    if (!targetBooking) return;
-    setSendOfferLetterLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
-    try {
-      const res = await kycService.sendOfferLetter(targetBooking);
-      setIsOfferLetterSent(true);
-      setOfferLetterWarning(null);
-      setActionSuccess(res.message || 'Offer Letter sent successfully to buyer email and unlocked in Buyer Portal.');
-    } catch (err: any) {
-      setActionError(err?.message || 'Failed to send Offer Letter to buyer.');
-    } finally {
-      setSendOfferLetterLoading(false);
-    }
-  };
-
+  
   const fetchKycData = async () => {
     if (!bookingId) {
       return;
@@ -369,11 +328,10 @@ export const BuyerDashboardPage: React.FC = () => {
             {kycData?.status === 'APPROVED' && (
               <button
                 onClick={handleViewOfferLetter}
-                disabled={offerLetterLoading}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 shrink-0"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all shrink-0"
               >
                 <FileText className="w-4 h-4" />
-                {offerLetterLoading ? 'Checking Status...' : 'View Offer Letter'}
+                View Offer Letter
               </button>
             )}
           </div>
@@ -391,18 +349,8 @@ export const BuyerDashboardPage: React.FC = () => {
               <ShieldAlert className="w-8 h-8 text-amber-500 mx-auto" />
               <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Offer Letter Not Shared Yet</h4>
               <p className="text-xs text-slate-500">
-                {offerLetterWarning || 'Your Offer Letter has not been shared yet.'}
+                Your Offer Letter has not been shared by the builder team yet.
               </p>
-            </div>
-          ) : offerLetterWarning ? (
-            <div className="p-6 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                <span>{offerLetterWarning}</span>
-              </div>
-              <button onClick={handleViewOfferLetter} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs">
-                Retry
-              </button>
             </div>
           ) : (
             <div className="p-6 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -412,10 +360,9 @@ export const BuyerDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={handleViewOfferLetter}
-                disabled={offerLetterLoading}
                 className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all shrink-0"
               >
-                <Eye className="w-4 h-4" /> Open PDF Viewer
+                <Eye className="w-4 h-4" /> Open Offer Letter Page
               </button>
             </div>
           )}
@@ -656,18 +603,6 @@ export const BuyerDashboardPage: React.FC = () => {
           fileUrl={kycService.getFileUrl(previewSlot.documentId, previewSlot.currentVersion.versionNumber)}
         />
       )}
-
-      {/* Offer Letter Document Preview Modal */}
-      <DocumentPreviewModal
-        isOpen={offerLetterModalOpen}
-        onClose={() => setOfferLetterModalOpen(false)}
-        fileName={`Offer_Letter_${bookingId || kycData?.bookingId || 'CADENCE'}.pdf`}
-        fileUrl={offerLetterUrl}
-        mimeType="application/pdf"
-        onSendOfferLetter={canManageOfferLetter ? handleSendOfferLetter : undefined}
-        sendOfferLetterLoading={sendOfferLetterLoading}
-        isOfferLetterSent={isOfferLetterSent}
-      />
     </div>
   );
 };
