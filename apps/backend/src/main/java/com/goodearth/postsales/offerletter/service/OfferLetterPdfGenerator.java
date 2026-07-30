@@ -11,6 +11,8 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.Base64;
 
 @Component
 public class OfferLetterPdfGenerator {
@@ -18,9 +20,28 @@ public class OfferLetterPdfGenerator {
     private static final Logger log = LoggerFactory.getLogger(OfferLetterPdfGenerator.class);
 
     private final TemplateEngine templateEngine;
+    private static String cachedLogoBase64 = null;
 
     public OfferLetterPdfGenerator(TemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
+    }
+
+    private synchronized String getLogoBase64() {
+        if (cachedLogoBase64 == null) {
+            try (InputStream is = getClass().getResourceAsStream("/static/images/goodearth-logo.png")) {
+                if (is != null) {
+                    byte[] bytes = is.readAllBytes();
+                    cachedLogoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+                } else {
+                    log.warn("goodearth-logo.png resource not found under /static/images/");
+                    cachedLogoBase64 = "";
+                }
+            } catch (Exception e) {
+                log.error("Failed to load logo from static resources", e);
+                cachedLogoBase64 = "";
+            }
+        }
+        return cachedLogoBase64;
     }
 
     /**
@@ -38,6 +59,7 @@ public class OfferLetterPdfGenerator {
             log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator -> Step 1: Setting up Thymeleaf Context...");
             Context context = new Context();
             context.setVariable("offer", dto);
+            context.setVariable("logoBase64", getLogoBase64());
 
             log.info("[OFFER_LETTER_TRACE_v2] 6. Values inside Thymeleaf Context before rendering:");
             log.info(" - offer.unitName: '{}'", dto.getUnitName());
