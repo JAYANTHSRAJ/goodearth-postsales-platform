@@ -26,9 +26,10 @@ import { formatDateTime, formatDate } from '../../../../utils/dateFormatter';
 interface AdminKycReviewConsoleProps {
   kycData: KycApplicationResponseDto;
   onRefresh: () => void;
+  showOfferLetterButton?: boolean;
 }
 
-export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ kycData, onRefresh }) => {
+export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ kycData, onRefresh, showOfferLetterButton = true }) => {
   // Modal Action States
   const [activeModal, setActiveModal] = useState<'GRANT_EDIT' | 'REJECT' | 'NOTE' | null>(null);
   const [modalReason, setModalReason] = useState<string>('');
@@ -262,7 +263,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Approve
           </button>
-          {kycData.status === 'APPROVED' && (
+          {showOfferLetterButton && kycData.status === 'APPROVED' && (
             <button
               onClick={handleViewOfferLetter}
               disabled={offerLetterLoading}
