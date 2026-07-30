@@ -65,8 +65,7 @@ public class WebSecurityConfig {
             .headers(headers -> {
                 headers.frameOptions(frame -> frame.sameOrigin())
                        .contentTypeOptions(content -> {})
-                       .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                       .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.razorpay.com;"));
+                       .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
                 
                 if (hstsEnabled) {
                     headers.httpStrictTransportSecurity(hsts -> hsts
@@ -128,7 +127,6 @@ public class WebSecurityConfig {
 
         List<String> origins = new java.util.ArrayList<>(List.of(
             "https://goodearth-postsales-platform.vercel.app",
-            "https://goodearth-postsales-platform-*.vercel.app",
             "https://*.vercel.app",
             "https://goodearth.in",
             "https://*.goodearth.in",
@@ -142,6 +140,10 @@ public class WebSecurityConfig {
                     String cleaned = orig.replace("[", "").replace("]", "").trim();
                     for (String part : cleaned.split(",")) {
                         String singleOrigin = part.trim();
+                        // Filter out invalid middle-wildcard pattern if passed via env
+                        if (singleOrigin.contains("-*.")) {
+                            singleOrigin = "https://*.vercel.app";
+                        }
                         if (!singleOrigin.isEmpty() && !origins.contains(singleOrigin)) {
                             origins.add(singleOrigin);
                         }
