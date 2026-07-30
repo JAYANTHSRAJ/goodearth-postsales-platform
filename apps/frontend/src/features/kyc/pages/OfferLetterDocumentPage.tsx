@@ -182,7 +182,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
             {/* Official GoodEarth Header Branding */}
             <div className="flex items-center gap-3">
               <img
-                src="https://goodearth.org.in/assets/1778746789898_wewsp.svg"
+                src="/assets/goodearth-logo.png"
                 alt="GoodEarth - building sustainable communities"
                 className="h-10 md:h-12 w-auto object-contain bg-white/95 p-1.5 rounded-xl border border-slate-700 shadow-md"
               />
