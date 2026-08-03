@@ -1,1 +1,1 @@
-web: cd apps/backend && mvn clean package -DskipTests && java -XX:+UseContainerSupport -Xmx256m -XX:MaxMetaspaceSize=128m -Dserver.port=$PORT -jar target/postsales-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+web: cd apps/backend && java -XX:+UseContainerSupport -Xmx512m -XX:MaxMetaspaceSize=256m -Dserver.port=$PORT -jar target/postsales-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod

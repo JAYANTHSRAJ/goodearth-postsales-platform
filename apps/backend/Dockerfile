@@ -14,6 +14,4 @@ WORKDIR /app
 
 COPY --from=build /app/target/postsales-backend-0.0.1-SNAPSHOT.jar app.jar
 
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
+ENTRYPOINT ["sh", "-c", "java -XX:+UseContainerSupport -Xmx512m -XX:MaxMetaspaceSize=256m -Dserver.port=${PORT:-8080} -jar app.jar --spring.profiles.active=prod"]
