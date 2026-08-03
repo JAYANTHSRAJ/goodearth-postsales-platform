@@ -4,7 +4,7 @@ export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline';
 
 interface AutosaveIndicatorProps {
   status: AutosaveStatus;
-  lastSavedAt?: string | null;
+  lastSavedAt?: string | Date | null;
   onRetry?: () => void;
 }
 
@@ -14,6 +14,13 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
   onRetry,
 }) => {
   if (status === 'idle' && !lastSavedAt) return null;
+
+  const formatSavedTime = (time?: string | Date | null): string => {
+    if (!time) return '';
+    const date = time instanceof Date ? time : new Date(time);
+    if (isNaN(date.getTime())) return '';
+    return `at ${date.toLocaleTimeString()}`;
+  };
 
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -30,7 +37,7 @@ export const AutosaveIndicator: React.FC<AutosaveIndicatorProps> = ({
             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
           <span className="text-emerald-700 dark:text-emerald-300">
-            Saved {lastSavedAt ? `at ${new Date(lastSavedAt).toLocaleTimeString()}` : ''}
+            Saved {formatSavedTime(lastSavedAt)}
           </span>
         </>
       )}

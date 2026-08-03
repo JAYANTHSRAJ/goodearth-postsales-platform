@@ -80,7 +80,7 @@ export const useKycAutosave = (
   );
 
   const [status, setStatus] = useState<AutosaveStatus>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialData?.lastSavedAt || null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | Date | null>(initialData?.lastSavedAt || null);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isDirty, setIsDirty] = useState<boolean>(false);
 
@@ -226,7 +226,7 @@ export const useKycAutosave = (
       }
 
       // 1. Save draft to local PostgreSQL database
-      const response = await kycService.saveDraft({
+      const draftResponse = await kycService.saveDraft({
         bookingId,
         applicationDate,
         consideringHomeLoan,
@@ -235,6 +235,8 @@ export const useKycAutosave = (
         primaryApplicant,
         jointApplicants,
       });
+
+      let submitResponse: KycApplicationResponseDto | null = null;
 
       // 2. Submit applicant info to sync with Zoho CRM Deal & persist primary & co-applicant address
       if (primaryApplicant) {
@@ -327,11 +329,19 @@ export const useKycAutosave = (
           }
         }
 
-        await kycService.submitApplicantInfo(submitPayload);
+        submitResponse = await kycService.submitApplicantInfo(submitPayload);
       }
 
+      const getBackendTimestamp = (res: any): string | undefined => {
+        if (!res || typeof res !== 'object') return undefined;
+        return res.updatedAt || res.modifiedTime || res.lastSavedAt || res.timestamp;
+      };
+
+      const returnedTimestamp = getBackendTimestamp(submitResponse) || getBackendTimestamp(draftResponse);
+      const nextSavedAt = (returnedTimestamp && returnedTimestamp !== lastSavedAt) ? returnedTimestamp : new Date();
+
       setStatus('saved');
-      setLastSavedAt(response.lastSavedAt || new Date().toISOString());
+      setLastSavedAt(nextSavedAt);
       setIsDirty(false);
       return true;
     } catch (err) {

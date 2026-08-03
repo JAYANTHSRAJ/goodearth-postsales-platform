@@ -104,6 +104,9 @@ export interface KycApplicationResponseDto {
   verifiedAt?: string;
   verifiedBy?: string;
   lastSavedAt?: string;
+  updatedAt?: string;
+  modifiedTime?: string;
+  timestamp?: string;
   rejectionReason?: string;
   editReason?: string;
   internalNotes?: string;
