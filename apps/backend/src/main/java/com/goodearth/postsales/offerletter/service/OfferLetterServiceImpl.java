@@ -1041,6 +1041,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     }
 
     private String getStringWithDefault(Map<?, ?> map, String defaultVal, String... keys) {
+        if (map == null) return sanitizeString(defaultVal);
         for (String k : keys) {
             if (map.containsKey(k) && map.get(k) != null) {
                 String val = sanitizeString(map.get(k).toString());
@@ -1055,6 +1056,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     }
 
     private String getStringFromObjectOrMap(Map<?, ?> map, String... keys) {
+        if (map == null) return null;
         for (String k : keys) {
             if (map.containsKey(k) && map.get(k) != null) {
                 Object obj = map.get(k);
