@@ -89,7 +89,9 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         KycApplication application = kycApplicationRepository.findById(kycApplicationId)
                 .orElseThrow(() -> new KycNotFoundException("KYC Application", kycApplicationId.toString()));
 
-        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        if (application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Upload Document");
         }
 
@@ -231,7 +233,10 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                 .orElseThrow(() -> new CustomException("Document not found with ID: " + documentId, HttpStatus.NOT_FOUND));
 
         KycApplication application = document.getKycApplication();
-        if (application != null && application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        if (application != null &&
+                application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Delete Document");
         }
 

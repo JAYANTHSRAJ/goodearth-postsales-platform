@@ -116,7 +116,9 @@ public class KycServiceImpl implements KycService {
         }
 
         // State Machine Check: Cannot save draft if under review, approved, or rejected
-        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        if (application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Save Draft");
         }
 
@@ -237,7 +239,9 @@ public class KycServiceImpl implements KycService {
         String effectiveTargetKey = targetDealId != null && !targetDealId.isEmpty() ? targetDealId : targetDealName;
         KycApplication application = getOrCreateKycApplication(effectiveTargetKey);
 
-        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        if (application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Submit Applicant Info");
         }
 
@@ -726,7 +730,9 @@ public class KycServiceImpl implements KycService {
         KycApplication application = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dto.getBookingId())
                 .orElseThrow(() -> new KycNotFoundException("Booking ID", dto.getBookingId()));
 
-        if (application.getStatus() != KycApplicationStatus.DRAFT && application.getStatus() != KycApplicationStatus.ACTION_REQUIRED) {
+        if (application.getStatus() != KycApplicationStatus.DRAFT &&
+                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
+                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
             throw new KycInvalidStateTransitionException(application.getStatus().name(), "Autosave Field");
         }
 
@@ -1343,15 +1349,29 @@ public class KycServiceImpl implements KycService {
             throw new KycValidationException("Cannot resubmit KYC application: " + missingMsg);
         }
 
+        log.info("[KYC_RESUBMIT_TRACE]\nBooking ID: {}\nStatus Before: {}\nStatus Target: UNDER_REVIEW",
+                application.getBookingId(), application.getStatus());
+
         application.setStatus(KycApplicationStatus.UNDER_REVIEW);
         application.setSubmittedAt(LocalDateTime.now());
         application.setUpdatedAt(LocalDateTime.now());
         KycApplication savedApp = kycApplicationRepository.save(application);
+        kycApplicationRepository.flush();
+
+        KycApplication reloadedApp = kycApplicationRepository.findById(savedApp.getId()).orElse(savedApp);
+        log.info("[KYC_RESUBMIT_TRACE]\nEntity ID: {}\nBooking ID: {}\nStatus Saved: {}\nStatus Reloaded: {}\nCompletion %: {}%",
+                reloadedApp.getId(), reloadedApp.getBookingId(), savedApp.getStatus(), reloadedApp.getStatus(), reloadedApp.getCompletionPercentage());
 
         auditService.logEvent(savedApp, KycAuditEventType.KYC_SUBMITTED, actorId, "CLIENT",
                 "Buyer resubmitted updated KYC application for review", null);
 
-        zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Resubmitted", "Buyer updated and resubmitted KYC application.");
+        // Synchronize updated Deal fields and milestone status note to Zoho CRM
+        log.info("[KYC_RESUBMIT_TRACE] Triggering Zoho CRM Deal fields & milestone sync for booking: {}", savedApp.getBookingId());
+        boolean dealFieldsSyncSuccess = zohoKycSyncService.syncKycDealFieldsToCrm(savedApp);
+        boolean statusNoteSyncSuccess = zohoKycSyncService.syncKycStatusToCrm(savedApp, "KYC Resubmitted", "Buyer updated and resubmitted KYC application.");
+
+        log.info("[KYC_RESUBMIT_TRACE]\nBooking ID: {}\nDeal Fields Sync: {}\nStatus Note Sync: {}\nResubmit Sync Status: SUCCESS",
+                savedApp.getBookingId(), dealFieldsSyncSuccess ? "SUCCESS" : "SKIPPED/WARNING", statusNoteSyncSuccess ? "SUCCESS" : "SKIPPED/WARNING");
 
         List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
         return kycApplicationMapper.toResponseDto(savedApp, documents);
