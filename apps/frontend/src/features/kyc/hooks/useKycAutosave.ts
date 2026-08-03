@@ -213,7 +213,7 @@ export const useKycAutosave = (
   // Execute Save Draft
   const saveNow = async (): Promise<boolean> => {
     const currentStatus = statusRef.current || initialData?.status;
-    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED') {
+    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED' && currentStatus !== 'EDIT_ENABLED') {
       console.warn(`[KYC_AUTOSAVE] Skipping saveDraft: Application status is '${currentStatus}'`);
       return false;
     }
@@ -358,7 +358,7 @@ export const useKycAutosave = (
     }
 
     const currentStatus = statusRef.current || initialData?.status;
-    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED') {
+    if (currentStatus && currentStatus !== 'DRAFT' && currentStatus !== 'ACTION_REQUIRED' && currentStatus !== 'EDIT_ENABLED') {
       return;
     }
 

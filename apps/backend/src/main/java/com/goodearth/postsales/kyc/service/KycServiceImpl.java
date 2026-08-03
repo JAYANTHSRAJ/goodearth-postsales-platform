@@ -168,6 +168,11 @@ public class KycServiceImpl implements KycService {
             application.setHasCoApplicant(dto.getHasCoApplicant());
         }
 
+        String titleBeforeMapping = application.getApplicants() != null ? application.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .map(KycApplicant::getSalutation)
+                .findFirst().orElse("N/A") : "N/A";
+
         if (dto.getPrimaryApplicant() != null) {
             updateOrCreateApplicant(application, dto.getPrimaryApplicant(), ApplicantType.PRIMARY);
         }
@@ -180,17 +185,38 @@ public class KycServiceImpl implements KycService {
             }
         }
 
+        String titleAfterMapping = application.getApplicants() != null ? application.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .map(KycApplicant::getSalutation)
+                .findFirst().orElse("N/A") : "N/A";
+
         int percentage = calculateCompletionPercentage(application);
         application.setCompletionPercentage(percentage);
+        application.setUpdatedAt(LocalDateTime.now());
         KycApplication savedApp = kycApplicationRepository.save(application);
+        kycApplicationRepository.flush();
 
-        auditService.logEvent(savedApp, KycAuditEventType.DRAFT_SAVED, actorId, "CLIENT", "KYC draft saved", null);
+        String titleAfterSave = savedApp.getApplicants() != null ? savedApp.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .map(KycApplicant::getSalutation)
+                .findFirst().orElse("N/A") : "N/A";
 
-        // Sync Deal fields and milestone to Zoho CRM
-        zohoKycSyncService.syncKycDealFieldsToCrm(savedApp);
+        KycApplication reloadedApp = kycApplicationRepository.findById(savedApp.getId()).orElse(savedApp);
+        String titleAfterDbReload = reloadedApp.getApplicants() != null ? reloadedApp.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .map(KycApplicant::getSalutation)
+                .findFirst().orElse("N/A") : "N/A";
 
-        List<Document> documents = documentRepository.findByKycApplicationId(savedApp.getId());
-        return kycApplicationMapper.toResponseDto(savedApp, documents);
+        log.info("[SAVE_DRAFT_TRACE]\nBooking ID: {}\nApplication ID: {}\nApplicant Title before mapping: {}\nApplicant Title after mapping: {}\nApplicant Title after save(): {}\nApplicant Title after DB reload: {}",
+                reloadedApp.getBookingId(), reloadedApp.getId(), titleBeforeMapping, titleAfterMapping, titleAfterSave, titleAfterDbReload);
+
+        auditService.logEvent(reloadedApp, KycAuditEventType.DRAFT_SAVED, actorId, "CLIENT", "KYC draft saved", null);
+
+        // Sync Deal fields and milestone to Zoho CRM using reloaded entity
+        zohoKycSyncService.syncKycDealFieldsToCrm(reloadedApp);
+
+        List<Document> documents = documentRepository.findByKycApplicationId(reloadedApp.getId());
+        return kycApplicationMapper.toResponseDto(reloadedApp, documents);
     }
 
     @Override

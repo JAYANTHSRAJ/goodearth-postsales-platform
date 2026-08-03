@@ -562,6 +562,9 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
                 log.warn("[ZOHO_RAW_BEFORE_WARN] Could not fetch Deal before update: {}", exBefore.getMessage());
             }
 
+            log.info("[SAVE_DRAFT_TRACE]\nBooking ID: {}\nApplicant Title in Zoho payload: {}",
+                    bookingId, dealFields.get("Applicant_Title"));
+
             try {
                 log.info("[ZOHO_RAW_PUT] Executing Zoho CRM PUT /Deals request for Record ID: {} URL: {}", targetRecordId, url);
                 log.info("[ZOHO_RAW_PUT_PAYLOAD] Payload: {}", requestBody);
