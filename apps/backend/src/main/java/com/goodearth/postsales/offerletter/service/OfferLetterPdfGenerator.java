@@ -77,6 +77,8 @@ public class OfferLetterPdfGenerator {
             log.info(" - offer.gstAmountFormatted: '{}'", dto.getGstAmountFormatted());
             log.info(" - offer.costOfHomeFormatted: '{}'", dto.getCostOfHomeFormatted());
             log.info(" - offer.maintenanceDepositsFormatted: '{}'", dto.getMaintenanceDepositsFormatted());
+            log.info(" - offer.escrowBankDetails: {}", dto.getEscrowBankDetails());
+            log.info(" - offer.currentBankDetails: {}", dto.getCurrentBankDetails());
 
             log.info("[OFFER_LETTER_TRACE_v2] PDFGenerator -> Step 2: Processing Thymeleaf HTML template 'offer-letter'...");
             String htmlContent = templateEngine.process("offer-letter", context);

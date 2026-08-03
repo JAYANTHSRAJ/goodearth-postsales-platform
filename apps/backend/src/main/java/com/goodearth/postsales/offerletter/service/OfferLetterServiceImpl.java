@@ -588,23 +588,23 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         if (totalGstAmount == null) totalGstAmount = gstAmount;
         if (totalInstallmentAmount == null) totalInstallmentAmount = costOfHome;
 
-        // Bank Remittance Details (Dynamic from linked Project Site record in Zoho CRM)
+        // Bank Remittance Details (Dynamic from linked Project Site record in Zoho CRM ONLY)
         Map<?, ?> projectSiteMap = fetchProjectSiteMapFromCrm(dealMap, unitMap);
 
         String escrowBeneficiary = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Beneficiary");
-        if (escrowBeneficiary == null) escrowBeneficiary = getStringWithDefault(dealMap, "GEECPL - GOOD EARTH CADENCE COLLECTION ESCROW ACCOUNT", "Escrow_Beneficiary_Name");
+        if (escrowBeneficiary == null || escrowBeneficiary.isBlank()) escrowBeneficiary = "-";
 
         String escrowAccNo = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Account_No");
-        if (escrowAccNo == null) escrowAccNo = getStringWithDefault(dealMap, "57500001653570", "Escrow_Account_No");
+        if (escrowAccNo == null || escrowAccNo.isBlank()) escrowAccNo = "-";
 
         String escrowBankName = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Name");
-        if (escrowBankName == null) escrowBankName = getStringWithDefault(dealMap, "HDFC Bank Ltd", "Escrow_Bank_Name");
+        if (escrowBankName == null || escrowBankName.isBlank()) escrowBankName = "-";
 
         String escrowBankAddress = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Address");
-        if (escrowBankAddress == null) escrowBankAddress = getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Escrow_Bank_Address");
+        if (escrowBankAddress == null || escrowBankAddress.isBlank()) escrowBankAddress = "-";
 
         String escrowIfsc = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_IFSC_Code");
-        if (escrowIfsc == null) escrowIfsc = getStringWithDefault(dealMap, "HDFC0000523", "Escrow_IFSC_Code");
+        if (escrowIfsc == null || escrowIfsc.isBlank()) escrowIfsc = "-";
 
         OfferLetterBankDetailsDto escrowBank = OfferLetterBankDetailsDto.builder()
                 .beneficiaryName(escrowBeneficiary)
@@ -615,19 +615,19 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .build();
 
         String currentBeneficiary = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Beneficiary");
-        if (currentBeneficiary == null) currentBeneficiary = getStringWithDefault(dealMap, "GEECPL GOOD EARTH CADENCE CURRENT ACCOUNT", "Current_Beneficiary_Name");
+        if (currentBeneficiary == null || currentBeneficiary.isBlank()) currentBeneficiary = "-";
 
         String currentAccNo = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Account_No");
-        if (currentAccNo == null) currentAccNo = getStringWithDefault(dealMap, "57500001654366", "Current_Account_No");
+        if (currentAccNo == null || currentAccNo.isBlank()) currentAccNo = "-";
 
         String currentBankName = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Name");
-        if (currentBankName == null) currentBankName = getStringWithDefault(dealMap, "HDFC Bank Ltd", "Current_Bank_Name");
+        if (currentBankName == null || currentBankName.isBlank()) currentBankName = "-";
 
         String currentBankAddress = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Address");
-        if (currentBankAddress == null) currentBankAddress = getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Current_Bank_Address");
+        if (currentBankAddress == null || currentBankAddress.isBlank()) currentBankAddress = "-";
 
         String currentIfsc = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_IFSC_Code");
-        if (currentIfsc == null) currentIfsc = getStringWithDefault(dealMap, "HDFC0000523", "Current_IFSC_Code");
+        if (currentIfsc == null || currentIfsc.isBlank()) currentIfsc = "-";
 
         OfferLetterBankDetailsDto currentBank = OfferLetterBankDetailsDto.builder()
                 .beneficiaryName(currentBeneficiary)

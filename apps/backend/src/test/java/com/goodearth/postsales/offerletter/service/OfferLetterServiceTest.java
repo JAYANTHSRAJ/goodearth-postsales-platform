@@ -269,6 +269,20 @@ public class OfferLetterServiceTest {
         assertEquals("", dto.getGstAmountFormatted());
         assertEquals("", dto.getCostOfHomeFormatted());
         assertEquals("", dto.getMaintenanceDepositsFormatted());
+
+        assertNotNull(dto.getEscrowBankDetails());
+        assertEquals("-", dto.getEscrowBankDetails().getBeneficiaryName());
+        assertEquals("-", dto.getEscrowBankDetails().getBeneficiaryAccountNo());
+        assertEquals("-", dto.getEscrowBankDetails().getBankName());
+        assertEquals("-", dto.getEscrowBankDetails().getBankAddress());
+        assertEquals("-", dto.getEscrowBankDetails().getIfscCode());
+
+        assertNotNull(dto.getCurrentBankDetails());
+        assertEquals("-", dto.getCurrentBankDetails().getBeneficiaryName());
+        assertEquals("-", dto.getCurrentBankDetails().getBeneficiaryAccountNo());
+        assertEquals("-", dto.getCurrentBankDetails().getBankName());
+        assertEquals("-", dto.getCurrentBankDetails().getBankAddress());
+        assertEquals("-", dto.getCurrentBankDetails().getIfscCode());
     }
 
     @Test

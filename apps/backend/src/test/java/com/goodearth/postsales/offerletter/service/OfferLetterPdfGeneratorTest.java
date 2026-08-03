@@ -83,4 +83,44 @@ public class OfferLetterPdfGeneratorTest {
         String pdfHeader = new String(pdfBytes, 0, 5);
         assertEquals("%PDF-", pdfHeader, "Output should start with valid PDF magic bytes %PDF-");
     }
+
+    @Test
+    @DisplayName("Generated PDF contains zero hardcoded fallback values (GEECPL, HDFC, Richmond Road, etc.) when bank fields are empty")
+    void testGeneratePdf_WithEmptyBankDetails_ContainsNoHardcodedValues() throws Exception {
+        OfferLetterDto dto = OfferLetterDto.builder()
+                .offerLetterNo("CADENCE-TEST-BLANK-BANK")
+                .offerLetterDate("03/08/2026")
+                .projectName("Good Earth Cadence")
+                .unitName("CADENCE-A001")
+                .escrowBankDetails(com.goodearth.postsales.offerletter.dto.OfferLetterBankDetailsDto.builder()
+                        .beneficiaryName("-")
+                        .beneficiaryAccountNo("-")
+                        .bankName("-")
+                        .bankAddress("-")
+                        .ifscCode("-")
+                        .build())
+                .currentBankDetails(com.goodearth.postsales.offerletter.dto.OfferLetterBankDetailsDto.builder()
+                        .beneficiaryName("-")
+                        .beneficiaryAccountNo("-")
+                        .bankName("-")
+                        .bankAddress("-")
+                        .ifscCode("-")
+                        .build())
+                .build();
+
+        byte[] pdfBytes = pdfGenerator.generatePdf(dto);
+        assertNotNull(pdfBytes);
+
+        try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(pdfBytes)) {
+            org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+            String pdfText = stripper.getText(document);
+
+            assertFalse(pdfText.contains("GEECPL"), "PDF should not contain GEECPL");
+            assertFalse(pdfText.contains("HDFC Bank Ltd"), "PDF should not contain HDFC Bank Ltd");
+            assertFalse(pdfText.contains("Richmond Road"), "PDF should not contain Richmond Road");
+            assertFalse(pdfText.contains("HDFC0000523"), "PDF should not contain HDFC0000523");
+            assertFalse(pdfText.contains("COLLECTION ESCROW"), "PDF should not contain COLLECTION ESCROW");
+            assertFalse(pdfText.contains("CURRENT ACCOUNT"), "PDF should not contain CURRENT ACCOUNT");
+        }
+    }
 }
