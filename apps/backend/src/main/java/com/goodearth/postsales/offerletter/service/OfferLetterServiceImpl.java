@@ -592,6 +592,38 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         // Bank Remittance Details (Dynamic from linked Project Site record in Zoho CRM ONLY)
         Map<?, ?> projectSiteMap = fetchProjectSiteMapFromCrm(dealMap, unitMap);
 
+        log.info("[PROJECT_SITE_DEBUG_TRACE] projectSiteMap.keySet(): {}", projectSiteMap != null ? projectSiteMap.keySet() : "null");
+        log.info("[PROJECT_SITE_DEBUG_TRACE] Individual Key Lookups from projectSiteMap:");
+        log.info(" - Unit_Bank_Beneficiary: {}", projectSiteMap != null ? projectSiteMap.get("Unit_Bank_Beneficiary") : "null");
+        log.info(" - Unit_Bank_Account_No: {}", projectSiteMap != null ? projectSiteMap.get("Unit_Bank_Account_No") : "null");
+        log.info(" - Unit_Bank_Name: {}", projectSiteMap != null ? projectSiteMap.get("Unit_Bank_Name") : "null");
+        log.info(" - Unit_Bank_Address: {}", projectSiteMap != null ? projectSiteMap.get("Unit_Bank_Address") : "null");
+        log.info(" - Unit_Bank_IFSC_Code: {}", projectSiteMap != null ? projectSiteMap.get("Unit_Bank_IFSC_Code") : "null");
+        log.info(" - GST_Bank_Beneficiary: {}", projectSiteMap != null ? projectSiteMap.get("GST_Bank_Beneficiary") : "null");
+        log.info(" - GST_Bank_Account_No: {}", projectSiteMap != null ? projectSiteMap.get("GST_Bank_Account_No") : "null");
+        log.info(" - GST_Bank_Name: {}", projectSiteMap != null ? projectSiteMap.get("GST_Bank_Name") : "null");
+        log.info(" - GST_Bank_Address: {}", projectSiteMap != null ? projectSiteMap.get("GST_Bank_Address") : "null");
+        log.info(" - GST_Bank_IFSC_Code: {}", projectSiteMap != null ? projectSiteMap.get("GST_Bank_IFSC_Code") : "null");
+
+        if (projectSiteMap != null) {
+            boolean hasNull = projectSiteMap.get("Unit_Bank_Beneficiary") == null ||
+                              projectSiteMap.get("Unit_Bank_Account_No") == null ||
+                              projectSiteMap.get("Unit_Bank_Name") == null ||
+                              projectSiteMap.get("Unit_Bank_Address") == null ||
+                              projectSiteMap.get("Unit_Bank_IFSC_Code") == null ||
+                              projectSiteMap.get("GST_Bank_Beneficiary") == null ||
+                              projectSiteMap.get("GST_Bank_Account_No") == null ||
+                              projectSiteMap.get("GST_Bank_Name") == null ||
+                              projectSiteMap.get("GST_Bank_Address") == null ||
+                              projectSiteMap.get("GST_Bank_IFSC_Code") == null;
+            if (hasNull) {
+                log.info("[PROJECT_SITE_DEBUG_TRACE] ALL available keys in Project Site record:");
+                for (Map.Entry<?, ?> entry : projectSiteMap.entrySet()) {
+                    log.info("   [ALL_KEYS] {} => {}", entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
         String escrowBeneficiary = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Beneficiary");
         if (escrowBeneficiary == null || escrowBeneficiary.isBlank()) escrowBeneficiary = "-";
 
