@@ -170,6 +170,68 @@ public class OfferLetterServiceTest {
     }
 
     @Test
+    @DisplayName("Table 4 and Table 5 fetch bank remittance details dynamically from linked Project Site record")
+    void testBuildOfferLetterDto_WithProjectSiteBankDetails() {
+        String dealId = "CADENCE-PROJECT-SITE-TEST";
+        String targetRecordId = "6638590000147048035";
+        String unitRecordId = "6638590000147099995";
+        String siteRecordId = "6638590000147077777";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-PROJECT-SITE-TEST",
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A001")
+        );
+
+        Map<String, Object> crmUnit = Map.of(
+                "id", unitRecordId,
+                "Project_Site", Map.of("id", siteRecordId, "name", "Good Earth Cadence"),
+                "Product_Name", "CADENCE-A001"
+        );
+
+        Map<String, Object> crmSite = Map.ofEntries(
+                Map.entry("id", siteRecordId),
+                Map.entry("Unit_Bank_Beneficiary", "DYNAMIC ESCROW BENEFICIARY"),
+                Map.entry("Unit_Bank_Account_No", "11223344556677"),
+                Map.entry("Unit_Bank_Name", "ICICI Bank"),
+                Map.entry("Unit_Bank_Address", "Indiranagar, Bengaluru"),
+                Map.entry("Unit_Bank_IFSC_Code", "ICIC0001234"),
+                Map.entry("GST_Bank_Beneficiary", "DYNAMIC GST BENEFICIARY"),
+                Map.entry("GST_Bank_Account_No", "99887766554433"),
+                Map.entry("GST_Bank_Name", "Axis Bank"),
+                Map.entry("GST_Bank_Address", "Koramangala, Bengaluru"),
+                Map.entry("GST_Bank_IFSC_Code", "UTIB0005678")
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Project_Sites/" + siteRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmSite)));
+
+        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
+
+        assertNotNull(dto);
+        assertNotNull(dto.getEscrowBankDetails());
+        assertEquals("DYNAMIC ESCROW BENEFICIARY", dto.getEscrowBankDetails().getBeneficiaryName());
+        assertEquals("11223344556677", dto.getEscrowBankDetails().getBeneficiaryAccountNo());
+        assertEquals("ICICI Bank", dto.getEscrowBankDetails().getBankName());
+        assertEquals("Indiranagar, Bengaluru", dto.getEscrowBankDetails().getBankAddress());
+        assertEquals("ICIC0001234", dto.getEscrowBankDetails().getIfscCode());
+
+        assertNotNull(dto.getCurrentBankDetails());
+        assertEquals("DYNAMIC GST BENEFICIARY", dto.getCurrentBankDetails().getBeneficiaryName());
+        assertEquals("99887766554433", dto.getCurrentBankDetails().getBeneficiaryAccountNo());
+        assertEquals("Axis Bank", dto.getCurrentBankDetails().getBankName());
+        assertEquals("Koramangala, Bengaluru", dto.getCurrentBankDetails().getBankAddress());
+        assertEquals("UTIB0005678", dto.getCurrentBankDetails().getIfscCode());
+    }
+
+    @Test
     @DisplayName("Empty CRM Unit fields should remain empty without inserting sample values")
     void testBuildOfferLetterDto_WithEmptyCrmFields() {
         String dealId = "CADENCE-EMPTY";

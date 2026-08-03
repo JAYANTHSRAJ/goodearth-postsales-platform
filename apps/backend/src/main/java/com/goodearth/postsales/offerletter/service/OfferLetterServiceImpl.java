@@ -588,21 +588,53 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         if (totalGstAmount == null) totalGstAmount = gstAmount;
         if (totalInstallmentAmount == null) totalInstallmentAmount = costOfHome;
 
-        // Bank Remittance Details
+        // Bank Remittance Details (Dynamic from linked Project Site record in Zoho CRM)
+        Map<?, ?> projectSiteMap = fetchProjectSiteMapFromCrm(dealMap, unitMap);
+
+        String escrowBeneficiary = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Beneficiary");
+        if (escrowBeneficiary == null) escrowBeneficiary = getStringWithDefault(dealMap, "GEECPL - GOOD EARTH CADENCE COLLECTION ESCROW ACCOUNT", "Escrow_Beneficiary_Name");
+
+        String escrowAccNo = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Account_No");
+        if (escrowAccNo == null) escrowAccNo = getStringWithDefault(dealMap, "57500001653570", "Escrow_Account_No");
+
+        String escrowBankName = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Name");
+        if (escrowBankName == null) escrowBankName = getStringWithDefault(dealMap, "HDFC Bank Ltd", "Escrow_Bank_Name");
+
+        String escrowBankAddress = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_Address");
+        if (escrowBankAddress == null) escrowBankAddress = getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Escrow_Bank_Address");
+
+        String escrowIfsc = getStringFromObjectOrMap(projectSiteMap, "Unit_Bank_IFSC_Code");
+        if (escrowIfsc == null) escrowIfsc = getStringWithDefault(dealMap, "HDFC0000523", "Escrow_IFSC_Code");
+
         OfferLetterBankDetailsDto escrowBank = OfferLetterBankDetailsDto.builder()
-                .beneficiaryName(getStringWithDefault(dealMap, "GEECPL - GOOD EARTH CADENCE COLLECTION ESCROW ACCOUNT", "Escrow_Beneficiary_Name"))
-                .beneficiaryAccountNo(getStringWithDefault(dealMap, "57500001653570", "Escrow_Account_No"))
-                .bankName(getStringWithDefault(dealMap, "HDFC Bank Ltd", "Escrow_Bank_Name"))
-                .bankAddress(getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Escrow_Bank_Address"))
-                .ifscCode(getStringWithDefault(dealMap, "HDFC0000523", "Escrow_IFSC_Code"))
+                .beneficiaryName(escrowBeneficiary)
+                .beneficiaryAccountNo(escrowAccNo)
+                .bankName(escrowBankName)
+                .bankAddress(escrowBankAddress)
+                .ifscCode(escrowIfsc)
                 .build();
 
+        String currentBeneficiary = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Beneficiary");
+        if (currentBeneficiary == null) currentBeneficiary = getStringWithDefault(dealMap, "GEECPL GOOD EARTH CADENCE CURRENT ACCOUNT", "Current_Beneficiary_Name");
+
+        String currentAccNo = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Account_No");
+        if (currentAccNo == null) currentAccNo = getStringWithDefault(dealMap, "57500001654366", "Current_Account_No");
+
+        String currentBankName = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Name");
+        if (currentBankName == null) currentBankName = getStringWithDefault(dealMap, "HDFC Bank Ltd", "Current_Bank_Name");
+
+        String currentBankAddress = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_Address");
+        if (currentBankAddress == null) currentBankAddress = getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Current_Bank_Address");
+
+        String currentIfsc = getStringFromObjectOrMap(projectSiteMap, "GST_Bank_IFSC_Code");
+        if (currentIfsc == null) currentIfsc = getStringWithDefault(dealMap, "HDFC0000523", "Current_IFSC_Code");
+
         OfferLetterBankDetailsDto currentBank = OfferLetterBankDetailsDto.builder()
-                .beneficiaryName(getStringWithDefault(dealMap, "GEECPL GOOD EARTH CADENCE CURRENT ACCOUNT", "Current_Beneficiary_Name"))
-                .beneficiaryAccountNo(getStringWithDefault(dealMap, "57500001654366", "Current_Account_No"))
-                .bankName(getStringWithDefault(dealMap, "HDFC Bank Ltd", "Current_Bank_Name"))
-                .bankAddress(getStringWithDefault(dealMap, "Richmond Road, Bengaluru", "Current_Bank_Address"))
-                .ifscCode(getStringWithDefault(dealMap, "HDFC0000523", "Current_IFSC_Code"))
+                .beneficiaryName(currentBeneficiary)
+                .beneficiaryAccountNo(currentAccNo)
+                .bankName(currentBankName)
+                .bankAddress(currentBankAddress)
+                .ifscCode(currentIfsc)
                 .build();
 
         OfferLetterDto dto = OfferLetterDto.builder()
@@ -1046,13 +1078,64 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                         return new BigDecimal(number.toString());
                     }
                     String str = obj.toString().trim();
-                    if (!str.isEmpty()) {
-                        return new BigDecimal(str);
-                    }
                 } catch (Exception ignored) {
                 }
             }
         }
         return null;
     }
+
+    private Map<?, ?> fetchProjectSiteMapFromCrm(Map<?, ?> dealMap, Map<?, ?> unitMap) {
+        String projectSiteRecordId = null;
+        Map<?, ?>[] maps = new Map<?, ?>[]{unitMap, dealMap};
+        String[] lookupKeys = {"Project_Site", "Project_Sites", "Project_Site_Name", "Project_Site_Lookup", "Project_Site_ID"};
+
+        for (Map<?, ?> m : maps) {
+            if (m == null) continue;
+            for (String key : lookupKeys) {
+                if (m.containsKey(key) && m.get(key) != null) {
+                    Object obj = m.get(key);
+                    if (obj instanceof Map<?, ?> lookupMap && lookupMap.get("id") != null) {
+                        projectSiteRecordId = lookupMap.get("id").toString();
+                        break;
+                    } else if (!(obj instanceof Map)) {
+                        String val = obj.toString().trim();
+                        if (val.matches("\\d{15,20}")) {
+                            projectSiteRecordId = val;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (projectSiteRecordId != null) break;
+        }
+
+        if (projectSiteRecordId == null || projectSiteRecordId.isBlank()) {
+            log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Project Site lookup ID not found in unitMap or dealMap");
+            return null;
+        }
+
+        String crmApiUrl = properties.getCrmApiUrl();
+        String primaryUrl = crmApiUrl + "/Project_Sites/" + projectSiteRecordId;
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting GET Project Site record: {}", primaryUrl);
+
+        try {
+            Map<?, ?> response = apiClient.get(primaryUrl, Map.class);
+            if (response == null || !response.containsKey("data") || (response.get("data") instanceof List<?> list && list.isEmpty())) {
+                String fallbackUrl = crmApiUrl + "/Project_Site/" + projectSiteRecordId;
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Primary URL returned null/empty data. Attempting fallback GET: {}", fallbackUrl);
+                response = apiClient.get(fallbackUrl, Map.class);
+            }
+
+            if (response != null && response.get("data") instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> siteData) {
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Successfully retrieved Project Site record for ID {}: {}", projectSiteRecordId, siteData);
+                return siteData;
+            }
+        } catch (Exception ex) {
+            log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Failed to fetch Project Site record for ID {}: {}", projectSiteRecordId, ex.getMessage());
+        }
+
+        return null;
+    }
 }
+
