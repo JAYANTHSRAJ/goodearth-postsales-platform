@@ -1130,6 +1130,48 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         return null;
     }
 
+    private String resolveModuleApiNameByDisplayLabel(String targetLabel) {
+        if (targetLabel == null || targetLabel.isBlank()) return null;
+        try {
+            String crmApiUrl = properties.getCrmApiUrl();
+            String metadataUrl = crmApiUrl + "/settings/modules";
+            log.info("[ZOHO_MODULE_METADATA_TRACE] Querying CRM module metadata from: {}", metadataUrl);
+            Map<?, ?> response = apiClient.get(metadataUrl, Map.class);
+            log.info("[ZOHO_MODULE_METADATA_TRACE] Raw GET /settings/modules response: {}", response);
+
+            if (response != null && response.get("modules") instanceof List<?> modules) {
+                for (Object item : modules) {
+                    if (item instanceof Map<?, ?> modMap) {
+                        Object displayLabelObj = modMap.get("display_label");
+                        Object singularLabelObj = modMap.get("singular_label");
+                        Object pluralLabelObj = modMap.get("plural_label");
+                        Object apiNameObj = modMap.get("api_name");
+                        Object idObj = modMap.get("id");
+
+                        String displayLabel = displayLabelObj != null ? displayLabelObj.toString() : "";
+                        String singularLabel = singularLabelObj != null ? singularLabelObj.toString() : "";
+                        String pluralLabel = pluralLabelObj != null ? pluralLabelObj.toString() : "";
+                        String apiName = apiNameObj != null ? apiNameObj.toString() : "";
+                        String moduleId = idObj != null ? idObj.toString() : "";
+
+                        log.info("[ZOHO_MODULE_METADATA_TRACE] Module Metadata Entry -> Display Label: '{}', Singular: '{}', Plural: '{}', API Name: '{}', Module ID: '{}'",
+                                displayLabel, singularLabel, pluralLabel, apiName, moduleId);
+
+                        if (displayLabel.equalsIgnoreCase(targetLabel) || singularLabel.equalsIgnoreCase(targetLabel) || pluralLabel.equalsIgnoreCase(targetLabel)
+                                || displayLabel.replaceAll("\\s+", "").equalsIgnoreCase(targetLabel.replaceAll("\\s+", ""))) {
+                            log.info("[ZOHO_MODULE_METADATA_TRACE] MATCH FOUND! Display Label: '{}', Actual API Name: '{}', Module ID: '{}'",
+                                    displayLabel, apiName, moduleId);
+                            return apiName;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[ZOHO_MODULE_METADATA_TRACE] Exception querying CRM modules metadata for label '{}': {}", targetLabel, ex.getMessage());
+        }
+        return null;
+    }
+
     private Map<?, ?> fetchProjectSiteMapFromCrm(Map<?, ?> dealMap, Map<?, ?> unitMap) {
         log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] --- START Project Site Lookup Resolution ---");
         log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Deal Map keys: {}", dealMap != null ? dealMap.keySet() : "null");
@@ -1201,54 +1243,60 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Resolution Result -> Source Map: '{}', Lookup Key: '{}', Raw Lookup Value: {}, Extracted Record ID: '{}', Extracted Name: '{}'",
                 sourceMapName, resolvedLookupKey, resolvedLookupVal, projectSiteRecordId, projectSiteName);
 
+        // Dynamically resolve exact API Name for Project Sites module from Zoho CRM Metadata
+        String exactModuleApiName = null;
+
+        if (resolvedLookupKey != null) {
+            exactModuleApiName = resolveReferencedModuleApiName(resolvedLookupKey);
+        }
+        if (exactModuleApiName == null || exactModuleApiName.isBlank()) {
+            exactModuleApiName = resolveModuleApiNameByDisplayLabel("Project Sites");
+        }
+        if (exactModuleApiName == null || exactModuleApiName.isBlank()) {
+            exactModuleApiName = resolveModuleApiNameByDisplayLabel("Project Site");
+        }
+        if (exactModuleApiName == null || exactModuleApiName.isBlank()) {
+            exactModuleApiName = "Project_Sites"; // Final fallback if metadata call is unvailable
+        }
+
+        log.info("[ZOHO_MODULE_METADATA_TRACE] EXACT RESOLVED PROJECT SITES MODULE API NAME: '{}'", exactModuleApiName);
+
         String crmApiUrl = properties.getCrmApiUrl();
 
-        // 1. Direct GET by Record ID
+        // 1. Direct GET by Record ID using EXACT module API name
         if (projectSiteRecordId != null && !projectSiteRecordId.isBlank()) {
-            String resolvedModule = resolveReferencedModuleApiName(resolvedLookupKey);
-            List<String> moduleCandidates = new ArrayList<>();
-            if (resolvedModule != null && !resolvedModule.isBlank()) {
-                moduleCandidates.add(resolvedModule);
-            }
-            moduleCandidates.addAll(List.of("Project_Sites", "Project_Site", "Projects", "Project_Sites_s"));
-
-            for (String mod : moduleCandidates) {
-                String url = crmApiUrl + "/" + mod + "/" + projectSiteRecordId;
-                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting GET by Record ID endpoint: {}", url);
-                try {
-                    Map<?, ?> response = apiClient.get(url, Map.class);
-                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from GET {}: {}", url, response);
-                    if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
-                        if (list.get(0) instanceof Map<?, ?> firstRecord) {
-                            log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS: Extracted data[0] Project Site record via ID GET from endpoint: {}", url);
-                            return firstRecord;
-                        }
+            String url = crmApiUrl + "/" + exactModuleApiName + "/" + projectSiteRecordId;
+            log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting GET by Record ID using exact module API name: {}", url);
+            try {
+                Map<?, ?> response = apiClient.get(url, Map.class);
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from GET {}: {}", url, response);
+                if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
+                    if (list.get(0) instanceof Map<?, ?> firstRecord) {
+                        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS (HTTP 200): Extracted data[0] Project Site record via ID GET from endpoint: {}", url);
+                        return firstRecord;
                     }
-                } catch (Exception ex) {
-                    log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] GET endpoint {} failed: {}", url, ex.getMessage());
                 }
+            } catch (Exception ex) {
+                log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] GET endpoint {} failed: {}", url, ex.getMessage());
             }
         }
 
-        // 2. Search Fallback by Project Site Name
+        // 2. Search Fallback by Project Site Name using EXACT module API name
         if (projectSiteName != null && !projectSiteName.isBlank()) {
-            List<String> searchModules = List.of("Project_Sites", "Project_Site", "Projects");
-            for (String mod : searchModules) {
-                try {
-                    String encodedName = java.net.URLEncoder.encode(projectSiteName, java.nio.charset.StandardCharsets.UTF_8);
-                    String searchUrl = crmApiUrl + "/" + mod + "/search?criteria=(Name:equals:" + encodedName + ")";
-                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting Search Fallback endpoint: {}", searchUrl);
-                    Map<?, ?> response = apiClient.get(searchUrl, Map.class);
-                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from Search GET {}: {}", searchUrl, response);
-                    if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
-                        if (list.get(0) instanceof Map<?, ?> firstRecord) {
-                            log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS: Extracted data[0] Project Site record via Name Search from endpoint: {}", searchUrl);
-                            return firstRecord;
-                        }
+            try {
+                String encodedName = java.net.URLEncoder.encode(projectSiteName, java.nio.charset.StandardCharsets.UTF_8);
+                String searchUrl = crmApiUrl + "/" + exactModuleApiName + "/search?criteria=(Name:equals:" + encodedName + ")";
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting Search Fallback using exact module API name: {}", searchUrl);
+                Map<?, ?> response = apiClient.get(searchUrl, Map.class);
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from Search GET {}: {}", searchUrl, response);
+                if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
+                    if (list.get(0) instanceof Map<?, ?> firstRecord) {
+                        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS (HTTP 200): Extracted data[0] Project Site record via Name Search from endpoint: {}", searchUrl);
+                        return firstRecord;
                     }
-                } catch (Exception ex) {
-                    log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Search endpoint for module '{}' failed: {}", mod, ex.getMessage());
                 }
+            } catch (Exception ex) {
+                log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Search endpoint for module '{}' failed: {}", exactModuleApiName, ex.getMessage());
             }
         }
 
