@@ -60,7 +60,7 @@ export const BuyerDashboardPage: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleViewOfferLetter = () => {
-    const targetBooking = bookingId || kycData?.bookingId || 'motif16';
+    const targetBooking = bookingId || kycData?.bookingId || '';
     const targetPath = user?.role.toLowerCase() === 'buyer' ? '/client/offer-letter' : `/buyers/${targetBooking}/offer-letter`;
     navigate(targetPath);
   };

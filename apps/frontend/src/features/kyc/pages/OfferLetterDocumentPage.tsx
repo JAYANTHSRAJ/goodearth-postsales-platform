@@ -4,6 +4,7 @@ import { kycService } from '../services/kyc.service';
 import { OfferLetterStatusDto } from '../types/kyc';
 import { NativePdfCanvasViewer } from '../components/documents/NativePdfCanvasViewer';
 import { useAuthStore } from '../../../store/authStore';
+import { useUnitStore } from '../../../store/unitStore';
 import {
   Download,
   Send,
@@ -21,11 +22,18 @@ export const OfferLetterDocumentPage: React.FC = () => {
   const { bookingId: paramBookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { activeUnit } = useUnitStore();
 
   const isAdminOrCrm = user ? ['super_admin', 'admin', 'crm', 'finance'].includes(user.role.toLowerCase()) : false;
 
-  // Determine booking identifier
-  const targetBooking = paramBookingId || (user?.role.toLowerCase() === 'buyer' ? 'motif16' : '');
+  // Determine booking identifier dynamically in priority order
+  const targetBooking =
+    paramBookingId ||
+    activeUnit?.unitName ||
+    activeUnit?.zohoDealName ||
+    activeUnit?.workflowId ||
+    activeUnit?.id ||
+    '';
 
   const [statusInfo, setStatusInfo] = useState<OfferLetterStatusDto | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -38,7 +46,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
   // Fetch Offer Letter Status & Document Stream
   const fetchOfferLetter = useCallback(async () => {
     if (!targetBooking) {
-      setError('Booking reference is missing.');
+      setError('No active booking found for this account.');
       setLoading(false);
       return;
     }
