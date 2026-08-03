@@ -95,26 +95,33 @@ export const useKycAutosave = (
     }
   }, [initialData?.status]);
 
-  // Sync initialData when loaded from backend or reset when empty
+  // Sync initialData when loaded from backend for the first time or when bookingId/applicationId changes
+  const loadedAppIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (initialData) {
       if (initialData.status) {
         statusRef.current = initialData.status;
       }
-      setApplicationDate(initialData.applicationDate || new Date().toISOString().split('T')[0]);
-      setConsideringHomeLoan(initialData.consideringHomeLoan || 'No');
       
-      const coVal = initialData.hasCoApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No');
-      const thirdVal = initialData.hasThirdApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No');
-      setHasCoApplicant(coVal);
-      setHasThirdApplicant(thirdVal);
+      // Only set form field values on initial load or when application ID changes, to preserve active user input
+      if (loadedAppIdRef.current !== initialData.kycApplicationId) {
+        loadedAppIdRef.current = initialData.kycApplicationId || null;
+        setApplicationDate(initialData.applicationDate || new Date().toISOString().split('T')[0]);
+        setConsideringHomeLoan(initialData.consideringHomeLoan || 'No');
+        
+        const coVal = initialData.hasCoApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No');
+        const thirdVal = initialData.hasThirdApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No');
+        setHasCoApplicant(coVal);
+        setHasThirdApplicant(thirdVal);
 
-      setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
-      setJointApplicants(prepareJointApplicants(initialData.jointApplicants || [], coVal, thirdVal));
-      setLastSavedAt(initialData.lastSavedAt || null);
-      setErrors({});
-      setIsDirty(false);
-    } else {
+        setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
+        setJointApplicants(prepareJointApplicants(initialData.jointApplicants || [], coVal, thirdVal));
+        setLastSavedAt(initialData.lastSavedAt || null);
+        setErrors({});
+        setIsDirty(false);
+      }
+    } else if (!loadedAppIdRef.current) {
       statusRef.current = 'DRAFT';
       setApplicationDate(new Date().toISOString().split('T')[0]);
       setConsideringHomeLoan('No');
@@ -126,7 +133,7 @@ export const useKycAutosave = (
       setErrors({});
       setIsDirty(false);
     }
-  }, [initialData]);
+  }, [initialData?.kycApplicationId, initialData?.status]);
 
   // Dirty State Protection (Warn user before closing tab if unsaved changes exist)
   useEffect(() => {

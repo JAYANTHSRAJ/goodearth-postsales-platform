@@ -77,6 +77,9 @@ export const SingleKycPage: React.FC = () => {
         data = await kycService.getKycByBooking(bookingId);
       }
       setInitialData(data);
+      if (data?.documentSlots) {
+        setDocumentSlots(data.documentSlots);
+      }
 
       const targetId = data.bookingId || bookingId;
       const summary = await kycService.validateKyc(targetId).catch(() => null);
@@ -93,11 +96,15 @@ export const SingleKycPage: React.FC = () => {
     }
   };
 
+  const [documentSlots, setDocumentSlots] = useState<KycApplicationResponseDto['documentSlots']>([]);
+
   const refreshDocumentsSilently = async () => {
     try {
       const data = await kycService.getKycByBooking(bookingId);
-      setInitialData(data);
-      const targetId = data.bookingId || bookingId;
+      if (data?.documentSlots) {
+        setDocumentSlots(data.documentSlots);
+      }
+      const targetId = data?.bookingId || bookingId;
       const summary = await kycService.validateKyc(targetId).catch(() => null);
       if (summary) setValidationSummary(summary);
     } catch (err) {
@@ -160,10 +167,8 @@ export const SingleKycPage: React.FC = () => {
   };
 
   const handleSaveDraft = async () => {
-    const saved = await saveNow();
-    if (saved) {
-      loadInitialData();
-    }
+    await saveNow();
+    refreshDocumentsSilently();
   };
 
   const handleSubmitKyc = async () => {
@@ -205,7 +210,7 @@ export const SingleKycPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <KycLoadingSkeleton />
       </div>
     );
@@ -214,7 +219,7 @@ export const SingleKycPage: React.FC = () => {
   const coApplicantDto = jointApplicants.find((a) => a.applicantType === 'JOINT_1') || jointApplicants[0];
   const thirdApplicantDto = jointApplicants.find((a) => a.applicantType === 'JOINT_2') || jointApplicants[1];
 
-  const documentSlots = initialData?.documentSlots || [];
+  const currentSlots = documentSlots || [];
   const kycApplicationId = initialData?.kycApplicationId || '';
 
   // Determine if buyer can edit form
@@ -224,7 +229,7 @@ export const SingleKycPage: React.FC = () => {
     (currentStatus === 'DRAFT' || currentStatus === 'ACTION_REQUIRED' || currentStatus === 'EDIT_ENABLED');
 
   // Filter additional slots (Address proof, Voter ID, etc.)
-  const additionalSlots = documentSlots.filter(
+  const additionalSlots = currentSlots.filter(
     (s) => s.documentType === 'ADDRESS_PROOF' || s.documentType === 'VOTER_ID' || s.documentType === 'OTHER'
   );
 
@@ -253,6 +258,16 @@ export const SingleKycPage: React.FC = () => {
 
   const badge = getStatusBadge(currentStatus);
 
+  const completionPercent = initialData?.completionPercentage !== undefined
+    ? initialData.completionPercentage
+    : (() => {
+        const reqSlots = currentSlots.filter(s => s.isRequired);
+        const uploadedCount = reqSlots.filter(s => s.currentVersion).length;
+        const docsP = reqSlots.length > 0 ? Math.round((uploadedCount / reqSlots.length) * 50) : 50;
+        const formP = primaryApplicant.fullName && primaryApplicant.panNumber && primaryApplicant.aadhaarNumber ? 50 : 25;
+        return Math.min(100, docsP + formP);
+      })();
+
   if (noBookingFoundError) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-6">
@@ -276,37 +291,54 @@ export const SingleKycPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* PART 1: CLEAN PROFESSIONAL HEADER & STATUS BADGE */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-1">
-            <ShieldCheck className="w-4 h-4" /> GoodEarth Post-Sales Platform
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-24">
+      {/* HEADER & PROGRESS INDICATOR */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-1">
+              <ShieldCheck className="w-4 h-4" /> GoodEarth Post-Sales Portal
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              Buyer KYC Verification
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Complete your KYC details and identity uploads for legal documentation and property registration.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-            Buyer KYC Verification
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Please complete your KYC information for legal documentation and property registration.
-          </p>
+
+          <div className="flex flex-col sm:items-end gap-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${badge.color} shadow-2xs`}>
+                ● {badge.label}
+              </span>
+            </div>
+            <AutosaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={handleSaveDraft} />
+          </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <span className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${badge.color} shadow-xs`}>
-            ● {badge.label}
+        {/* KYC Progress Bar */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4">
+          <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-brand-600 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${completionPercent}%` }}
+            />
+          </div>
+          <span className="text-xs font-bold text-brand-600 dark:text-brand-400 shrink-0">
+            KYC Progress: {completionPercent}% Complete
           </span>
-          {canEdit && <AutosaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={handleSaveDraft} />}
         </div>
       </div>
 
-      {/* PART 10/11: ACTION REQUIRED BANNER WHEN EDIT ACCESS IS GRANTED */}
+      {/* ACTION REQUIRED BANNER */}
       {(currentStatus === 'EDIT_ENABLED' || currentStatus === 'ACTION_REQUIRED') && (
-        <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 rounded-3xl p-6 shadow-sm flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-bold shrink-0">
-            <AlertCircle className="w-6 h-6" />
+        <div className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800 rounded-2xl p-4 shadow-xs flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold shrink-0">
+            <AlertCircle className="w-5 h-5" />
           </div>
-          <div className="space-y-2 flex-1">
-            <h3 className="text-base font-bold text-orange-950 dark:text-orange-200">
+          <div className="space-y-1 flex-1">
+            <h3 className="text-sm font-bold text-orange-950 dark:text-orange-200">
               Action Required: Edit Access Granted by GoodEarth Admin
             </h3>
             {initialData?.editReason && (
@@ -315,35 +347,35 @@ export const SingleKycPage: React.FC = () => {
               </p>
             )}
             <p className="text-xs text-orange-700 dark:text-orange-400 leading-relaxed">
-              Our GoodEarth Admin team has unlocked your application. Please review the details, make the required updates, and click <span className="font-bold">Resubmit KYC Application</span> when ready.
+              Please review the details, update the required fields or document uploads, and click <span className="font-bold">Resubmit KYC Application</span> below.
             </p>
           </div>
         </div>
       )}
 
-      {/* PART 4: AFTER SUBMISSION SUCCESS BANNER & READ-ONLY BANNER */}
+      {/* READ-ONLY / SUBMITTED BANNER */}
       {!canEdit && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 text-center">
-          <div className="w-14 h-14 rounded-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold mx-auto">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
 
-          <div className="space-y-2 max-w-xl mx-auto">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+          <div className="space-y-1 max-w-xl mx-auto">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {currentStatus === 'APPROVED' ? 'KYC Approved & Verified' : 'KYC Submitted Successfully'}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {currentStatus === 'APPROVED'
                 ? 'Your KYC application has been verified and approved by GoodEarth Admin.'
-                : 'Thank you for submitting your KYC. Our GoodEarth Admin Team is reviewing your application. You will receive updates by email and inside the portal. No further action is required.'}
+                : 'Thank you for submitting your KYC. Our GoodEarth Admin Team is reviewing your application. You will receive updates by email and inside the portal.'}
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
               type="button"
               onClick={() => setShowReadOnlyForm(!showReadOnlyForm)}
-              className="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
             >
               <Eye className="w-4 h-4 text-brand-500" />
               {showReadOnlyForm ? 'Hide Submitted KYC Details' : 'View Submitted KYC Details'}
@@ -352,7 +384,7 @@ export const SingleKycPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/client/dashboard')}
-              className="w-full sm:w-auto px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
+              className="w-full sm:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
@@ -361,7 +393,7 @@ export const SingleKycPage: React.FC = () => {
         </div>
       )}
 
-      {/* PART 13: WORKFLOW TIMELINE */}
+      {/* WORKFLOW TIMELINE */}
       <KycWorkflowTimeline
         status={currentStatus}
         submittedAt={initialData?.submittedAt}
@@ -369,78 +401,78 @@ export const SingleKycPage: React.FC = () => {
         verifiedBy={initialData?.verifiedBy}
       />
 
-      {/* FORM SECTION CONTAINER (Editable when canEdit is true, or visible in read-only mode when showReadOnlyForm is true) */}
+      {/* FORM SECTION CONTAINER */}
       {(canEdit || showReadOnlyForm) && (
-        <div className="space-y-8">
-          {/* READ-ONLY APPLICATION PARTICULARS HEADER */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl shadow-xl border border-slate-800 overflow-hidden">
+        <div className="space-y-6">
+          {/* BOOKING REFERENCE ACCORDION */}
+          <div className="bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800 overflow-hidden">
             <div
               onClick={() => setIsHeaderOpen(!isHeaderOpen)}
-              className="p-6 sm:p-8 flex items-center justify-between cursor-pointer select-none border-b border-white/10"
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-white/10"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-500/20 text-brand-300 border border-brand-500/30 flex items-center justify-center font-bold">
-                  <Building2 className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-300 border border-brand-500/30 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[11px] font-semibold mb-1">
-                    <Sparkles className="w-3 h-3" /> Property Booking Particulars
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] font-semibold mb-0.5">
+                    <Sparkles className="w-3 h-3" /> Property Particulars
                   </div>
-                  <h2 className="text-xl font-bold font-serif text-white">Booking Reference Details</h2>
+                  <h2 className="text-base font-bold text-white">Booking Reference Details</h2>
                 </div>
               </div>
               <button type="button" className="text-slate-400 hover:text-white p-1">
-                {isHeaderOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {isHeaderOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
             {isHeaderOpen && (
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Application Date</p>
-                    <div className="flex items-center gap-1.5 text-sm font-bold text-white">
-                      <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                      <Calendar className="w-3.5 h-3.5 text-brand-400 shrink-0" />
                       <input
                         type="text"
                         value={applicationDate}
                         onChange={(e) => canEdit && setApplicationDate(e.target.value)}
                         readOnly={!canEdit}
-                        className="bg-transparent border-none text-white focus:ring-0 p-0 text-sm font-bold w-full"
+                        className="bg-transparent border-none text-white focus:ring-0 p-0 text-xs font-bold w-full"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Booking ID</p>
-                    <p className="text-sm font-bold text-brand-300 truncate">{bookingId}</p>
+                    <p className="text-xs font-bold text-brand-300 truncate">{bookingId}</p>
                   </div>
 
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Unit Ref</p>
-                    <p className="text-sm font-bold text-white truncate">
+                    <p className="text-xs font-bold text-white truncate">
                       {activeUnit?.unitName || 'GoodEarth Villa'}
                     </p>
                   </div>
 
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Project</p>
-                    <p className="text-sm font-bold text-white truncate">
+                    <p className="text-xs font-bold text-white truncate">
                       {activeUnit?.projectName || 'GoodEarth Malhar'}
                     </p>
                   </div>
 
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">KYC Status</p>
-                    <span className="inline-block px-2.5 py-0.5 rounded-md bg-brand-500/20 text-brand-300 text-xs font-bold border border-brand-500/30">
+                    <span className="inline-block px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 text-[10px] font-bold border border-brand-500/30">
                       {badge.label}
                     </span>
                   </div>
 
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-1">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1">
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Completion</p>
-                    <p className="text-sm font-bold text-emerald-400">
-                      {validationSummary?.overallValid ? '100%' : 'In Progress'}
+                    <p className="text-xs font-bold text-emerald-400">
+                      {completionPercent}%
                     </p>
                   </div>
                 </div>
@@ -448,52 +480,58 @@ export const SingleKycPage: React.FC = () => {
             )}
           </div>
 
-          {/* SECTION 1: PRIMARY APPLICANT FORM */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                <User className="w-4 h-4 text-brand-500" /> Section 1: Primary Applicant Details
+          {/* SECTION 1: PRIMARY APPLICANT FORM ACCORDION */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+            <div
+              onClick={() => setIsPrimaryOpen(!isPrimaryOpen)}
+              className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Section 1: Primary Applicant Details</h3>
+                  <p className="text-[11px] text-slate-400">Personal info, address, identity & document uploads</p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsPrimaryOpen(!isPrimaryOpen)}
-                className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-              >
-                {isPrimaryOpen ? 'Collapse Primary Applicant Form' : 'Expand Primary Applicant Form'}
+              <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                 {isPrimaryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
             {isPrimaryOpen && (
-              <KycApplicantFormSection
-                title="Primary Applicant Details"
-                applicantType="PRIMARY"
-                applicant={primaryApplicant}
-                onChange={(updated) => canEdit && setPrimaryApplicant(updated)}
-                errors={errors}
-                documentSlots={documentSlots}
-                kycApplicationId={kycApplicationId}
-                onRefreshDocuments={loadInitialData}
-                canEdit={canEdit}
-              />
+              <div className="p-4 sm:p-6">
+                <KycApplicantFormSection
+                  title="Primary Applicant Details"
+                  applicantType="PRIMARY"
+                  applicant={primaryApplicant}
+                  onChange={(updated) => canEdit && setPrimaryApplicant(updated)}
+                  errors={errors}
+                  documentSlots={currentSlots}
+                  kycApplicationId={kycApplicationId}
+                  onRefreshDocuments={refreshDocumentsSilently}
+                  canEdit={canEdit}
+                />
+              </div>
             )}
           </div>
 
           {/* CO-APPLICANT TOGGLE CARD */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-                  <UserPlus className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                  <UserPlus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Do you have a Co-Applicant?</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Include joint owner for legal property registration.</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Do you have a Co-Applicant?</h3>
+                  <p className="text-[11px] text-slate-400">Include joint owner for legal property registration.</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-5">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
                   <input
                     type="radio"
                     name="hasCoApplicantRadio"
@@ -505,7 +543,7 @@ export const SingleKycPage: React.FC = () => {
                   />
                   <span>No</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-800 dark:text-slate-200">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
                   <input
                     type="radio"
                     name="hasCoApplicantRadio"
@@ -521,63 +559,69 @@ export const SingleKycPage: React.FC = () => {
             </div>
           </div>
 
-          {/* SECTION 2: CO-APPLICANT FORM */}
+          {/* SECTION 2: CO-APPLICANT FORM ACCORDION */}
           {hasCoApplicant === 'Yes' && coApplicantDto && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  <UserPlus className="w-4 h-4 text-brand-500" /> Section 2: Co-Applicant Details
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+              <div
+                onClick={() => setIsCoApplicantOpen(!isCoApplicantOpen)}
+                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Section 2: Co-Applicant Details</h3>
+                    <p className="text-[11px] text-slate-400">Co-owner personal info, address, identity & document uploads</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCoApplicantOpen(!isCoApplicantOpen)}
-                  className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-                >
-                  {isCoApplicantOpen ? 'Collapse Co-Applicant Form' : 'Expand Co-Applicant Form'}
+                <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                   {isCoApplicantOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
 
               {isCoApplicantOpen && (
-                <KycApplicantFormSection
-                  title="Co-Applicant Details"
-                  applicantType="JOINT_1"
-                  applicant={coApplicantDto}
-                  primaryApplicantAddress={primaryApplicant.address}
-                  onChange={(updated) => {
-                    if (!canEdit) return;
-                    const list = [...jointApplicants];
-                    const idx = list.findIndex((a) => a.applicantType === 'JOINT_1');
-                    if (idx >= 0) list[idx] = updated;
-                    else list.unshift(updated);
-                    setJointApplicants(list);
-                  }}
-                  errors={errors}
-                  documentSlots={documentSlots}
-                  kycApplicationId={kycApplicationId}
-                  onRefreshDocuments={loadInitialData}
-                  canEdit={canEdit}
-                />
+                <div className="p-4 sm:p-6">
+                  <KycApplicantFormSection
+                    title="Co-Applicant Details"
+                    applicantType="JOINT_1"
+                    applicant={coApplicantDto}
+                    primaryApplicantAddress={primaryApplicant.address}
+                    onChange={(updated) => {
+                      if (!canEdit) return;
+                      const list = [...jointApplicants];
+                      const idx = list.findIndex((a) => a.applicantType === 'JOINT_1');
+                      if (idx >= 0) list[idx] = updated;
+                      else list.unshift(updated);
+                      setJointApplicants(list);
+                    }}
+                    errors={errors}
+                    documentSlots={currentSlots}
+                    kycApplicationId={kycApplicationId}
+                    onRefreshDocuments={refreshDocumentsSilently}
+                    canEdit={canEdit}
+                  />
+                </div>
               )}
             </div>
           )}
 
           {/* THIRD APPLICANT TOGGLE CARD */}
           {hasCoApplicant === 'Yes' && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-                    <UserPlus className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                    <UserPlus className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Do you wish to add a 3rd Joint Owner?</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Include third applicant for legal property registration.</p>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Do you wish to add a 3rd Joint Owner?</h3>
+                    <p className="text-[11px] text-slate-400">Include third applicant for legal property registration.</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-800 dark:text-slate-200">
+                <div className="flex items-center gap-5">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
                     <input
                       type="radio"
                       name="hasThirdApplicantRadio"
@@ -589,7 +633,7 @@ export const SingleKycPage: React.FC = () => {
                     />
                     <span>No</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-800 dark:text-slate-200">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
                     <input
                       type="radio"
                       name="hasThirdApplicantRadio"
@@ -606,77 +650,83 @@ export const SingleKycPage: React.FC = () => {
             </div>
           )}
 
-          {/* SECTION 3: THIRD APPLICANT FORM */}
+          {/* SECTION 3: THIRD APPLICANT FORM ACCORDION */}
           {hasCoApplicant === 'Yes' && hasThirdApplicant === 'Yes' && thirdApplicantDto && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  <UserPlus className="w-4 h-4 text-brand-500" /> Section 3: Third Applicant Details
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+              <div
+                onClick={() => setIsThirdApplicantOpen(!isThirdApplicantOpen)}
+                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Section 3: Third Applicant Details</h3>
+                    <p className="text-[11px] text-slate-400">Third co-owner personal info, address & identity</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsThirdApplicantOpen(!isThirdApplicantOpen)}
-                  className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-                >
-                  {isThirdApplicantOpen ? 'Collapse Third Applicant Form' : 'Expand Third Applicant Form'}
+                <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                   {isThirdApplicantOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
 
               {isThirdApplicantOpen && (
-                <KycApplicantFormSection
-                  title="Third Applicant Details"
-                  applicantType="JOINT_2"
-                  applicant={thirdApplicantDto}
-                  primaryApplicantAddress={primaryApplicant.address}
-                  secondaryApplicantAddress={coApplicantDto?.address}
-                  onChange={(updated) => {
-                    if (!canEdit) return;
-                    const list = [...jointApplicants];
-                    const idx = list.findIndex((a) => a.applicantType === 'JOINT_2');
-                    if (idx >= 0) list[idx] = updated;
-                    else list.push(updated);
-                    setJointApplicants(list);
-                  }}
-                  errors={errors}
-                  documentSlots={documentSlots}
-                  kycApplicationId={kycApplicationId}
-                  onRefreshDocuments={loadInitialData}
-                  canEdit={canEdit}
-                />
+                <div className="p-4 sm:p-6">
+                  <KycApplicantFormSection
+                    title="Third Applicant Details"
+                    applicantType="JOINT_2"
+                    applicant={thirdApplicantDto}
+                    primaryApplicantAddress={primaryApplicant.address}
+                    secondaryApplicantAddress={coApplicantDto?.address}
+                    onChange={(updated) => {
+                      if (!canEdit) return;
+                      const list = [...jointApplicants];
+                      const idx = list.findIndex((a) => a.applicantType === 'JOINT_2');
+                      if (idx >= 0) list[idx] = updated;
+                      else list.push(updated);
+                      setJointApplicants(list);
+                    }}
+                    errors={errors}
+                    documentSlots={currentSlots}
+                    kycApplicationId={kycApplicationId}
+                    onRefreshDocuments={refreshDocumentsSilently}
+                    canEdit={canEdit}
+                  />
+                </div>
               )}
             </div>
           )}
 
           {/* HOME LOAN ASSISTANCE SECTION */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
-                <Landmark className="w-5 h-5" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                <Landmark className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Home Loan Assistance</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Are you considering applying for a home loan for this unit purchase?</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Home Loan Assistance</h3>
+                <p className="text-[11px] text-slate-400">Are you considering applying for a home loan for this unit purchase?</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
                 disabled={!canEdit}
                 onClick={() => canEdit && setConsideringHomeLoan('No')}
-                className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
                   consideringHomeLoan === 'No'
-                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-1 ring-brand-500/20'
                     : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
                 }`}
               >
-                <div className={`p-2.5 rounded-xl ${consideringHomeLoan === 'No' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                  <CheckCircle2 className="w-5 h-5" />
+                <div className={`p-2 rounded-lg ${consideringHomeLoan === 'No' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white">Self-Funded / No Loan</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Payment will be made directly without bank financing.</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">Self-Funded / No Loan</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Payment will be made directly without bank financing.</div>
                 </div>
               </button>
 
@@ -684,95 +734,97 @@ export const SingleKycPage: React.FC = () => {
                 type="button"
                 disabled={!canEdit}
                 onClick={() => canEdit && setConsideringHomeLoan('Yes')}
-                className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
+                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
                   consideringHomeLoan === 'Yes'
-                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-2 ring-brand-500/20'
+                    ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40 ring-1 ring-brand-500/20'
                     : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
                 }`}
               >
-                <div className={`p-2.5 rounded-xl ${consideringHomeLoan === 'Yes' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                  <Landmark className="w-5 h-5" />
+                <div className={`p-2 rounded-lg ${consideringHomeLoan === 'Yes' ? 'bg-brand-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  <Landmark className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white">Applying for Home Loan</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">GoodEarth home loan desk will assist with bank sanction documents.</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">Applying for Home Loan</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">GoodEarth home loan desk will assist with bank sanction documents.</div>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* SECTION 4: ADDITIONAL MANDATORY DOCUMENTS & SLOTS */}
+          {/* SECTION 4: ADDITIONAL MANDATORY DOCUMENTS & SLOTS ACCORDION */}
           {additionalSlots.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
               <div
                 onClick={() => setIsDocsOpen(!isDocsOpen)}
-                className="flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 pb-4"
+                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
-                    <FileText className="w-5 h-5" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Additional Document Proofs</h3>
-                    <p className="text-xs text-slate-500">Address proof and supplementary verification files</p>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Additional Document Proofs</h3>
+                    <p className="text-[11px] text-slate-400">Address proof and supplementary verification files</p>
                   </div>
                 </div>
                 <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
-                  {isDocsOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  {isDocsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
 
               {isDocsOpen && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {additionalSlots.map((slot) => (
-                    <KycDocumentSlotCard
-                      key={slot.documentId}
-                      slot={slot}
-                      kycApplicationId={kycApplicationId}
-                      onRefresh={refreshDocumentsSilently}
-                      canEdit={canEdit}
-                    />
-                  ))}
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {additionalSlots.map((slot) => (
+                      <KycDocumentSlotCard
+                        key={slot.documentId}
+                        slot={slot}
+                        kycApplicationId={kycApplicationId}
+                        onRefresh={refreshDocumentsSilently}
+                        canEdit={canEdit}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* SECTION 5: REAL-TIME VALIDATION SUMMARY CHECKLIST & SUBMISSION */}
+          {/* SECTION 5: REAL-TIME VALIDATION SUMMARY & LEGAL DECLARATION */}
           {canEdit && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
               <div
                 onClick={() => setIsReviewOpen(!isReviewOpen)}
-                className="flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 pb-4"
+                className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-brand-500/10 text-brand-600 flex items-center justify-center font-bold">
-                    <CheckCircle2 className="w-5 h-5" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold">
+                    <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Validation Summary & Legal Declaration</h3>
-                    <p className="text-xs text-slate-500">Review required fields, accept declaration, and submit KYC</p>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Validation Summary & Legal Declaration</h3>
+                    <p className="text-[11px] text-slate-400">Review required fields, accept declaration, and submit KYC</p>
                   </div>
                 </div>
                 <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
-                  {isReviewOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  {isReviewOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
 
               {isReviewOpen && (
-                <div className="space-y-6">
+                <div className="p-4 sm:p-6 space-y-5">
                   {validationSummary && (
                     <KycValidationChecklist kycData={initialData} validationSummary={validationSummary} bookingId={bookingId} />
                   )}
 
                   {submitError && (
-                    <div role="alert" className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900">
+                    <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900">
                       {submitError}
                     </div>
                   )}
 
                   {/* Declaration Checkbox */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-start gap-3">
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl flex items-start gap-3">
                     <input
                       id="kyc-single-declaration"
                       type="checkbox"
@@ -785,36 +837,49 @@ export const SingleKycPage: React.FC = () => {
                       I hereby declare that all information and identity document proofs provided above are true, complete, and authentic. I authorize GoodEarth to process this data for legal property registration.
                     </label>
                   </div>
-
-                  {/* Final Action Buttons Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleSaveDraft}
-                      className="w-full sm:w-auto px-6 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl font-bold text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center justify-center gap-2 transition-all"
-                    >
-                      <Save className="w-4 h-4 text-brand-600" />
-                      Save Draft
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSubmitKyc}
-                      disabled={!canEdit || isSubmitting}
-                      className="w-full sm:w-auto px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                    >
-                      <Send className="w-4 h-4" />
-                      {isSubmitting
-                        ? 'Submitting KYC Application...'
-                        : currentStatus === 'EDIT_ENABLED' || currentStatus === 'ACTION_REQUIRED'
-                        ? 'Resubmit KYC Application'
-                        : 'Submit KYC Application'}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* STICKY ACTION BAR AT BOTTOM */}
+      {canEdit && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4 shadow-2xl">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+              <AutosaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={handleSaveDraft} />
+              <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 sm:hidden">
+                <span>{completionPercent}% Complete</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="flex-1 sm:flex-none px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-slate-700"
+              >
+                <Save className="w-3.5 h-3.5 text-brand-500" />
+                Save Draft
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmitKyc}
+                disabled={!canEdit || isSubmitting}
+                className="flex-1 sm:flex-none px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold text-xs shadow-md shadow-brand-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {isSubmitting
+                  ? 'Submitting...'
+                  : currentStatus === 'EDIT_ENABLED' || currentStatus === 'ACTION_REQUIRED'
+                  ? 'Resubmit KYC'
+                  : 'Submit KYC Application'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
