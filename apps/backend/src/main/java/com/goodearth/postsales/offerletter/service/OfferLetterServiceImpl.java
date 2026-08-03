@@ -1072,6 +1072,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     }
 
     private BigDecimal getBigDecimal(Map<?, ?> map, String... keys) {
+        if (map == null) return null;
         for (String k : keys) {
             if (map.containsKey(k) && map.get(k) != null) {
                 Object obj = map.get(k);
@@ -1080,6 +1081,9 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                         return new BigDecimal(number.toString());
                     }
                     String str = obj.toString().trim();
+                    if (!str.isEmpty()) {
+                        return new BigDecimal(str);
+                    }
                 } catch (Exception ignored) {
                 }
             }
