@@ -21,6 +21,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -637,6 +638,12 @@ public class OfferLetterServiceImpl implements OfferLetterService {
                 .ifscCode(currentIfsc)
                 .build();
 
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Mapped 10 Bank Detail Fields from Project Site record:");
+        log.info(" - Table 4 Unit Cost -> Beneficiary: '{}', AccNo: '{}', Bank: '{}', Address: '{}', IFSC: '{}'",
+                escrowBeneficiary, escrowAccNo, escrowBankName, escrowBankAddress, escrowIfsc);
+        log.info(" - Table 5 GST/Maint -> Beneficiary: '{}', AccNo: '{}', Bank: '{}', Address: '{}', IFSC: '{}'",
+                currentBeneficiary, currentAccNo, currentBankName, currentBankAddress, currentIfsc);
+
         OfferLetterDto dto = OfferLetterDto.builder()
                 .offerLetterNo(offerNo)
                 .offerLetterDate(offerDate)
@@ -1092,55 +1099,128 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     }
 
     private Map<?, ?> fetchProjectSiteMapFromCrm(Map<?, ?> dealMap, Map<?, ?> unitMap) {
-        String projectSiteRecordId = null;
-        Map<?, ?>[] maps = new Map<?, ?>[]{unitMap, dealMap};
-        String[] lookupKeys = {"Project_Site", "Project_Sites", "Project_Site_Name", "Project_Site_Lookup", "Project_Site_ID"};
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] --- START Project Site Lookup Resolution ---");
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Deal Map keys: {}", dealMap != null ? dealMap.keySet() : "null");
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Unit Map keys: {}", unitMap != null ? unitMap.keySet() : "null");
 
-        for (Map<?, ?> m : maps) {
-            if (m == null) continue;
+        String projectSiteRecordId = null;
+        String projectSiteName = null;
+        String resolvedLookupKey = null;
+        Object resolvedLookupVal = null;
+        String sourceMapName = null;
+
+        Map<String, Map<?, ?>> mapsToSearch = new LinkedHashMap<>();
+        if (unitMap != null) mapsToSearch.put("unitMap", unitMap);
+        if (dealMap != null) mapsToSearch.put("dealMap", dealMap);
+
+        String[] lookupKeys = {
+            "Project_Site", "Project_Sites", "Project_Site_Name", "Project_Site_Lookup", 
+            "Project_Site_ID", "Project", "Projects", "Project_Name", "Project_Site_s", 
+            "Project_Sites_s", "Linked_Project_Site", "Associated_Project_Site"
+        };
+
+        for (Map.Entry<String, Map<?, ?>> entry : mapsToSearch.entrySet()) {
+            Map<?, ?> m = entry.getValue();
             for (String key : lookupKeys) {
                 if (m.containsKey(key) && m.get(key) != null) {
                     Object obj = m.get(key);
-                    if (obj instanceof Map<?, ?> lookupMap && lookupMap.get("id") != null) {
-                        projectSiteRecordId = lookupMap.get("id").toString();
+                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Found lookup key '{}' in {}: {}", key, entry.getKey(), obj);
+                    if (obj instanceof Map<?, ?> lookupMap) {
+                        Object idObj = lookupMap.get("id") != null ? lookupMap.get("id") : lookupMap.get("ID");
+                        if (idObj != null) {
+                            projectSiteRecordId = idObj.toString();
+                        }
+                        if (lookupMap.get("name") != null) {
+                            projectSiteName = lookupMap.get("name").toString();
+                        }
+                        resolvedLookupKey = key;
+                        resolvedLookupVal = obj;
+                        sourceMapName = entry.getKey();
                         break;
-                    } else if (!(obj instanceof Map)) {
+                    } else if (obj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> listMap) {
+                        Object idObj = listMap.get("id") != null ? listMap.get("id") : listMap.get("ID");
+                        if (idObj != null) {
+                            projectSiteRecordId = idObj.toString();
+                        }
+                        if (listMap.get("name") != null) {
+                            projectSiteName = listMap.get("name").toString();
+                        }
+                        resolvedLookupKey = key;
+                        resolvedLookupVal = obj;
+                        sourceMapName = entry.getKey();
+                        break;
+                    } else if (!(obj instanceof Map) && !(obj instanceof List)) {
                         String val = obj.toString().trim();
                         if (val.matches("\\d{15,20}")) {
                             projectSiteRecordId = val;
-                            break;
+                        } else if (!val.isBlank()) {
+                            projectSiteName = val;
                         }
+                        resolvedLookupKey = key;
+                        resolvedLookupVal = obj;
+                        sourceMapName = entry.getKey();
+                        break;
                     }
                 }
             }
-            if (projectSiteRecordId != null) break;
+            if (projectSiteRecordId != null || projectSiteName != null) break;
         }
 
-        if (projectSiteRecordId == null || projectSiteRecordId.isBlank()) {
-            log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Project Site lookup ID not found in unitMap or dealMap");
-            return null;
-        }
+        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Resolution Result -> Source Map: '{}', Lookup Key: '{}', Raw Lookup Value: {}, Extracted Record ID: '{}', Extracted Name: '{}'",
+                sourceMapName, resolvedLookupKey, resolvedLookupVal, projectSiteRecordId, projectSiteName);
 
         String crmApiUrl = properties.getCrmApiUrl();
-        String primaryUrl = crmApiUrl + "/Project_Sites/" + projectSiteRecordId;
-        log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting GET Project Site record: {}", primaryUrl);
 
-        try {
-            Map<?, ?> response = apiClient.get(primaryUrl, Map.class);
-            if (response == null || !response.containsKey("data") || (response.get("data") instanceof List<?> list && list.isEmpty())) {
-                String fallbackUrl = crmApiUrl + "/Project_Site/" + projectSiteRecordId;
-                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Primary URL returned null/empty data. Attempting fallback GET: {}", fallbackUrl);
-                response = apiClient.get(fallbackUrl, Map.class);
+        // 1. Direct GET by Record ID
+        if (projectSiteRecordId != null && !projectSiteRecordId.isBlank()) {
+            String resolvedModule = resolveReferencedModuleApiName(resolvedLookupKey);
+            List<String> moduleCandidates = new ArrayList<>();
+            if (resolvedModule != null && !resolvedModule.isBlank()) {
+                moduleCandidates.add(resolvedModule);
             }
+            moduleCandidates.addAll(List.of("Project_Sites", "Project_Site", "Projects", "Project_Sites_s"));
 
-            if (response != null && response.get("data") instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> siteData) {
-                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Successfully retrieved Project Site record for ID {}: {}", projectSiteRecordId, siteData);
-                return siteData;
+            for (String mod : moduleCandidates) {
+                String url = crmApiUrl + "/" + mod + "/" + projectSiteRecordId;
+                log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting GET by Record ID endpoint: {}", url);
+                try {
+                    Map<?, ?> response = apiClient.get(url, Map.class);
+                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from GET {}: {}", url, response);
+                    if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
+                        if (list.get(0) instanceof Map<?, ?> firstRecord) {
+                            log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS: Extracted data[0] Project Site record via ID GET from endpoint: {}", url);
+                            return firstRecord;
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] GET endpoint {} failed: {}", url, ex.getMessage());
+                }
             }
-        } catch (Exception ex) {
-            log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Failed to fetch Project Site record for ID {}: {}", projectSiteRecordId, ex.getMessage());
         }
 
+        // 2. Search Fallback by Project Site Name
+        if (projectSiteName != null && !projectSiteName.isBlank()) {
+            List<String> searchModules = List.of("Project_Sites", "Project_Site", "Projects");
+            for (String mod : searchModules) {
+                try {
+                    String encodedName = java.net.URLEncoder.encode(projectSiteName, java.nio.charset.StandardCharsets.UTF_8);
+                    String searchUrl = crmApiUrl + "/" + mod + "/search?criteria=(Name:equals:" + encodedName + ")";
+                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Attempting Search Fallback endpoint: {}", searchUrl);
+                    Map<?, ?> response = apiClient.get(searchUrl, Map.class);
+                    log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] Raw JSON response from Search GET {}: {}", searchUrl, response);
+                    if (response != null && response.containsKey("data") && response.get("data") instanceof List<?> list && !list.isEmpty()) {
+                        if (list.get(0) instanceof Map<?, ?> firstRecord) {
+                            log.info("[OFFER_LETTER_PROJECT_SITE_TRACE] SUCCESS: Extracted data[0] Project Site record via Name Search from endpoint: {}", searchUrl);
+                            return firstRecord;
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] Search endpoint for module '{}' failed: {}", mod, ex.getMessage());
+                }
+            }
+        }
+
+        log.warn("[OFFER_LETTER_PROJECT_SITE_TRACE] WARNING: Unable to fetch Project Site record from Zoho CRM. Returning null.");
         return null;
     }
 }

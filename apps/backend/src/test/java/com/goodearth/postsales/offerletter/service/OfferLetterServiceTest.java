@@ -232,6 +232,64 @@ public class OfferLetterServiceTest {
     }
 
     @Test
+    @DisplayName("Table 4 and Table 5 fetch bank remittance details via Name Search Fallback when Project Site lookup is a string name")
+    void testBuildOfferLetterDto_WithProjectSiteNameSearchFallback() {
+        String dealId = "CADENCE-PROJECT-SITE-NAME-TEST";
+        String targetRecordId = "6638590000147048036";
+        String unitRecordId = "6638590000147099996";
+
+        when(zohoKycSyncService.resolveDealRecordIdByDealName(dealId)).thenReturn(targetRecordId);
+        when(properties.getCrmApiUrl()).thenReturn("https://crmsandbox.zoho.in/crm/v2");
+
+        Map<String, Object> crmDeal = Map.of(
+                "id", targetRecordId,
+                "Deal_Name", "CADENCE-PROJECT-SITE-NAME-TEST",
+                "Product_Name", Map.of("id", unitRecordId, "name", "CADENCE-A002")
+        );
+
+        Map<String, Object> crmUnit = Map.of(
+                "id", unitRecordId,
+                "Project_Site", "Good Earth Cadence",
+                "Product_Name", "CADENCE-A002"
+        );
+
+        Map<String, Object> crmSite = Map.ofEntries(
+                Map.entry("id", "6638590000147077788"),
+                Map.entry("Name", "Good Earth Cadence"),
+                Map.entry("Unit_Bank_Beneficiary", "NAME SEARCH ESCROW BENEFICIARY"),
+                Map.entry("Unit_Bank_Account_No", "554433221100"),
+                Map.entry("Unit_Bank_Name", "HDFC Bank"),
+                Map.entry("Unit_Bank_Address", "Richmond Road, Bengaluru"),
+                Map.entry("Unit_Bank_IFSC_Code", "HDFC0000123"),
+                Map.entry("GST_Bank_Beneficiary", "NAME SEARCH GST BENEFICIARY"),
+                Map.entry("GST_Bank_Account_No", "990011223344"),
+                Map.entry("GST_Bank_Name", "State Bank of India"),
+                Map.entry("GST_Bank_Address", "MG Road, Bengaluru"),
+                Map.entry("GST_Bank_IFSC_Code", "SBIN0004567")
+        );
+
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Deals/" + targetRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmDeal)));
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Units/" + unitRecordId), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmUnit)));
+        String encodedName = java.net.URLEncoder.encode("Good Earth Cadence", java.nio.charset.StandardCharsets.UTF_8);
+        when(apiClient.get(eq("https://crmsandbox.zoho.in/crm/v2/Project_Sites/search?criteria=(Name:equals:" + encodedName + ")"), eq(Map.class)))
+                .thenReturn(Map.of("data", List.of(crmSite)));
+
+        OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealId);
+
+        assertNotNull(dto);
+        assertNotNull(dto.getEscrowBankDetails());
+        assertEquals("NAME SEARCH ESCROW BENEFICIARY", dto.getEscrowBankDetails().getBeneficiaryName());
+        assertEquals("554433221100", dto.getEscrowBankDetails().getBeneficiaryAccountNo());
+        assertEquals("HDFC Bank", dto.getEscrowBankDetails().getBankName());
+
+        assertNotNull(dto.getCurrentBankDetails());
+        assertEquals("NAME SEARCH GST BENEFICIARY", dto.getCurrentBankDetails().getBeneficiaryName());
+        assertEquals("990011223344", dto.getCurrentBankDetails().getBeneficiaryAccountNo());
+    }
+
+    @Test
     @DisplayName("Empty CRM Unit fields should remain empty without inserting sample values")
     void testBuildOfferLetterDto_WithEmptyCrmFields() {
         String dealId = "CADENCE-EMPTY";
