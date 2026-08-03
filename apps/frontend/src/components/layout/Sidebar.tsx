@@ -1,4 +1,4 @@
-import React, { ComponentType, useEffect } from 'react';
+import React, { ComponentType, useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
 import { clientService } from '../../services/client.service';
+import kycService from '../../features/kyc/services/kyc.service';
 
 interface NavItem {
   name: string;
@@ -31,8 +32,9 @@ const crmNavItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { sidebarCollapsed, mobileSidebarOpen, toggleMobileSidebar } = useUIStore();
   const { user } = useAuthStore();
-  const { setUnits } = useUnitStore();
+  const { activeUnit, setUnits } = useUnitStore();
   const location = useLocation();
+  const [isKycApproved, setIsKycApproved] = useState<boolean>(false);
 
   const isClient = user?.role === 'buyer';
 
@@ -50,9 +52,32 @@ export const Sidebar: React.FC = () => {
     }
   }, [isClient, user, setUnits]);
 
+  // Fetch KYC approval status for buyer to control Offer Letter menu visibility
+  useEffect(() => {
+    if (isClient && user) {
+      const bookingId = activeUnit?.unitName || activeUnit?.zohoDealName || activeUnit?.workflowId || activeUnit?.id || 'current';
+      kycService
+        .getKycByBooking(bookingId)
+        .then((data) => {
+          if (data && data.status === 'APPROVED') {
+            setIsKycApproved(true);
+          } else {
+            setIsKycApproved(false);
+          }
+        })
+        .catch(() => {
+          setIsKycApproved(false);
+        });
+    } else {
+      setIsKycApproved(false);
+    }
+  }, [isClient, user, activeUnit]);
+
   const clientNavItems: NavItem[] = [
     { name: 'KYC Information', path: '/client/kyc', icon: User, requiresUnit: false },
-    { name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false },
+    ...(isKycApproved
+      ? [{ name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false }]
+      : []),
   ];
 
   const visibleNavItems = isClient ? clientNavItems : crmNavItems;

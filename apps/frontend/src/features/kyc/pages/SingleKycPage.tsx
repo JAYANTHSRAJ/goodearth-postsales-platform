@@ -313,7 +313,6 @@ export const SingleKycPage: React.FC = () => {
                 ● {badge.label}
               </span>
             </div>
-            <AutosaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={handleSaveDraft} />
           </div>
         </div>
 
