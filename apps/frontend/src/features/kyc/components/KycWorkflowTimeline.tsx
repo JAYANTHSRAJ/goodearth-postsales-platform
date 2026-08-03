@@ -62,22 +62,6 @@ export const KycWorkflowTimeline: React.FC<KycWorkflowTimelineProps> = ({
       isCompleted: status === 'APPROVED',
       isCurrent: false,
     },
-    {
-      id: 'OFFER_LETTER',
-      label: 'Offer Letter Stage',
-      description: status === 'APPROVED' ? 'Offer Letter generation & verification' : 'Unlocks after KYC Approval',
-      icon: ShieldCheck,
-      isCompleted: status === 'APPROVED',
-      isCurrent: status === 'APPROVED',
-    },
-    {
-      id: 'PAYMENTS',
-      label: 'Payments & Milestones Stage',
-      description: status === 'APPROVED' ? 'Next step after Offer Letter completion' : 'Locked until Offer Letter stage',
-      icon: Clock,
-      isCompleted: false,
-      isCurrent: false,
-    },
   ];
 
   return (
