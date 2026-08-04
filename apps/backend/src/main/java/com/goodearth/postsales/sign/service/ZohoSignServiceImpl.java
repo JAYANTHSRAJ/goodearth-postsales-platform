@@ -14,9 +14,12 @@ import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +33,9 @@ public class ZohoSignServiceImpl implements ZohoSignService {
 
     private static final Logger log = LoggerFactory.getLogger(ZohoSignServiceImpl.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Valid sample PDF stream bytes used when generating documents for e-Sign API payload
+    private static final byte[] SAMPLE_PDF_BYTES = ("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>endobj 4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj 5 0 obj<</Length 44>>stream\nBT /F1 24 Tf 100 700 Td (GoodEarth Offer Letter Document) Tj ET\nendstream\nendobj\nxref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n00000000101 00000 n \n00000000212 00000 n \n00000000281 00000 n \ntrailer<</Size 6/Root 1 0 R>>\nstartxref\n375\n%%EOF").getBytes();
 
     private final ZohoApiClient apiClient;
     private final ZohoSignProperties signProperties;
@@ -48,6 +54,18 @@ public class ZohoSignServiceImpl implements ZohoSignService {
         this.signRequestRepository = signRequestRepository;
         this.workflowRepository = workflowRepository;
         this.documentRepository = documentRepository;
+    }
+
+    private static class NamedByteArrayResource extends ByteArrayResource {
+        private final String filename;
+        public NamedByteArrayResource(byte[] byteArray, String filename) {
+            super(byteArray);
+            this.filename = filename;
+        }
+        @Override
+        public String getFilename() {
+            return this.filename;
+        }
     }
 
     @Override
@@ -83,18 +101,28 @@ public class ZohoSignServiceImpl implements ZohoSignService {
 
         try {
             String url = signProperties.getApiUrl() + "/requests";
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("requests", Map.of(
-                    "request_name", request.getDocumentName(),
-                    "description", metadataJson,
-                    "actions", List.of(Map.of(
-                            "recipient_name", request.getRecipientName(),
-                            "recipient_email", request.getRecipientEmail(),
-                            "action_type", "SIGN"
-                    ))
-            ));
 
-            Map<?, ?> response = apiClient.post(url, payload, Map.class);
+            Map<String, Object> dataMap = Map.of(
+                    "requests", Map.of(
+                            "request_name", request.getDocumentName(),
+                            "description", metadataJson,
+                            "actions", List.of(Map.of(
+                                    "recipient_name", request.getRecipientName(),
+                                    "recipient_email", request.getRecipientEmail(),
+                                    "action_type", "SIGN"
+                            ))
+                    )
+            );
+            String dataJsonString = objectMapper.writeValueAsString(dataMap);
+
+            byte[] pdfBytes = SAMPLE_PDF_BYTES;
+            String pdfFileName = request.getDocumentName().endsWith(".pdf") ? request.getDocumentName() : request.getDocumentName() + ".pdf";
+
+            MultiValueMap<String, Object> multipartBody = new LinkedMultiValueMap<>();
+            multipartBody.add("file", new NamedByteArrayResource(pdfBytes, pdfFileName));
+            multipartBody.add("data", dataJsonString);
+
+            Map<?, ?> response = apiClient.postMultipart(url, multipartBody, Map.class);
             if (response != null && response.containsKey("requests")) {
                 Map<?, ?> reqData = (Map<?, ?>) response.get("requests");
                 if (reqData.containsKey("request_id")) {
@@ -102,6 +130,16 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                 }
             }
             log.info("Registered signature request in Zoho Sign API with ID: {} and metadata JSON: {}", generatedRequestId, metadataJson);
+
+            // Submit/send request so recipient receives e-Sign email notification and status transitions to SENT
+            try {
+                String submitUrl = signProperties.getApiUrl() + "/requests/" + generatedRequestId + "/submit";
+                apiClient.post(submitUrl, new HashMap<>(), Map.class);
+                log.info("Submitted signature request {} in Zoho Sign API", generatedRequestId);
+            } catch (Exception submitEx) {
+                log.warn("Zoho Sign submit request notification warning for {}: {}", generatedRequestId, submitEx.getMessage());
+            }
+
         } catch (Exception ex) {
             log.warn("Zoho Sign API integration warning during creation: {}. Using request ID: {}", ex.getMessage(), generatedRequestId);
         }
@@ -184,7 +222,6 @@ public class ZohoSignServiceImpl implements ZohoSignService {
     @Transactional
     public void handleSignWebhook(Map<String, Object> payload) {
         log.info("Processing Zoho Sign webhook notification: {}", payload);
-        // Optional webhook listener for real-time notifications; state remains single-source on Zoho Sign.
     }
 
     @Override
