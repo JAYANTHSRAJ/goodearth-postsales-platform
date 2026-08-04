@@ -25,6 +25,8 @@ public class ZohoSignDto {
     private String embedUrl;
     private String signUrl;
     private String signedDocumentId;
+    private boolean apiLicenseRequired;
+    private String licenseWarningMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime completedAt;

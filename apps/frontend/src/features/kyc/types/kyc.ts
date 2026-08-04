@@ -248,5 +248,7 @@ export interface ZohoSignDto {
   requestStatus: 'DRAFT' | 'SENT' | 'VIEWED' | 'SIGNED' | 'COMPLETED' | string;
   signUrl?: string;
   embedUrl?: string;
+  apiLicenseRequired?: boolean;
+  licenseWarningMessage?: string;
   createdAt?: string;
 }

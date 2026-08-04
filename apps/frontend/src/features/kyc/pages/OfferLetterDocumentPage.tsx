@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ShieldCheck,
   UserCheck,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const OfferLetterDocumentPage: React.FC = () => {
@@ -45,7 +46,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Fetch Offer Letter Status, Live Zoho Sign Status & Document Stream
   const fetchOfferLetter = useCallback(async () => {
@@ -105,9 +106,18 @@ export const OfferLetterDocumentPage: React.FC = () => {
       setStatusInfo((prev: OfferLetterStatusDto | null) =>
         prev ? { ...prev, sent: true, sentAt: res.sentAt || new Date().toISOString() } : res
       );
-      setNotification({ message: 'Offer Letter sent for e-Sign via Zoho Sign!', type: 'success' });
-      // Re-fetch live status and document stream directly from Zoho Sign
-      fetchOfferLetter();
+
+      const liveSign = await kycService.getSignRequestForBooking(targetBooking);
+      setSignRequest(liveSign);
+
+      if (liveSign?.requestStatus === 'DRAFT' || liveSign?.apiLicenseRequired) {
+        setNotification({
+          message: 'Request created as DRAFT in Zoho Sign. API submission requires a Zoho Sign plan upgrade or manual send from Zoho Sign portal.',
+          type: 'warning',
+        });
+      } else {
+        setNotification({ message: 'Offer Letter sent for e-Sign via Zoho Sign!', type: 'success' });
+      }
     } catch (err: any) {
       console.error('[OFFER_LETTER_PAGE] Error sending for e-Sign:', err);
       setNotification({
@@ -127,10 +137,13 @@ export const OfferLetterDocumentPage: React.FC = () => {
     try {
       // Fetch latest live status and signing URL directly from Zoho Sign API
       const liveStatus = await kycService.getSignRequestStatus(signRequest.requestId);
-      if (liveStatus?.signUrl) {
+      if (liveStatus?.signUrl && liveStatus.requestStatus !== 'DRAFT') {
         window.open(liveStatus.signUrl, '_blank', 'noopener,noreferrer');
       } else {
-        setNotification({ message: 'Signing URL currently unavailable from Zoho Sign.', type: 'error' });
+        setNotification({
+          message: 'Document is currently in DRAFT state. Signing will be enabled once dispatched by GoodEarth.',
+          type: 'warning',
+        });
       }
     } catch (err: any) {
       console.error('[OFFER_LETTER_PAGE] Error fetching signing URL:', err);
@@ -180,6 +193,9 @@ export const OfferLetterDocumentPage: React.FC = () => {
 
   const isSigned =
     signRequest?.requestStatus === 'COMPLETED' || signRequest?.requestStatus === 'SIGNED';
+
+  const isDraftLicenseBlocked =
+    signRequest?.requestStatus === 'DRAFT' || signRequest?.apiLicenseRequired;
 
   const formattedGeneratedAt = statusInfo?.sentAt
     ? new Date(statusInfo.sentAt).toLocaleDateString('en-IN', {
@@ -249,6 +265,11 @@ export const OfferLetterDocumentPage: React.FC = () => {
               <span className="text-xs font-bold px-3.5 py-1 rounded-full border bg-emerald-950/90 text-emerald-300 border-emerald-700/80 flex items-center gap-1.5 shadow-lg">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 {isAdminOrCrm ? '✓ Signed' : '✅ Offer Letter Signed'}
+              </span>
+            ) : isDraftLicenseBlocked ? (
+              <span className="text-xs font-bold px-3.5 py-1 rounded-full border bg-amber-950/90 text-amber-300 border-amber-700/80 flex items-center gap-1.5 shadow-lg">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                {isAdminOrCrm ? '⚠️ Draft (Action Required)' : '⏳ Signature Pending Dispatch'}
               </span>
             ) : signRequest ? (
               <span className={`text-xs font-bold px-3.5 py-1 rounded-full border flex items-center gap-1.5 shadow-lg ${
@@ -409,6 +430,20 @@ export const OfferLetterDocumentPage: React.FC = () => {
                   <Download className="w-4 h-4" />
                   <span>Download Signed Offer Letter</span>
                 </button>
+              ) : isDraftLicenseBlocked ? (
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    disabled
+                    className="px-5 py-2.5 bg-slate-800 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-2 cursor-not-allowed border border-slate-800"
+                    title="Document signature is being initialized by GoodEarth."
+                  >
+                    <ExternalLink className="w-4 h-4 text-slate-500" />
+                    <span>Sign Offer Letter (Pending Dispatch)</span>
+                  </button>
+                  <span className="text-[10px] text-amber-400 font-medium">
+                    Document signature is being initialized by GoodEarth.
+                  </span>
+                </div>
               ) : signRequest ? (
                 <button
                   onClick={handleBuyerSign}
@@ -450,12 +485,39 @@ export const OfferLetterDocumentPage: React.FC = () => {
         </div>
       </div>
 
+      {/* License Warning Banner for Admin */}
+      {isAdminOrCrm && isDraftLicenseBlocked && (
+        <div className="mb-6 p-4 rounded-xl text-xs font-medium bg-amber-950/90 text-amber-200 border border-amber-700/80 flex items-start gap-3 shadow-lg">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <span className="font-bold text-amber-300 text-sm">
+              Zoho Sign License Action Required (Error 12000)
+            </span>
+            <p className="text-amber-200/90 leading-relaxed">
+              The signature request (ID: <code className="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-amber-300">{signRequest?.requestId}</code>) was successfully created as a <strong>DRAFT</strong> in Zoho Sign, but automated API dispatch requires a Zoho Sign plan upgrade.
+            </p>
+            <div className="mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-amber-300 font-semibold">
+              <span>To complete dispatch, an administrator must either:</span>
+              <span className="bg-amber-900/60 px-2 py-0.5 rounded border border-amber-600/50">
+                1. Upgrade Zoho Sign Plan
+              </span>
+              <span>or</span>
+              <span className="bg-amber-900/60 px-2 py-0.5 rounded border border-amber-600/50">
+                2. Send Draft manually from Zoho Sign Portal
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {notification && (
         <div
           className={`mb-6 p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
             notification.type === 'success'
               ? 'bg-emerald-950/80 text-emerald-200 border-emerald-800/60'
+              : notification.type === 'warning'
+              ? 'bg-amber-950/80 text-amber-200 border-amber-800/60'
               : 'bg-rose-950/80 text-rose-200 border-rose-800/60'
           }`}
         >

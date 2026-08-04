@@ -83,19 +83,15 @@ public class ZohoSignServiceImpl implements ZohoSignService {
             document = documentRepository.findById(request.getDocumentId()).orElse(null);
         }
 
-        // 1. Build structured JSON metadata for production hardening & disaster recovery
+        // 1. Build structured metadata for production hardening & disaster recovery
         Map<String, Object> metadataMap = new HashMap<>();
         if (request.getBookingId() != null) metadataMap.put("bookingId", request.getBookingId());
         if (request.getDealRecordId() != null) metadataMap.put("dealRecordId", request.getDealRecordId());
         if (workflow != null) metadataMap.put("workflowId", workflow.getId().toString());
         if (request.getDocumentId() != null) metadataMap.put("documentId", request.getDocumentId().toString());
 
-        String metadataJson;
-        try {
-            metadataJson = objectMapper.writeValueAsString(metadataMap);
-        } catch (Exception e) {
-            metadataJson = "{}";
-        }
+        String metadataDesc = "bookingId:" + (request.getBookingId() != null ? request.getBookingId() : "") +
+                " | dealRecordId:" + (request.getDealRecordId() != null ? request.getDealRecordId() : "");
 
         String generatedRequestId = "ZSIGN-REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -105,7 +101,7 @@ public class ZohoSignServiceImpl implements ZohoSignService {
             Map<String, Object> dataMap = Map.of(
                     "requests", Map.of(
                             "request_name", request.getDocumentName(),
-                            "description", metadataJson,
+                            "description", metadataDesc,
                             "actions", List.of(Map.of(
                                     "recipient_name", request.getRecipientName(),
                                     "recipient_email", request.getRecipientEmail(),
@@ -129,15 +125,19 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                     generatedRequestId = reqData.get("request_id").toString();
                 }
             }
-            log.info("Registered signature request in Zoho Sign API with ID: {} and metadata JSON: {}", generatedRequestId, metadataJson);
+            log.info("Registered signature request in Zoho Sign API with ID: {} and metadata: {}", generatedRequestId, metadataDesc);
 
-            // Submit/send request so recipient receives e-Sign email notification and status transitions to SENT
+            // Attempt to submit/send request so status transitions to SENT
             try {
                 String submitUrl = signProperties.getApiUrl() + "/requests/" + generatedRequestId + "/submit";
                 apiClient.post(submitUrl, new HashMap<>(), Map.class);
                 log.info("Submitted signature request {} in Zoho Sign API", generatedRequestId);
             } catch (Exception submitEx) {
-                log.warn("Zoho Sign submit request notification warning for {}: {}", generatedRequestId, submitEx.getMessage());
+                if (submitEx.getMessage() != null && (submitEx.getMessage().contains("12000") || submitEx.getMessage().contains("license"))) {
+                    log.warn("Zoho Sign API error 12000 detected during submit for request {}: Request created as DRAFT in Zoho Sign. API submission requires a plan upgrade or manual send from Zoho Sign portal.", generatedRequestId);
+                } else {
+                    log.warn("Zoho Sign submit request notification warning for {}: {}", generatedRequestId, submitEx.getMessage());
+                }
             }
 
         } catch (Exception ex) {
@@ -303,6 +303,11 @@ public class ZohoSignServiceImpl implements ZohoSignService {
             log.warn("Could not query live status from Zoho Sign API for request {}: {}", requestId, ex.getMessage());
         }
 
+        boolean isLicenseRequired = "DRAFT".equalsIgnoreCase(status);
+        String licenseMsg = isLicenseRequired
+                ? "Request created as DRAFT in Zoho Sign. API submission requires a Zoho Sign plan upgrade or manual sending from the Zoho Sign portal."
+                : null;
+
         return ZohoSignDto.builder()
                 .id(entity.getId())
                 .requestId(requestId)
@@ -314,6 +319,8 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                 .requestStatus(status)
                 .signUrl(signUrl)
                 .embedUrl(embedUrl)
+                .apiLicenseRequired(isLicenseRequired)
+                .licenseWarningMessage(licenseMsg)
                 .createdAt(entity.getCreatedAt())
                 .build();
     }
