@@ -145,9 +145,10 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         String fileName = item.getAttributes() != null && item.getAttributes().getName() != null ? item.getAttributes().getName() : "Drawing_Plan.pdf";
         String mimeType = item.getResolvedMimeType();
 
-        log.info("Syncing WorkDrive file: {} (ID: {})", fileName, fileId);
+        DocumentType determinedType = determineDocumentType(fileName);
+        log.info("Syncing WorkDrive file: {} (ID: {}, Determined DocumentType: {})", fileName, fileId, determinedType);
 
-        // 1. Check or create Document entity linked to DESIGN_PLAN
+        // 1. Check or create Document entity linked with accurate DocumentType
         List<Document> existingDocs = documentRepository.findByWorkflowId(workflow.getId());
         Document doc = existingDocs.stream()
                 .filter(d -> fileId.equalsIgnoreCase(d.getWorkDriveFileId()) || fileName.equalsIgnoreCase(d.getFileName()))
@@ -155,7 +156,7 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                 .orElseGet(() -> {
                     Document newDoc = new Document();
                     newDoc.setWorkflow(workflow);
-                    newDoc.setDocumentType(DocumentType.DESIGN_PLAN);
+                    newDoc.setDocumentType(determinedType);
                     newDoc.setFileName(fileName);
                     newDoc.setWorkDriveFileId(fileId);
                     newDoc.setFileSize(item.getAttributes() != null && item.getAttributes().getSize() != null ? item.getAttributes().getSize() : 102400L);
@@ -163,10 +164,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                     return documentRepository.save(newDoc);
                 });
 
-        if (doc.getDocumentType() != DocumentType.DESIGN_PLAN) {
-            doc.setDocumentType(DocumentType.DESIGN_PLAN);
-            documentRepository.save(doc);
-        }
+        doc.setDocumentType(determinedType);
+        documentRepository.save(doc);
 
         // 2. Check or create WorkDriveFile entity
         WorkDriveFile file = fileRepository.findByFileId(fileId)
@@ -185,6 +184,26 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
         // 3. Sync live versions directly from Zoho WorkDrive API
         syncVersionsForFile(savedFile, item.getAttributes());
+    }
+
+    private DocumentType determineDocumentType(String fileName) {
+        if (fileName == null) return DocumentType.OTHER;
+        String lower = fileName.toLowerCase();
+        if (lower.contains("plan") || lower.contains("drawing") || lower.contains("floor") ||
+            lower.contains("elevation") || lower.contains("structural") || lower.contains("electrical") ||
+            lower.contains("plumbing") || lower.contains("interior") || lower.contains("architectural") ||
+            lower.contains("layout") || lower.contains("cad")) {
+            return DocumentType.DESIGN_PLAN;
+        } else if (lower.contains("offer") || lower.contains("booking")) {
+            return DocumentType.BOOKING_FORM;
+        } else if (lower.contains("agreement") || lower.contains("contract")) {
+            return DocumentType.AGREEMENT;
+        } else if (lower.contains("invoice")) {
+            return DocumentType.INVOICE;
+        } else if (lower.contains("receipt")) {
+            return DocumentType.RECEIPT;
+        }
+        return DocumentType.OTHER;
     }
 
     @Override
