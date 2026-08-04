@@ -226,8 +226,8 @@ public class ZohoSignServiceImpl implements ZohoSignService {
         String documentName = entity.getDocument() != null ? entity.getDocument().getFileName() : "Offer_Letter.pdf";
         String recipientEmail = null;
         String recipientName = null;
-        String signUrl = "https://sign.zoho.com/zs/#/documents/" + requestId + "/sign";
-        String embedUrl = "https://sign.zoho.com/zs/#/embed/" + requestId;
+        String signUrl = null;
+        String embedUrl = null;
 
         // Fetch live state directly from Zoho Sign API
         try {
@@ -245,7 +245,21 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                     if (!actions.isEmpty() && actions.get(0) instanceof Map<?, ?> action) {
                         if (action.containsKey("recipient_email")) recipientEmail = action.get("recipient_email").toString();
                         if (action.containsKey("recipient_name")) recipientName = action.get("recipient_name").toString();
-                        if (action.containsKey("action_url")) signUrl = action.get("action_url").toString();
+
+                        // 1. Extract official recipient signing URL returned by Zoho Sign API
+                        if (action.containsKey("action_url") && action.get("action_url") != null) {
+                            signUrl = action.get("action_url").toString();
+                        } else if (action.containsKey("signing_url") && action.get("signing_url") != null) {
+                            signUrl = action.get("signing_url").toString();
+                        } else if (action.containsKey("sign_url") && action.get("sign_url") != null) {
+                            signUrl = action.get("sign_url").toString();
+                        }
+
+                        // 2. If action_url was not in GET response, generate embedded signing URL via Zoho embedurl API
+                        if (signUrl == null && action.containsKey("action_id")) {
+                            String actionId = action.get("action_id").toString();
+                            signUrl = fetchEmbedSigningUrl(requestId, actionId);
+                        }
                     }
                 }
             }
@@ -266,5 +280,20 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                 .embedUrl(embedUrl)
                 .createdAt(entity.getCreatedAt())
                 .build();
+    }
+
+    private String fetchEmbedSigningUrl(String requestId, String actionId) {
+        try {
+            String url = signProperties.getApiUrl() + "/requests/" + requestId + "/actions/" + actionId + "/embedurl";
+            Map<?, ?> res = apiClient.post(url, new HashMap<>(), Map.class);
+            if (res != null) {
+                if (res.containsKey("sign_url") && res.get("sign_url") != null) return res.get("sign_url").toString();
+                if (res.containsKey("signing_url") && res.get("signing_url") != null) return res.get("signing_url").toString();
+                if (res.containsKey("action_url") && res.get("action_url") != null) return res.get("action_url").toString();
+            }
+        } catch (Exception ex) {
+            log.warn("Could not fetch embedded signing URL for request {} action {}: {}", requestId, actionId, ex.getMessage());
+        }
+        return null;
     }
 }
