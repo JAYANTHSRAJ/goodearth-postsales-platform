@@ -70,7 +70,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
             WorkflowRepository workflowRepository,
             DocumentRepository documentRepository,
             ChangeRequestRepository changeRequestRepository,
-            WorkDriveMapper mapper) {
+            WorkDriveMapper mapper,
+            org.springframework.beans.factory.ObjectProvider<RestTemplate> restTemplateProvider) {
         this.apiClient = apiClient;
         this.tokenManager = tokenManager;
         this.properties = properties;
@@ -81,7 +82,7 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         this.documentRepository = documentRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.mapper = mapper;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplateProvider.getIfAvailable(RestTemplate::new);
     }
 
     @Override

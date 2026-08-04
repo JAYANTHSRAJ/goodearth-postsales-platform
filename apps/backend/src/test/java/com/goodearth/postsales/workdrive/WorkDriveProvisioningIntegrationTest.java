@@ -7,6 +7,9 @@ import com.goodearth.postsales.client.service.FloorPlanService;
 import com.goodearth.postsales.document.entity.Document;
 import com.goodearth.postsales.document.entity.DocumentType;
 import com.goodearth.postsales.document.repository.DocumentRepository;
+import com.goodearth.postsales.integration.workdrive.dto.ZohoWorkDriveResponse;
+import com.goodearth.postsales.integration.zoho.ZohoApiClient;
+import com.goodearth.postsales.integration.zoho.ZohoTokenManager;
 import com.goodearth.postsales.project.entity.Project;
 import com.goodearth.postsales.project.repository.ProjectRepository;
 import com.goodearth.postsales.workdrive.entity.WorkDriveFile;
@@ -21,20 +24,24 @@ import com.goodearth.postsales.workflow.entity.WorkflowStatus;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -67,23 +74,50 @@ public class WorkDriveProvisioningIntegrationTest {
     @Autowired
     private FloorPlanService floorPlanService;
 
+    @MockBean
+    private ZohoTokenManager zohoTokenManager;
+
+    @MockBean
+    private ZohoApiClient zohoApiClient;
+
+    @MockBean
+    private RestTemplate restTemplate;
+
     private Workflow testWorkflow;
     private Buyer testBuyer;
 
     @BeforeEach
     public void setUp() {
-        buyerRepository.deleteAll();
-        workflowRepository.deleteAll();
-        projectRepository.deleteAll();
         workDriveFileVersionRepository.deleteAll();
         workDriveFileRepository.deleteAll();
         documentRepository.deleteAll();
         workDriveFolderRepository.deleteAll();
+        workflowRepository.deleteAll();
+        buyerRepository.deleteAll();
+        projectRepository.deleteAll();
+
+        Mockito.when(zohoTokenManager.getAccessToken()).thenReturn("mock-valid-access-token");
+
+        // Mock ZohoApiClient GET responses
+        ZohoWorkDriveResponse emptyResponse = new ZohoWorkDriveResponse();
+        emptyResponse.setData(Collections.emptyList());
+        Mockito.when(zohoApiClient.get(anyString(), eq(ZohoWorkDriveResponse.class))).thenReturn(emptyResponse);
+
+        // Mock RestTemplate postForEntity for folder creation
+        ZohoWorkDriveResponse mockDriveResponse = new ZohoWorkDriveResponse();
+        ZohoWorkDriveResponse.WorkDriveItem item = new ZohoWorkDriveResponse.WorkDriveItem();
+        item.setId("WD-PROVISIONED-FLDR-ID");
+        item.setType("files");
+        mockDriveResponse.setData(Collections.singletonList(item));
+
+        ResponseEntity<ZohoWorkDriveResponse> responseEntity = new ResponseEntity<>(mockDriveResponse, HttpStatus.CREATED);
+        Mockito.doReturn(responseEntity).when(restTemplate).postForEntity(anyString(), any(), eq(ZohoWorkDriveResponse.class));
 
         Buyer buyer = new Buyer();
         buyer.setFullName("Arjun Test");
         buyer.setEmail("arjun.test@goodearth.com");
         buyer.setPhone("+919876543210");
+        buyer.setZohoContactId("ZOHO_CNT_MOTIF16");
         buyer.setZohoDealId("motif16");
         buyer.setUnitName("motif16");
         buyer.setStatus("BOOKING_CONFIRMED");
@@ -107,6 +141,7 @@ public class WorkDriveProvisioningIntegrationTest {
     }
 
     @Test
+    @Transactional
     public void testFullWorkDriveProvisioningSyncAndFloorPlansEndpoint() {
         // 1. Trigger syncFolder to provision WorkDrive folder hierarchy
         workDriveSyncService.syncFolder(testWorkflow.getId());
