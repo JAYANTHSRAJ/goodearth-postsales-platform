@@ -237,3 +237,16 @@ export interface OfferLetterStatusDto {
   dealId?: string;
 }
 
+export interface ZohoSignDto {
+  id?: string;
+  requestId: string;
+  workflowId?: string;
+  documentId?: string;
+  documentName?: string;
+  recipientEmail?: string;
+  recipientName?: string;
+  requestStatus: 'DRAFT' | 'SENT' | 'VIEWED' | 'SIGNED' | 'COMPLETED' | string;
+  signUrl?: string;
+  embedUrl?: string;
+  createdAt?: string;
+}

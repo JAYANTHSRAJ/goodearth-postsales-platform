@@ -11,6 +11,7 @@ import {
   DocumentDownloadResponseDto,
   KycValidationSummaryResponseDto,
   OfferLetterStatusDto,
+  ZohoSignDto,
 } from '../types/kyc';
 
 export const kycService = {
@@ -106,6 +107,26 @@ export const kycService = {
 
   getOfferLetterFileUrl: (dealIdOrBookingId: string): string => {
     const path = `/deals/${dealIdOrBookingId}/offer-letter/file`;
+    const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+    return `${baseUrl}${path}`;
+  },
+
+  getSignRequestForBooking: async (dealIdOrBookingId: string): Promise<ZohoSignDto | null> => {
+    try {
+      const res = await api.get<ZohoSignDto>(`/sign/requests/booking/${dealIdOrBookingId}`);
+      return res;
+    } catch {
+      return null;
+    }
+  },
+
+  getSignRequestStatus: (requestId: string): Promise<ZohoSignDto> => {
+    return api.get<ZohoSignDto>(`/sign/requests/${requestId}/status`);
+  },
+
+  getSignedDocumentDownloadUrl: (requestId: string): string => {
+    const path = `/sign/requests/${requestId}/download`;
     const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
     return `${baseUrl}${path}`;

@@ -51,12 +51,16 @@ app:
     api-url: ${ZOHO_WORKDRIVE_API_URL:https://workdrive.zoho.in/api/v1}
   books:
     api-url: ${ZOHO_BOOKS_API_URL:https://www.zohoapis.in/books/v3}
+  sign:
+    api-url: ${ZOHO_SIGN_API_URL:https://sign.zoho.com/api/v1}
 
 zoho:
   webhook:
     crm-secret: ${ZOHO_WEBHOOK_CRM_SECRET:}
     books-secret: ${ZOHO_WEBHOOK_BOOKS_SECRET:}
     workdrive-secret: ${ZOHO_WEBHOOK_WORKDRIVE_SECRET:}
+    sign-secret: ${ZOHO_WEBHOOK_SIGN_SECRET:}
+
 
 razorpay:
   webhook:

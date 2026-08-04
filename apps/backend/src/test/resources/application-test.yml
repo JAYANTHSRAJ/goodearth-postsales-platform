@@ -44,12 +44,16 @@ app:
     api-url: https://workdrive.zoho.in/api/v1
   books:
     api-url: https://books.zoho.in/api/v3
+  sign:
+    api-url: https://sign.zoho.com/api/v1
 
 zoho:
   webhook:
     crm-secret: mock-crm-secret
     books-secret: mock-books-secret
     workdrive-secret: mock-workdrive-secret
+    sign-secret: mock-sign-secret
+
 
 razorpay:
   webhook:

@@ -45,6 +45,7 @@ public class OfferLetterServiceImpl implements OfferLetterService {
     private final OfferLetterPdfGenerator pdfGenerator;
     private final OfferLetterAuditRepository auditRepository;
     private final EmailService emailService;
+    private final com.goodearth.postsales.sign.service.ZohoSignService zohoSignService;
 
     public OfferLetterServiceImpl(
             ZohoApiClient apiClient,
@@ -53,13 +54,27 @@ public class OfferLetterServiceImpl implements OfferLetterService {
             OfferLetterPdfGenerator pdfGenerator,
             OfferLetterAuditRepository auditRepository,
             EmailService emailService) {
+        this(apiClient, properties, zohoKycSyncService, pdfGenerator, auditRepository, emailService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OfferLetterServiceImpl(
+            ZohoApiClient apiClient,
+            ZohoProperties properties,
+            ZohoKycSyncService zohoKycSyncService,
+            OfferLetterPdfGenerator pdfGenerator,
+            OfferLetterAuditRepository auditRepository,
+            EmailService emailService,
+            @org.springframework.context.annotation.Lazy com.goodearth.postsales.sign.service.ZohoSignService zohoSignService) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.zohoKycSyncService = zohoKycSyncService;
         this.pdfGenerator = pdfGenerator;
         this.auditRepository = auditRepository;
         this.emailService = emailService;
+        this.zohoSignService = zohoSignService;
     }
+
 
     @Override
     public OfferLetterStatusDto getOfferLetterStatus(String dealIdOrBookingId) {
@@ -177,6 +192,24 @@ public class OfferLetterServiceImpl implements OfferLetterService {
         }
 
         String targetRecordId = zohoKycSyncService.resolveDealRecordIdByDealName(cleanIdentifier);
+
+        if (zohoSignService != null) {
+            try {
+                com.goodearth.postsales.sign.dto.ZohoSignCreateRequest signReq = new com.goodearth.postsales.sign.dto.ZohoSignCreateRequest();
+                signReq.setBookingId(cleanIdentifier);
+                signReq.setDealRecordId(targetRecordId);
+
+                signReq.setDocumentName(fileName);
+                signReq.setRecipientEmail(buyerEmail);
+                signReq.setRecipientName(buyerName != null && !buyerName.isBlank() ? buyerName : "Buyer");
+                signReq.setRecipientRole("BUYER");
+                zohoSignService.createSignRequest(signReq);
+                log.info("[SEND_OFFER_LETTER] Successfully initiated Zoho Sign request for document: {} to recipient: {}", fileName, buyerEmail);
+            } catch (Exception ex) {
+                log.warn("[SEND_OFFER_LETTER] Zoho Sign request initiation warning for {}: {}", cleanIdentifier, ex.getMessage());
+            }
+        }
+
         OfferLetterAudit audit = auditRepository.findByBookingId(cleanIdentifier)
                 .orElse(OfferLetterAudit.builder()
                         .bookingId(cleanIdentifier)

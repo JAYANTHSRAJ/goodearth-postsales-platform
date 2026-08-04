@@ -102,7 +102,7 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
               className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
-              {sendOfferLetterLoading ? 'Sending Email...' : isOfferLetterSent ? 'Resend Offer Letter' : 'Send Offer Letter'}
+              {sendOfferLetterLoading ? 'Initiating e-Sign...' : isOfferLetterSent ? 'Resend e-Sign Email' : 'Send for e-Sign'}
             </button>
           )}
           <a
