@@ -38,5 +38,7 @@ public class ZohoWorkDriveResponse {
         private String uploadedBy;
         @JsonProperty("uploaded_at")
         private String uploadedAt;
+        @JsonProperty("team_id")
+        private String teamId;
     }
 }

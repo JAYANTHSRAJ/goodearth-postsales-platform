@@ -153,7 +153,9 @@ public class WorkDriveProvisioningIntegrationTest {
         assertEquals("motif16", folder.getBookingId());
         assertEquals("GoodEarth Motif", folder.getProjectName());
         assertEquals("motif16", folder.getUnitNumber());
+        assertNotNull(folder.getWorkflow(), "Workflow must never be null");
         assertNotNull(folder.getFolderId(), "TestSandbox folder ID must not be null");
+        assertNotNull(folder.getTestSandboxFolderId(), "test_sandbox_folder_id must not be null");
         assertNotNull(folder.getProjectFolderId(), "Project folder ID must not be null");
         assertNotNull(folder.getUnitFolderId(), "Unit folder ID must not be null");
         assertNotNull(folder.getFloorPlansFolderId(), "Floor Plans folder ID must not be null");

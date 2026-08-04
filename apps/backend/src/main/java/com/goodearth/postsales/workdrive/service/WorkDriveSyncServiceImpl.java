@@ -109,25 +109,30 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                     return newFolder;
                 });
 
+        String teamFolderId = resolveTeamFolderId();
         folder.setBookingId(bookingId);
         folder.setProjectName(projectName);
         folder.setUnitNumber(unitNumber);
-        folder.setTeamFolderId(DEFAULT_TEAM_FOLDER_ID);
+        folder.setTeamFolderId(teamFolderId);
 
         try {
             // 1. Check or create 'TestSandbox' folder inside TeamFolder
-            String sandboxFolderId = findOrCreateFolder("TestSandbox", DEFAULT_TEAM_FOLDER_ID, workflowId, bookingId);
+            String sandboxFolderId = findOrCreateFolder("TestSandbox", teamFolderId, workflowId, bookingId);
             folder.setFolderId(sandboxFolderId);
+            folder.setTestSandboxFolderId(sandboxFolderId);
+            log.info("Provisioned TestSandbox Folder ID: {}", sandboxFolderId);
 
             // 2. Check or create '<Project Name>' folder inside TestSandbox
             String projectFolderId = findOrCreateFolder(projectName, sandboxFolderId, workflowId, bookingId);
             folder.setProjectFolderId(projectFolderId);
+            log.info("Provisioned Project Folder '{}' ID: {}", projectName, projectFolderId);
 
             // 3. Check or create '<Unit Number>' folder inside Project folder
             String unitFolderId = findOrCreateFolder(unitNumber, projectFolderId, workflowId, bookingId);
             folder.setUnitFolderId(unitFolderId);
             folder.setBookingFolderId(unitFolderId);
             folder.setFolderName(projectName + " - " + unitNumber);
+            log.info("Provisioned Unit Folder '{}' ID: {}", unitNumber, unitFolderId);
 
             // 4. Create all 9 subfolders inside Unit Folder
             folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, workflowId, bookingId));
@@ -229,10 +234,26 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
         String targetFolderId = folder.getUnitFolderId() != null ? folder.getUnitFolderId() : folder.getFolderId();
         if (targetFolderId == null) {
-            targetFolderId = DEFAULT_TEAM_FOLDER_ID;
+            targetFolderId = resolveTeamFolderId();
         }
 
         traverseAndSyncFolder(targetFolderId, folder, workflow);
+    }
+
+    private String resolveTeamFolderId() {
+        try {
+            String endpoint = properties.getApiUrl() + "/users/me";
+            ZohoWorkDriveResponse response = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
+            if (response != null && response.getData() != null && !response.getData().isEmpty()) {
+                ZohoWorkDriveResponse.WorkDriveItem item = response.getData().get(0);
+                if (item.getAttributes() != null && item.getAttributes().getTeamId() != null) {
+                    return item.getAttributes().getTeamId();
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Could not dynamically resolve team folder ID via /users/me: {}. Utilizing standard configured team folder ID.", ex.getMessage());
+        }
+        return DEFAULT_TEAM_FOLDER_ID;
     }
 
     private void traverseAndSyncFolder(String folderId, WorkDriveFolder folder, Workflow workflow) {

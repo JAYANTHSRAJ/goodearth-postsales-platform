@@ -41,6 +41,9 @@ public class WorkDriveFolder extends BaseEntity {
     @Column(name = "team_folder_id")
     private String teamFolderId;
 
+    @Column(name = "test_sandbox_folder_id")
+    private String testSandboxFolderId;
+
     @Column(name = "project_folder_id")
     private String projectFolderId;
 

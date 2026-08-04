@@ -16,6 +16,7 @@ public class WorkDriveFolderDto {
     private String projectName;
     private String unitNumber;
     private String teamFolderId;
+    private String testSandboxFolderId;
     private String projectFolderId;
     private String unitFolderId;
     private String floorPlansFolderId;

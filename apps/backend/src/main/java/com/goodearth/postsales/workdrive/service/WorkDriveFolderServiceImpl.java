@@ -75,24 +75,8 @@ public class WorkDriveFolderServiceImpl implements WorkDriveFolderService {
             return existingOpt.get();
         }
 
-        log.info("Creating WorkDrive folder hierarchy for Booking ID: {}", effectiveBookingId);
-
-        WorkDriveFolder folder = new WorkDriveFolder();
-        folder.setBookingId(effectiveBookingId);
-        folder.setProjectFolderId("wd_proj_goodearth_root");
-        folder.setBookingFolderId("WD-FLDR-BOOKING-" + effectiveBookingId);
-        folder.setKycSubfolderId("WD-FLDR-KYC-" + effectiveBookingId);
-        folder.setAgreementsSubfolderId("WD-FLDR-AGR-" + effectiveBookingId);
-        folder.setPaymentsSubfolderId("WD-FLDR-PAY-" + effectiveBookingId);
-        folder.setHandoverSubfolderId("WD-FLDR-HND-" + effectiveBookingId);
-
-        folder.setFolderId("WD-FLDR-BOOKING-" + effectiveBookingId);
-        folder.setFolderName("Booking_" + effectiveBookingId + "_Documents");
-
-        WorkDriveFolder savedFolder = folderRepository.save(folder);
-        log.info("Successfully provisioned WorkDrive folder hierarchy for Booking ID: {}", effectiveBookingId);
-
-        return savedFolder;
+        log.error("WorkDrive folder hierarchy not provisioned for Booking ID: {}", effectiveBookingId);
+        throw new CustomException("WorkDrive folder hierarchy not provisioned for Booking ID: " + effectiveBookingId, HttpStatus.NOT_FOUND);
     }
 
     @Override

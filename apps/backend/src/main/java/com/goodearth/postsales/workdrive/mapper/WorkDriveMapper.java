@@ -26,6 +26,7 @@ public class WorkDriveMapper {
         dto.setProjectName(folder.getProjectName());
         dto.setUnitNumber(folder.getUnitNumber());
         dto.setTeamFolderId(folder.getTeamFolderId());
+        dto.setTestSandboxFolderId(folder.getTestSandboxFolderId());
         dto.setProjectFolderId(folder.getProjectFolderId());
         dto.setUnitFolderId(folder.getUnitFolderId());
         dto.setFloorPlansFolderId(folder.getFloorPlansFolderId());
