@@ -125,7 +125,7 @@ public class ZohoSignServiceImpl implements ZohoSignService {
             Map<?, ?> response = apiClient.postMultipart(url, multipartBody, Map.class);
             if (response != null && response.containsKey("requests")) {
                 Map<?, ?> reqData = (Map<?, ?>) response.get("requests");
-                if (reqData.containsKey("request_id")) {
+                if (reqData != null && reqData.containsKey("request_id") && reqData.get("request_id") != null) {
                     generatedRequestId = reqData.get("request_id").toString();
                 }
             }
@@ -235,8 +235,8 @@ public class ZohoSignServiceImpl implements ZohoSignService {
             if (response != null && response.containsKey("requests") && response.get("requests") instanceof List<?> requestsList) {
                 for (Object item : requestsList) {
                     if (item instanceof Map<?, ?> reqMap) {
-                        String desc = reqMap.containsKey("description") ? reqMap.get("description").toString() : "";
-                        String reqId = reqMap.containsKey("request_id") ? reqMap.get("request_id").toString() : null;
+                        String desc = (reqMap.containsKey("description") && reqMap.get("description") != null) ? reqMap.get("description").toString() : "";
+                        String reqId = (reqMap.containsKey("request_id") && reqMap.get("request_id") != null) ? reqMap.get("request_id").toString() : null;
 
                         if (reqId != null && (desc.contains(dealRecordId) || desc.contains(bookingId))) {
                             ZohoSignRequest signEntity = signRequestRepository.findByRequestId(reqId)
@@ -270,18 +270,17 @@ public class ZohoSignServiceImpl implements ZohoSignService {
         try {
             String url = signProperties.getApiUrl() + "/requests/" + requestId;
             Map<?, ?> response = apiClient.get(url, Map.class);
-            if (response != null && response.containsKey("requests")) {
-                Map<?, ?> reqData = (Map<?, ?>) response.get("requests");
-                if (reqData.containsKey("request_status")) {
+            if (response != null && response.containsKey("requests") && response.get("requests") instanceof Map<?, ?> reqData) {
+                if (reqData.containsKey("request_status") && reqData.get("request_status") != null) {
                     status = reqData.get("request_status").toString().toUpperCase();
                 }
-                if (reqData.containsKey("request_name")) {
+                if (reqData.containsKey("request_name") && reqData.get("request_name") != null) {
                     documentName = reqData.get("request_name").toString();
                 }
                 if (reqData.containsKey("actions") && reqData.get("actions") instanceof List<?> actions) {
                     if (!actions.isEmpty() && actions.get(0) instanceof Map<?, ?> action) {
-                        if (action.containsKey("recipient_email")) recipientEmail = action.get("recipient_email").toString();
-                        if (action.containsKey("recipient_name")) recipientName = action.get("recipient_name").toString();
+                        if (action.containsKey("recipient_email") && action.get("recipient_email") != null) recipientEmail = action.get("recipient_email").toString();
+                        if (action.containsKey("recipient_name") && action.get("recipient_name") != null) recipientName = action.get("recipient_name").toString();
 
                         // 1. Extract official recipient signing URL returned by Zoho Sign API
                         if (action.containsKey("action_url") && action.get("action_url") != null) {
@@ -293,7 +292,7 @@ public class ZohoSignServiceImpl implements ZohoSignService {
                         }
 
                         // 2. If action_url was not in GET response, generate embedded signing URL via Zoho embedurl API
-                        if (signUrl == null && action.containsKey("action_id")) {
+                        if (signUrl == null && action.containsKey("action_id") && action.get("action_id") != null) {
                             String actionId = action.get("action_id").toString();
                             signUrl = fetchEmbedSigningUrl(requestId, actionId);
                         }

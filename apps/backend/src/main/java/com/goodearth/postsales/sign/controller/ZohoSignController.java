@@ -47,7 +47,7 @@ public class ZohoSignController {
     }
 
     @GetMapping("/api/v1/sign/requests/{requestId}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'BUYER', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
     public ResponseEntity<ApiResponse<ZohoSignDto>> getSignRequestStatus(@PathVariable String requestId) {
         long startTime = System.currentTimeMillis();
         ZohoSignDto response = signService.getSignRequestStatus(requestId);
@@ -59,7 +59,7 @@ public class ZohoSignController {
     }
 
     @GetMapping("/api/v1/sign/requests/booking/{dealIdOrBookingId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'BUYER', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
     public ResponseEntity<ApiResponse<ZohoSignDto>> getSignRequestForBooking(@PathVariable String dealIdOrBookingId) {
         long startTime = System.currentTimeMillis();
         ZohoSignDto response = signService.getSignRequestForBooking(dealIdOrBookingId);
@@ -71,7 +71,7 @@ public class ZohoSignController {
     }
 
     @GetMapping("/api/v1/sign/requests/workflow/{workflowId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'BUYER', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
     public ResponseEntity<ApiResponse<List<ZohoSignDto>>> getSignRequestsForWorkflow(@PathVariable UUID workflowId) {
         long startTime = System.currentTimeMillis();
         List<ZohoSignDto> response = signService.getSignRequestsForWorkflow(workflowId);
@@ -83,7 +83,7 @@ public class ZohoSignController {
     }
 
     @GetMapping("/api/v1/sign/requests/{requestId}/download")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'BUYER', 'CLIENT', 'DESIGN_STUDIO', 'FINANCE')")
     public ResponseEntity<byte[]> downloadSignedDocument(@PathVariable String requestId) {
         long startTime = System.currentTimeMillis();
         byte[] pdfBytes = signService.downloadSignedDocument(requestId);
