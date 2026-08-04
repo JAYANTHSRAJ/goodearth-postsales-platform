@@ -8,6 +8,7 @@ import com.goodearth.postsales.document.entity.DocumentType;
 import com.goodearth.postsales.document.repository.DocumentRepository;
 import com.goodearth.postsales.integration.workdrive.WorkDriveProperties;
 import com.goodearth.postsales.integration.zoho.ZohoApiClient;
+import com.goodearth.postsales.integration.zoho.ZohoTokenManager;
 import com.goodearth.postsales.integration.workdrive.dto.ZohoWorkDriveResponse;
 import com.goodearth.postsales.workdrive.dto.WorkDriveFileDto;
 import com.goodearth.postsales.workdrive.entity.WorkDriveFile;
@@ -22,12 +23,20 @@ import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import com.goodearth.postsales.common.exception.CustomException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,10 +45,11 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(WorkDriveSyncServiceImpl.class);
 
-    // Default real WorkDrive CRM team folder ID
-    private static final String DEFAULT_WORKDRIVE_TEAM_FOLDER_ID = "5bgp045dc56c28ae545a293f9b444c377db6a";
+    // Connected Zoho WorkDrive CRM TeamFolder ID
+    private static final String DEFAULT_TEAM_FOLDER_ID = "5bgp045dc56c28ae545a293f9b444c377db6a";
 
     private final ZohoApiClient apiClient;
+    private final ZohoTokenManager tokenManager;
     private final WorkDriveProperties properties;
     private final WorkDriveFolderRepository folderRepository;
     private final WorkDriveFileRepository fileRepository;
@@ -48,9 +58,11 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
     private final DocumentRepository documentRepository;
     private final ChangeRequestRepository changeRequestRepository;
     private final WorkDriveMapper mapper;
+    private final RestTemplate restTemplate;
 
     public WorkDriveSyncServiceImpl(
             ZohoApiClient apiClient,
+            ZohoTokenManager tokenManager,
             WorkDriveProperties properties,
             WorkDriveFolderRepository folderRepository,
             WorkDriveFileRepository fileRepository,
@@ -60,6 +72,7 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
             ChangeRequestRepository changeRequestRepository,
             WorkDriveMapper mapper) {
         this.apiClient = apiClient;
+        this.tokenManager = tokenManager;
         this.properties = properties;
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
@@ -68,14 +81,25 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         this.documentRepository = documentRepository;
         this.changeRequestRepository = changeRequestRepository;
         this.mapper = mapper;
+        this.restTemplate = new RestTemplate();
     }
 
     @Override
     @Transactional
     public void syncFolder(UUID workflowId) {
-        log.info("Starting WorkDrive Folder sync for workflow ID: {}", workflowId);
+        log.info("Starting automated WorkDrive folder provisioning for workflow ID: {}", workflowId);
         Workflow workflow = workflowRepository.findById(workflowId)
-                .orElseThrow(() -> new CustomException("Workflow not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("Workflow not found: " + workflowId, HttpStatus.NOT_FOUND));
+
+        String projectName = (workflow.getProject() != null && workflow.getProject().getProjectName() != null)
+                ? workflow.getProject().getProjectName()
+                : "GoodEarth Motif";
+
+        String unitNumber = (workflow.getBuyer() != null && workflow.getBuyer().getZohoDealId() != null)
+                ? workflow.getBuyer().getZohoDealId()
+                : "motif16";
+
+        String bookingId = unitNumber;
 
         WorkDriveFolder folder = folderRepository.findByWorkflowId(workflowId)
                 .orElseGet(() -> {
@@ -84,10 +108,108 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                     return newFolder;
                 });
 
-        folder.setFolderId(DEFAULT_WORKDRIVE_TEAM_FOLDER_ID);
-        folder.setFolderName("Workflow Folder " + (workflow.getBuyer() != null ? workflow.getBuyer().getFullName() : "Client"));
-        folderRepository.save(folder);
-        log.info("Registered real WorkDrive TeamFolder ID ({}) for workflow: {}", DEFAULT_WORKDRIVE_TEAM_FOLDER_ID, workflowId);
+        folder.setBookingId(bookingId);
+        folder.setProjectName(projectName);
+        folder.setUnitNumber(unitNumber);
+        folder.setTeamFolderId(DEFAULT_TEAM_FOLDER_ID);
+
+        try {
+            // 1. Check or create 'TestSandbox' folder inside TeamFolder
+            String sandboxFolderId = findOrCreateFolder("TestSandbox", DEFAULT_TEAM_FOLDER_ID, workflowId, bookingId);
+            folder.setFolderId(sandboxFolderId);
+
+            // 2. Check or create '<Project Name>' folder inside TestSandbox
+            String projectFolderId = findOrCreateFolder(projectName, sandboxFolderId, workflowId, bookingId);
+            folder.setProjectFolderId(projectFolderId);
+
+            // 3. Check or create '<Unit Number>' folder inside Project folder
+            String unitFolderId = findOrCreateFolder(unitNumber, projectFolderId, workflowId, bookingId);
+            folder.setUnitFolderId(unitFolderId);
+            folder.setBookingFolderId(unitFolderId);
+            folder.setFolderName(projectName + " - " + unitNumber);
+
+            // 4. Create all 9 subfolders inside Unit Folder
+            folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, workflowId, bookingId));
+            folder.setArchitecturalFolderId(findOrCreateFolder("Architectural Drawings", unitFolderId, workflowId, bookingId));
+            folder.setStructuralFolderId(findOrCreateFolder("Structural Drawings", unitFolderId, workflowId, bookingId));
+            folder.setElectricalFolderId(findOrCreateFolder("Electrical", unitFolderId, workflowId, bookingId));
+            folder.setPlumbingFolderId(findOrCreateFolder("Plumbing", unitFolderId, workflowId, bookingId));
+            folder.setInteriorFolderId(findOrCreateFolder("Interior", unitFolderId, workflowId, bookingId));
+            folder.setSitePhotosFolderId(findOrCreateFolder("Site Photos", unitFolderId, workflowId, bookingId));
+            folder.setApprovalsFolderId(findOrCreateFolder("Approvals", unitFolderId, workflowId, bookingId));
+            folder.setDocumentsFolderId(findOrCreateFolder("Documents", unitFolderId, workflowId, bookingId));
+
+            folderRepository.save(folder);
+            log.info("Successfully provisioned WorkDrive folder hierarchy for workflow {}: Unit Folder ID: {}", workflowId, unitFolderId);
+        } catch (Exception e) {
+            log.error("WorkDrive folder creation failed - Folder ID: N/A, File ID: N/A, Workflow ID: {}, Booking ID: {}, Error: {}",
+                    workflowId, bookingId, e.getMessage(), e);
+            if (e instanceof CustomException) {
+                throw (CustomException) e;
+            }
+            throw new CustomException("WorkDrive folder creation failed for workflow " + workflowId + ": " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, e);
+        }
+    }
+
+    private String findOrCreateFolder(String folderName, String parentId, UUID workflowId, String bookingId) {
+        String endpoint = properties.getApiUrl() + "/files/" + parentId + "/files";
+        try {
+            ZohoWorkDriveResponse response = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
+            if (response != null && response.getData() != null) {
+                for (ZohoWorkDriveResponse.WorkDriveItem item : response.getData()) {
+                    if (item.getAttributes() != null && folderName.equalsIgnoreCase(item.getAttributes().getName())) {
+                        log.info("Found existing WorkDrive folder '{}' under parent {} -> ID: {}", folderName, parentId, item.getId());
+                        return item.getId();
+                    }
+                }
+            }
+        } catch (RestClientResponseException rce) {
+            log.error("WorkDrive list files error - Parent Folder ID: {}, Workflow ID: {}, Booking ID: {}, Endpoint: {}, HTTP Status: {}",
+                    parentId, workflowId, bookingId, endpoint, rce.getStatusCode());
+        } catch (Exception ex) {
+            log.warn("Listing files in WorkDrive folder {} encountered error, attempting folder creation directly. Endpoint: {}, Error: {}",
+                    parentId, endpoint, ex.getMessage());
+        }
+
+        // Create folder via WorkDrive API POST /files
+        String createUrl = properties.getApiUrl() + "/files";
+        log.info("Creating new WorkDrive folder '{}' under parent ID: {}, Endpoint: {}", folderName, parentId, createUrl);
+
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("name", folderName);
+        attributes.put("parent_id", parentId);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("attributes", attributes);
+        data.put("type", "files");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("data", data);
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + tokenManager.getAccessToken());
+            headers.setContentType(MediaType.valueOf("application/vnd.api+json"));
+            headers.set("Accept", "application/vnd.api+json");
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<ZohoWorkDriveResponse> res = restTemplate.postForEntity(createUrl, entity, ZohoWorkDriveResponse.class);
+
+            if (res.getBody() != null && res.getBody().getData() != null && !res.getBody().getData().isEmpty()) {
+                String newId = res.getBody().getData().get(0).getId();
+                log.info("Created WorkDrive folder '{}' under parent {} -> New ID: {}", folderName, parentId, newId);
+                return newId;
+            }
+        } catch (RestClientResponseException rce) {
+            log.error("WorkDrive folder creation failed - Folder ID: {}, Parent ID: {}, Workflow ID: {}, Booking ID: {}, Endpoint: {}, HTTP Status: {}, Response: {}",
+                    folderName, parentId, workflowId, bookingId, createUrl, rce.getStatusCode(), rce.getResponseBodyAsString());
+            throw new CustomException("WorkDrive folder creation failed for '" + folderName + "' under parent " + parentId + " (Status: " + rce.getStatusCode() + ")", HttpStatus.INTERNAL_SERVER_ERROR, rce);
+        } catch (Exception createEx) {
+            log.error("Failed to create WorkDrive folder '{}' under parent {}: {}", folderName, parentId, createEx.getMessage(), createEx);
+            throw new CustomException("WorkDrive folder creation failed for '" + folderName + "': " + createEx.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, createEx);
+        }
+
+        throw new CustomException("Failed to obtain WorkDrive folder ID for '" + folderName + "'", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Override
@@ -95,32 +217,34 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
     public void syncFiles(UUID workflowId) {
         log.info("Starting WorkDrive Files sync for workflow ID: {}", workflowId);
         Workflow workflow = workflowRepository.findById(workflowId)
-                .orElseThrow(() -> new CustomException("Workflow not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("Workflow not found: " + workflowId, HttpStatus.NOT_FOUND));
 
         WorkDriveFolder folder = folderRepository.findByWorkflowId(workflowId)
                 .orElseGet(() -> {
-                    WorkDriveFolder f = new WorkDriveFolder();
-                    f.setWorkflow(workflow);
-                    f.setFolderId(DEFAULT_WORKDRIVE_TEAM_FOLDER_ID);
-                    f.setFolderName("Workflow Folder");
-                    return folderRepository.save(f);
+                    syncFolder(workflowId);
+                    return folderRepository.findByWorkflowId(workflowId)
+                            .orElseThrow(() -> new CustomException("Failed to register folder for workflow: " + workflowId, HttpStatus.INTERNAL_SERVER_ERROR));
                 });
 
-        String targetFolderId = (folder.getFolderId() != null && !folder.getFolderId().startsWith("wd_folder_"))
-                ? folder.getFolderId()
-                : DEFAULT_WORKDRIVE_TEAM_FOLDER_ID;
+        String targetFolderId = folder.getUnitFolderId() != null ? folder.getUnitFolderId() : folder.getFolderId();
+        if (targetFolderId == null) {
+            targetFolderId = DEFAULT_TEAM_FOLDER_ID;
+        }
 
-        // Recursively traverse folder hierarchy starting from targetFolderId
         traverseAndSyncFolder(targetFolderId, folder, workflow);
     }
 
     private void traverseAndSyncFolder(String folderId, WorkDriveFolder folder, Workflow workflow) {
-        String url = properties.getApiUrl() + "/files/" + folderId + "/files";
+        String endpoint = properties.getApiUrl() + "/files/" + folderId + "/files";
         ZohoWorkDriveResponse crmResponse;
         try {
-            crmResponse = apiClient.get(url, ZohoWorkDriveResponse.class);
+            crmResponse = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
+        } catch (RestClientResponseException rce) {
+            log.error("WorkDrive API Error during traverse - Folder ID: {}, Workflow ID: {}, Booking ID: {}, Endpoint: {}, HTTP Status: {}",
+                    folderId, workflow.getId(), folder.getBookingId(), endpoint, rce.getStatusCode());
+            throw new CustomException("Failed to query WorkDrive API for folder ID: " + folderId + " (Status: " + rce.getStatusCode() + ")", HttpStatus.INTERNAL_SERVER_ERROR, rce);
         } catch (Exception e) {
-            log.error("Failed to query WorkDrive API for folder ID: {}", folderId, e);
+            log.error("Failed to query WorkDrive API for folder ID: {} (Workflow: {}, Booking: {})", folderId, workflow.getId(), folder.getBookingId(), e);
             throw new CustomException("Failed to query WorkDrive API for folder ID: " + folderId + " - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
 
@@ -135,20 +259,19 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                 log.info("Traversing subfolder in WorkDrive: {} (ID: {})", item.getAttributes() != null ? item.getAttributes().getName() : item.getId(), item.getId());
                 traverseAndSyncFolder(item.getId(), folder, workflow);
             } else {
-                syncSingleWorkDriveFile(item, folder, workflow);
+                syncSingleWorkDriveFile(item, folder, workflow, folderId);
             }
         }
     }
 
-    private void syncSingleWorkDriveFile(ZohoWorkDriveResponse.WorkDriveItem item, WorkDriveFolder folder, Workflow workflow) {
+    private void syncSingleWorkDriveFile(ZohoWorkDriveResponse.WorkDriveItem item, WorkDriveFolder folder, Workflow workflow, String parentFolderId) {
         String fileId = item.getId();
         String fileName = item.getAttributes() != null && item.getAttributes().getName() != null ? item.getAttributes().getName() : "Drawing_Plan.pdf";
         String mimeType = item.getResolvedMimeType();
 
-        DocumentType determinedType = determineDocumentType(fileName);
-        log.info("Syncing WorkDrive file: {} (ID: {}, Determined DocumentType: {})", fileName, fileId, determinedType);
+        DocumentType determinedType = determineDocumentType(fileName, parentFolderId, folder);
+        log.info("Syncing WorkDrive file: {} (ID: {}, DocumentType: {}, Parent Folder: {})", fileName, fileId, determinedType, parentFolderId);
 
-        // 1. Check or create Document entity linked with accurate DocumentType
         List<Document> existingDocs = documentRepository.findByWorkflowId(workflow.getId());
         Document doc = existingDocs.stream()
                 .filter(d -> fileId.equalsIgnoreCase(d.getWorkDriveFileId()) || fileName.equalsIgnoreCase(d.getFileName()))
@@ -165,9 +288,10 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                 });
 
         doc.setDocumentType(determinedType);
+        doc.setWorkDriveFileId(fileId);
+        doc.setFileName(fileName);
         documentRepository.save(doc);
 
-        // 2. Check or create WorkDriveFile entity
         WorkDriveFile file = fileRepository.findByFileId(fileId)
                 .orElseGet(() -> {
                     WorkDriveFile newFile = new WorkDriveFile();
@@ -182,18 +306,50 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         file.setDocument(doc);
         WorkDriveFile savedFile = fileRepository.save(file);
 
-        // 3. Sync live versions directly from Zoho WorkDrive API
         syncVersionsForFile(savedFile, item.getAttributes());
     }
 
-    private DocumentType determineDocumentType(String fileName) {
+    private DocumentType determineDocumentType(String fileName, String parentFolderId, WorkDriveFolder folder) {
+        if (parentFolderId != null && folder != null) {
+            if (parentFolderId.equals(folder.getFloorPlansFolderId())) {
+                return DocumentType.DESIGN_PLAN;
+            } else if (parentFolderId.equals(folder.getArchitecturalFolderId())) {
+                return DocumentType.ARCHITECTURAL;
+            } else if (parentFolderId.equals(folder.getStructuralFolderId())) {
+                return DocumentType.STRUCTURAL;
+            } else if (parentFolderId.equals(folder.getElectricalFolderId())) {
+                return DocumentType.ELECTRICAL;
+            } else if (parentFolderId.equals(folder.getPlumbingFolderId())) {
+                return DocumentType.PLUMBING;
+            } else if (parentFolderId.equals(folder.getInteriorFolderId())) {
+                return DocumentType.INTERIOR;
+            } else if (parentFolderId.equals(folder.getDocumentsFolderId())) {
+                return DocumentType.DOCUMENT;
+            } else if (parentFolderId.equals(folder.getSitePhotosFolderId())) {
+                return DocumentType.PHOTO;
+            } else if (parentFolderId.equals(folder.getApprovalsFolderId())) {
+                return DocumentType.APPROVAL;
+            }
+        }
+
         if (fileName == null) return DocumentType.OTHER;
         String lower = fileName.toLowerCase();
-        if (lower.contains("plan") || lower.contains("drawing") || lower.contains("floor") ||
-            lower.contains("elevation") || lower.contains("structural") || lower.contains("electrical") ||
-            lower.contains("plumbing") || lower.contains("interior") || lower.contains("architectural") ||
-            lower.contains("layout") || lower.contains("cad")) {
+        if (lower.contains("plan") || lower.contains("drawing") || lower.contains("floor") || lower.contains("layout") || lower.contains("cad")) {
             return DocumentType.DESIGN_PLAN;
+        } else if (lower.contains("architectural")) {
+            return DocumentType.ARCHITECTURAL;
+        } else if (lower.contains("structural")) {
+            return DocumentType.STRUCTURAL;
+        } else if (lower.contains("electrical")) {
+            return DocumentType.ELECTRICAL;
+        } else if (lower.contains("plumbing")) {
+            return DocumentType.PLUMBING;
+        } else if (lower.contains("interior")) {
+            return DocumentType.INTERIOR;
+        } else if (lower.contains("approval")) {
+            return DocumentType.APPROVAL;
+        } else if (lower.contains("photo")) {
+            return DocumentType.PHOTO;
         } else if (lower.contains("offer") || lower.contains("booking")) {
             return DocumentType.BOOKING_FORM;
         } else if (lower.contains("agreement") || lower.contains("contract")) {
@@ -210,12 +366,16 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
     @Transactional
     public void syncVersions(String fileId) {
         WorkDriveFile file = fileRepository.findByFileId(fileId)
-                .orElseThrow(() -> new CustomException("WorkDrive file not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("WorkDrive file not found: " + fileId, HttpStatus.NOT_FOUND));
 
-        String url = properties.getApiUrl() + "/files/" + fileId + "/versions";
+        String endpoint = properties.getApiUrl() + "/files/" + fileId + "/versions";
         ZohoWorkDriveResponse crmResponse;
         try {
-            crmResponse = apiClient.get(url, ZohoWorkDriveResponse.class);
+            crmResponse = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
+        } catch (RestClientResponseException rce) {
+            log.error("WorkDrive API error fetching versions - File ID: {}, Endpoint: {}, HTTP Status: {}",
+                    fileId, endpoint, rce.getStatusCode());
+            throw new CustomException("Failed to fetch version history from WorkDrive API for file: " + fileId + " (Status: " + rce.getStatusCode() + ")", HttpStatus.INTERNAL_SERVER_ERROR, rce);
         } catch (Exception e) {
             log.error("Failed to fetch version history from Zoho WorkDrive API for file ID: {}", fileId, e);
             throw new CustomException("Failed to fetch version history from WorkDrive API for file: " + fileId + " - " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, e);

@@ -4,12 +4,15 @@ import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
 import com.goodearth.postsales.project.entity.Project;
 import com.goodearth.postsales.project.repository.ProjectRepository;
+import com.goodearth.postsales.workdrive.service.WorkDriveSyncService;
 import com.goodearth.postsales.workflow.dto.WorkflowDto;
 import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.workflow.entity.WorkflowStatus;
 import com.goodearth.postsales.workflow.mapper.WorkflowMapper;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import com.goodearth.postsales.common.exception.CustomException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,20 +25,25 @@ import java.util.stream.Collectors;
 @Service
 public class WorkflowServiceImpl implements WorkflowService {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkflowServiceImpl.class);
+
     private final WorkflowRepository workflowRepository;
     private final BuyerRepository buyerRepository;
     private final ProjectRepository projectRepository;
     private final WorkflowMapper workflowMapper;
+    private final WorkDriveSyncService workDriveSyncService;
 
     public WorkflowServiceImpl(
             WorkflowRepository workflowRepository,
             BuyerRepository buyerRepository,
             ProjectRepository projectRepository,
-            WorkflowMapper workflowMapper) {
+            WorkflowMapper workflowMapper,
+            WorkDriveSyncService workDriveSyncService) {
         this.workflowRepository = workflowRepository;
         this.buyerRepository = buyerRepository;
         this.projectRepository = projectRepository;
         this.workflowMapper = workflowMapper;
+        this.workDriveSyncService = workDriveSyncService;
     }
 
     @Override
@@ -62,6 +70,15 @@ public class WorkflowServiceImpl implements WorkflowService {
         workflow.setStartedAt(LocalDateTime.now());
 
         Workflow savedWorkflow = workflowRepository.save(workflow);
+
+        // Auto-provision WorkDrive folder structure immediately upon Workflow creation
+        try {
+            log.info("Auto-provisioning WorkDrive folders for new workflow: {}", savedWorkflow.getId());
+            workDriveSyncService.syncFolder(savedWorkflow.getId());
+        } catch (Exception ex) {
+            log.warn("Non-fatal WorkDrive folder provisioning warning for workflow {}: {}", savedWorkflow.getId(), ex.getMessage());
+        }
+
         return workflowMapper.toDto(savedWorkflow);
     }
 

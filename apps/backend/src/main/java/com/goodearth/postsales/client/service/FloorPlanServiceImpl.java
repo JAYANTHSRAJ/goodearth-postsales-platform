@@ -4,6 +4,7 @@ import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.client.dto.ClientDrawingSummaryDto;
 import com.goodearth.postsales.client.dto.ClientFloorPlansDto;
 import com.goodearth.postsales.client.mapper.ClientPortalMapper;
+import com.goodearth.postsales.common.exception.CustomException;
 import com.goodearth.postsales.document.entity.DocumentType;
 import com.goodearth.postsales.workdrive.dto.WorkDriveFileVersionDto;
 import com.goodearth.postsales.workdrive.entity.WorkDriveFile;
@@ -15,6 +16,7 @@ import com.goodearth.postsales.workdrive.service.WorkDriveVersionService;
 import com.goodearth.postsales.workflow.entity.Workflow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,19 +61,25 @@ public class FloorPlanServiceImpl implements FloorPlanService {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
         Workflow workflow = helper.getBuyerWorkflow(buyer);
         UUID workflowId = workflow.getId();
+        String bookingId = buyer.getZohoDealId() != null ? buyer.getZohoDealId() : "DEFAULT";
 
         ClientFloorPlansDto floorPlansDto = new ClientFloorPlansDto();
 
-        // 1. Trigger automated WorkDrive sync if folder/files are not synced yet
+        // 1. If synchronization has never been performed, automatically execute syncFolder() followed by syncFiles()
         Optional<WorkDriveFolder> folderOpt = workDriveFolderRepository.findByWorkflowId(workflowId);
         if (folderOpt.isEmpty() || workDriveFileRepository.findByFolderId(folderOpt.get().getId()).isEmpty()) {
             try {
-                log.info("Triggering automated WorkDrive synchronization for workflow: {}", workflowId);
+                log.info("Automatic WorkDrive synchronization triggered for workflow ID: {}, Booking ID: {}", workflowId, bookingId);
                 workDriveSyncService.syncFolder(workflowId);
                 workDriveSyncService.syncFiles(workflowId);
                 folderOpt = workDriveFolderRepository.findByWorkflowId(workflowId);
+            } catch (CustomException ce) {
+                log.error("WorkDrive sync failed for workflow ID: {}, Booking ID: {}, Error: {}", workflowId, bookingId, ce.getMessage());
+                throw ce;
             } catch (Exception syncEx) {
-                log.warn("Automated WorkDrive synchronization warning for workflow {}: {}", workflowId, syncEx.getMessage());
+                log.error("WorkDrive sync encountered unexpected failure - Folder ID: {}, Workflow ID: {}, Booking ID: {}, Error: {}",
+                        folderOpt.map(f -> f.getId().toString()).orElse("N/A"), workflowId, bookingId, syncEx.getMessage(), syncEx);
+                throw new CustomException("WorkDrive sync failed for workflow " + workflowId + ": " + syncEx.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, syncEx);
             }
         }
 
@@ -104,7 +112,7 @@ public class FloorPlanServiceImpl implements FloorPlanService {
             }
         }
 
-        // Return clean empty response if no drawings exist (Mock fallbacks removed)
+        // Return clean empty response if WorkDrive contains no drawings
         floorPlansDto.setAllPreviousVersions(new ArrayList<>());
         floorPlansDto.setRevisionHistory(new ArrayList<>());
         return floorPlansDto;

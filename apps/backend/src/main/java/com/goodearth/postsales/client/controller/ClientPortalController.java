@@ -136,7 +136,7 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
-    @GetMapping("/floorplans")
+    @GetMapping({"/floorplans", "/floor-plans"})
     public ResponseEntity<ApiResponse<ClientFloorPlansDto>> getFloorPlans(
             @AuthenticationPrincipal UserDetails userDetails) {
         ClientFloorPlansDto result = floorPlanService.getFloorPlans(userDetails);

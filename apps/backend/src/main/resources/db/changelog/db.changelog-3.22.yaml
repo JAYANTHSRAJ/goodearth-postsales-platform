@@ -1,0 +1,53 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.22-add-all-workdrive-subfolder-columns
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: floor_plans_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: project_name
+                  type: VARCHAR(255)
+              - column:
+                  name: unit_number
+                  type: VARCHAR(255)
+              - column:
+                  name: team_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: unit_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: floor_plans_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: architectural_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: structural_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: electrical_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: plumbing_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: interior_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: site_photos_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: approvals_folder_id
+                  type: VARCHAR(255)
+              - column:
+                  name: documents_folder_id
+                  type: VARCHAR(255)

@@ -49,6 +49,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final ActivationTokenService activationTokenService;
+    private final com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService;
 
     public ZohoBuyerSyncServiceImpl(
             ZohoApiClient apiClient,
@@ -60,7 +61,8 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             EmailService emailService,
-            ActivationTokenService activationTokenService) {
+            ActivationTokenService activationTokenService,
+            com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.buyerRepository = buyerRepository;
@@ -71,6 +73,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.activationTokenService = activationTokenService;
+        this.workDriveSyncService = workDriveSyncService;
     }
 
     @Override
@@ -367,25 +370,34 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         Stage resolvedStage = stageRepository.findByCode(stageName)
                 .orElseGet(() -> stageRepository.findByCode("BOOKING_CONFIRMED").orElse(null));
 
+        Workflow targetWorkflow;
         if (workflowOpt.isPresent()) {
-            Workflow workflow = workflowOpt.get();
+            targetWorkflow = workflowOpt.get();
             if (resolvedStage != null) {
-                workflow.setCurrentStageId(resolvedStage.getId());
+                targetWorkflow.setCurrentStageId(resolvedStage.getId());
             }
-            workflowRepository.save(workflow);
+            targetWorkflow = workflowRepository.save(targetWorkflow);
             summary.put("workflowsUpdated", (int) summary.get("workflowsUpdated") + 1);
         } else {
-            Workflow workflow = new Workflow();
-            workflow.setBuyer(buyer);
-            workflow.setProject(project);
-            workflow.setStatus(WorkflowStatus.ACTIVE);
-            workflow.setStartedAt(LocalDateTime.now());
+            targetWorkflow = new Workflow();
+            targetWorkflow.setBuyer(buyer);
+            targetWorkflow.setProject(project);
+            targetWorkflow.setStatus(WorkflowStatus.ACTIVE);
+            targetWorkflow.setStartedAt(LocalDateTime.now());
             if (resolvedStage != null) {
-                workflow.setCurrentStageId(resolvedStage.getId());
+                targetWorkflow.setCurrentStageId(resolvedStage.getId());
             }
-            workflowRepository.save(workflow);
+            targetWorkflow = workflowRepository.save(targetWorkflow);
             summary.put("workflowsCreated", (int) summary.get("workflowsCreated") + 1);
             log.info("Created new Workflow for Buyer: {} on Project: {}", email, projectName);
+        }
+
+        // Auto-provision WorkDrive folder hierarchy immediately upon Deal/Booking sync
+        try {
+            log.info("Auto-provisioning WorkDrive folder hierarchy for Deal/Booking workflow ID: {}", targetWorkflow.getId());
+            workDriveSyncService.syncFolder(targetWorkflow.getId());
+        } catch (Exception ex) {
+            log.error("WorkDrive folder auto-provisioning exception for workflow {}: {}", targetWorkflow.getId(), ex.getMessage(), ex);
         }
 
         // 5. Send Welcome Email

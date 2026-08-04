@@ -32,8 +32,47 @@ public class WorkDriveFolder extends BaseEntity {
     @Column(name = "booking_id")
     private String bookingId;
 
+    @Column(name = "project_name")
+    private String projectName;
+
+    @Column(name = "unit_number")
+    private String unitNumber;
+
+    @Column(name = "team_folder_id")
+    private String teamFolderId;
+
     @Column(name = "project_folder_id")
     private String projectFolderId;
+
+    @Column(name = "unit_folder_id")
+    private String unitFolderId;
+
+    @Column(name = "floor_plans_folder_id")
+    private String floorPlansFolderId;
+
+    @Column(name = "architectural_folder_id")
+    private String architecturalFolderId;
+
+    @Column(name = "structural_folder_id")
+    private String structuralFolderId;
+
+    @Column(name = "electrical_folder_id")
+    private String electricalFolderId;
+
+    @Column(name = "plumbing_folder_id")
+    private String plumbingFolderId;
+
+    @Column(name = "interior_folder_id")
+    private String interiorFolderId;
+
+    @Column(name = "site_photos_folder_id")
+    private String sitePhotosFolderId;
+
+    @Column(name = "approvals_folder_id")
+    private String approvalsFolderId;
+
+    @Column(name = "documents_folder_id")
+    private String documentsFolderId;
 
     @Column(name = "booking_folder_id")
     private String bookingFolderId;

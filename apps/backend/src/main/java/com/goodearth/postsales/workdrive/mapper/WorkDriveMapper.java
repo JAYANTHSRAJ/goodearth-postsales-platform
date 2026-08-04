@@ -22,6 +22,23 @@ public class WorkDriveMapper {
         }
         dto.setFolderId(folder.getFolderId());
         dto.setFolderName(folder.getFolderName());
+        dto.setBookingId(folder.getBookingId());
+        dto.setProjectName(folder.getProjectName());
+        dto.setUnitNumber(folder.getUnitNumber());
+        dto.setTeamFolderId(folder.getTeamFolderId());
+        dto.setProjectFolderId(folder.getProjectFolderId());
+        dto.setUnitFolderId(folder.getUnitFolderId());
+        dto.setFloorPlansFolderId(folder.getFloorPlansFolderId());
+        dto.setArchitecturalFolderId(folder.getArchitecturalFolderId());
+        dto.setStructuralFolderId(folder.getStructuralFolderId());
+        dto.setElectricalFolderId(folder.getElectricalFolderId());
+        dto.setPlumbingFolderId(folder.getPlumbingFolderId());
+        dto.setInteriorFolderId(folder.getInteriorFolderId());
+        dto.setSitePhotosFolderId(folder.getSitePhotosFolderId());
+        dto.setApprovalsFolderId(folder.getApprovalsFolderId());
+        dto.setDocumentsFolderId(folder.getDocumentsFolderId());
+        dto.setCreatedAt(folder.getCreatedAt());
+        dto.setUpdatedAt(folder.getUpdatedAt());
         return dto;
     }
 
