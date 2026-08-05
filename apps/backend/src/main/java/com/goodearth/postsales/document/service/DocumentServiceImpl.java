@@ -40,14 +40,21 @@ public class DocumentServiceImpl implements DocumentService {
         if (dto.getWorkflowId() == null) {
             throw new CustomException("Workflow ID is required.", HttpStatus.BAD_REQUEST);
         }
-        if (dto.getWorkDriveFileId() == null || dto.getWorkDriveFileId().trim().isEmpty()) {
-            throw new CustomException("WorkDrive File ID is required.", HttpStatus.BAD_REQUEST);
-        }
         if (dto.getFileName() == null || dto.getFileName().trim().isEmpty()) {
             throw new CustomException("File name is required.", HttpStatus.BAD_REQUEST);
         }
         if (dto.getDocumentType() == null) {
             throw new CustomException("Document type is required.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Context-aware validation for document storage models:
+        // Engineering/Project documents require a valid WorkDrive File ID.
+        // Buyer/KYC documents allow workDriveFileId to be null or empty.
+        boolean isBuyerDoc = isBuyerKycDocumentType(dto.getDocumentType());
+        if (!isBuyerDoc) {
+            if (dto.getWorkDriveFileId() == null || dto.getWorkDriveFileId().trim().isEmpty()) {
+                throw new CustomException("WorkDrive File ID is required for engineering documents.", HttpStatus.BAD_REQUEST);
+            }
         }
 
         Workflow workflow = workflowRepository.findById(dto.getWorkflowId())
@@ -130,5 +137,16 @@ public class DocumentServiceImpl implements DocumentService {
         document.setStatus(status);
         Document savedDoc = documentRepository.save(document);
         return documentMapper.toDto(savedDoc);
+    }
+
+    private boolean isBuyerKycDocumentType(com.goodearth.postsales.document.entity.DocumentType type) {
+        if (type == null) return false;
+        return type == com.goodearth.postsales.document.entity.DocumentType.PAN_CARD
+                || type == com.goodearth.postsales.document.entity.DocumentType.AADHAAR_CARD
+                || type == com.goodearth.postsales.document.entity.DocumentType.PASSPORT
+                || type == com.goodearth.postsales.document.entity.DocumentType.ADDRESS_PROOF
+                || type == com.goodearth.postsales.document.entity.DocumentType.VOTER_ID
+                || type == com.goodearth.postsales.document.entity.DocumentType.BOOKING_FORM
+                || type == com.goodearth.postsales.document.entity.DocumentType.AGREEMENT;
     }
 }

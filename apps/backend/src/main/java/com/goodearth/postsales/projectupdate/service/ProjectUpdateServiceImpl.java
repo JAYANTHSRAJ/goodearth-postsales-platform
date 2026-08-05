@@ -179,10 +179,10 @@ public class ProjectUpdateServiceImpl implements ProjectUpdateService {
                 media.setThumbnailUrl(versionDto.getPreviewUrl()); // Fallback thumbnail
             }
         } else {
-            // Placeholder/mock defaults if WorkDrive has not finished syncing
-            media.setPreviewUrl("https://workdrive.zoho.in/file/preview/" + workdriveFileId);
-            media.setDownloadUrl("https://workdrive.zoho.in/file/download/" + workdriveFileId);
-            media.setThumbnailUrl("https://workdrive.zoho.in/file/preview/" + workdriveFileId);
+            // Default preview/download URLs if WorkDrive has not finished syncing
+            media.setPreviewUrl("https://workdrive.zoho.com/file/preview/" + workdriveFileId);
+            media.setDownloadUrl("https://workdrive.zoho.com/file/download/" + workdriveFileId);
+            media.setThumbnailUrl("https://workdrive.zoho.com/file/preview/" + workdriveFileId);
         }
 
         ProjectUpdateMedia saved = mediaRepository.save(media);

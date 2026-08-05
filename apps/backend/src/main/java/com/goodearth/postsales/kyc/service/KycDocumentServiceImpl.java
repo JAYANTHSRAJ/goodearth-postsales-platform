@@ -109,9 +109,6 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                     size / 1024, maxMb, docType));
         }
 
-        // Provision/ensure WorkDrive folder hierarchy exists for booking
-        WorkDriveFolder bookingFolder = workDriveFolderService.getOrCreateBookingFolder(application.getBookingId());
-
         KycApplicant applicant = kycApplicantRepository.findFirstByKycApplicationIdAndApplicantType(kycApplicationId, applicantType)
                 .orElse(null);
 
@@ -128,7 +125,6 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             newDoc.setDocumentType(docType);
             newDoc.setIsRequired(slotConfig.isRequired());
             newDoc.setStatus(DocumentStatus.ACTIVE);
-            newDoc.setWorkDriveFileId("WD-FILE-" + UUID.randomUUID());
             newDoc.setFileName(fileName);
             document = documentRepository.save(newDoc);
         }
@@ -150,14 +146,10 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         }
 
         String checksumHex = calculateSha256(content);
-        String workDriveFileId = "WD-FILE-" + UUID.randomUUID();
-        String workDrivePermalink = "https://workdrive.zoho.com/file/" + workDriveFileId;
 
         DocumentVersion newVersion = new DocumentVersion();
         newVersion.setDocument(document);
         newVersion.setVersionNumber(nextVersionNumber);
-        newVersion.setWorkDriveFileId(workDriveFileId);
-        newVersion.setWorkDrivePermalink(workDrivePermalink);
         newVersion.setFileName(fileName);
         newVersion.setFileSizeBytes(size);
         newVersion.setMimeType(contentType);
@@ -179,9 +171,6 @@ public class KycDocumentServiceImpl implements KycDocumentService {
                 if (document != null && document.getId() != null) {
                     java.nio.file.Files.write(storageDir.resolve(document.getId().toString()), content);
                 }
-                if (savedVersion.getWorkDriveFileId() != null) {
-                    java.nio.file.Files.write(storageDir.resolve(savedVersion.getWorkDriveFileId()), content);
-                }
             } catch (Exception e) {
                 log.warn("Could not save document binary to local disk for version {}: {}", savedVersion.getId(), e.getMessage());
             }
@@ -202,19 +191,17 @@ public class KycDocumentServiceImpl implements KycDocumentService {
         document.setFileSize(size);
         document.setUploadedBy(uploadedBy != null ? uploadedBy : "CLIENT");
         document.setUploadedAt(LocalDateTime.now());
-        document.setWorkDriveFileId(savedVersion.getWorkDriveFileId());
         documentRepository.saveAndFlush(document);
 
         auditService.logEvent(application, KycAuditEventType.DOCUMENT_UPLOADED, uploadedBy, "CLIENT",
-                String.format("Uploaded %s (%s) version %d to WorkDrive subfolder %s", docType, applicantType, nextVersionNumber, bookingFolder.getKycSubfolderId()),
+                String.format("Uploaded %s (%s) version %d as Zoho CRM Attachment", docType, applicantType, nextVersionNumber),
                 null);
 
-        // Auto-sync uploaded document reference to Zoho CRM Deal
-        zohoKycSyncService.syncDocumentToCrm(application, docType.name(), applicantType.name(), workDriveFileId, workDrivePermalink, "UPLOADED");
+        // Upload buyer document EXCLUSIVELY as native Zoho CRM Attachment
         zohoKycSyncService.syncAttachmentToCrm(application, document, savedVersion, fileName, contentType, content);
 
-        log.info("[DOCUMENT_UPLOAD_TRACE]\nBooking ID: {}\nApplicant Type: {}\nDocument Type: {}\nOriginal Filename: {}\nWorkDrive Folder ID: {}\nWorkDrive File ID: {}\nDatabase Document ID: {}\nVersion: {}\nFile Size: {} bytes\nChecksum: {}\nUpload Status: SUCCESS",
-                application.getBookingId(), applicantType, docType, fileName, bookingFolder.getKycSubfolderId(), workDriveFileId, document.getId(), nextVersionNumber, size, checksumHex);
+        log.info("[DOCUMENT_UPLOAD_TRACE]\nBooking ID: {}\nApplicant Type: {}\nDocument Type: {}\nOriginal Filename: {}\nStorage Type: ZOHO_CRM_ATTACHMENT\nDatabase Document ID: {}\nVersion: {}\nFile Size: {} bytes\nChecksum: {}\nUpload Status: SUCCESS",
+                application.getBookingId(), applicantType, docType, fileName, document.getId(), nextVersionNumber, size, checksumHex);
 
         return DocumentUploadResponseDto.builder()
                 .documentId(document.getId())
@@ -229,30 +216,8 @@ public class KycDocumentServiceImpl implements KycDocumentService {
     @Override
     @Transactional
     public boolean deleteKycDocument(UUID documentId, String actorId) {
-        Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new CustomException("Document not found with ID: " + documentId, HttpStatus.NOT_FOUND));
-
-        KycApplication application = document.getKycApplication();
-        if (application != null &&
-                application.getStatus() != KycApplicationStatus.DRAFT &&
-                application.getStatus() != KycApplicationStatus.ACTION_REQUIRED &&
-                application.getStatus() != KycApplicationStatus.EDIT_ENABLED) {
-            throw new KycInvalidStateTransitionException(application.getStatus().name(), "Delete Document");
-        }
-
-        documentVersionRepository.deleteAll(document.getVersions());
-        documentRepository.delete(document);
-
-        if (application != null) {
-            auditService.logEvent(application, KycAuditEventType.DOCUMENT_DELETED, actorId, "CLIENT",
-                    String.format("Deleted document %s (%s)", document.getDocumentType(), document.getApplicantType()),
-                    null);
-
-            // Sync document deletion status to Zoho CRM Deal
-            zohoKycSyncService.syncDocumentToCrm(application, document.getDocumentType().name(), document.getApplicantType().name(), null, null, "DELETED");
-        }
-
-        return true;
+        log.warn("Attempted file deletion for document ID {} by actor {}. File deletion is disabled in portal.", documentId, actorId);
+        throw new CustomException("File deletion is disabled in the portal. All file management must be performed directly in Zoho CRM or WorkDrive.", HttpStatus.BAD_REQUEST);
     }
 
     @Override
@@ -326,14 +291,6 @@ public class KycDocumentServiceImpl implements KycDocumentService {
             }
         }
 
-        // Attempt downloading directly from WorkDrive if DB & disk are empty
-        if ((binaryContent == null || binaryContent.length == 0) && targetVersion.getWorkDriveFileId() != null && !targetVersion.getWorkDriveFileId().startsWith("WD-FILE-")) {
-            try {
-                binaryContent = zohoApiClient.downloadWorkDriveFile(targetVersion.getWorkDriveFileId());
-            } catch (Exception e) {
-                log.warn("Failed to download binary from WorkDrive for ID {}: {}", targetVersion.getWorkDriveFileId(), e.getMessage());
-            }
-        }
 
         // Fallback to valid minimal PDF if disk/DB/WorkDrive binary does not exist
         if (binaryContent == null || binaryContent.length == 0) {

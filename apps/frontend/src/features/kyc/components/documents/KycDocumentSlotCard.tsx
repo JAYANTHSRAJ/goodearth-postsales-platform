@@ -225,49 +225,11 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
                     className="hidden"
                     accept=".pdf,.png,.jpg,.jpeg"
                   />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmDelete(true)}
-                    className="px-2.5 py-1 rounded-md border border-rose-200 dark:border-rose-900/50 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-1 transition-all"
-                    title="Delete Document"
-                  >
-                    <Trash2 className="w-3 h-3 text-rose-500" />
-                    <span>Delete</span>
-                  </button>
                 </>
               )}
             </div>
           </div>
         )
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showConfirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-800">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Delete Document Version?</h4>
-            <p className="text-xs text-slate-500">
-              Are you sure you want to delete <span className="font-semibold text-slate-800 dark:text-slate-200">{currentVer?.fileName}</span>?
-            </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowConfirmDelete(false)}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 border border-slate-300 dark:border-slate-700 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-xs"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Preview Modal */}

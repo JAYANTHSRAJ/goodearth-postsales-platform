@@ -115,6 +115,6 @@ public class KycDocumentServiceImplUnitTest {
 
         assertNotNull(result);
         assertEquals(mockDoc.getId(), result.getDocumentId());
-        verify(zohoKycSyncService, times(1)).syncDocumentToCrm(any(), any(), any(), any(), any(), eq("UPLOADED"));
+        verify(zohoKycSyncService, times(1)).syncAttachmentToCrm(any(), any(), any(), any(), any(), any());
     }
 }

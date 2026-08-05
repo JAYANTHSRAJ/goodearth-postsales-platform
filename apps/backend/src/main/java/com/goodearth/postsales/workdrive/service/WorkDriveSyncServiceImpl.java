@@ -315,6 +315,20 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         }
     }
 
+    private boolean isBuyerKycDocument(Document doc) {
+        if (doc == null) return false;
+        if (doc.getKycApplication() != null) return true;
+        if (doc.getCategory() == com.goodearth.postsales.document.entity.DocumentCategory.KYC) return true;
+        DocumentType type = doc.getDocumentType();
+        return type == DocumentType.PAN_CARD
+                || type == DocumentType.AADHAAR_CARD
+                || type == DocumentType.PASSPORT
+                || type == DocumentType.ADDRESS_PROOF
+                || type == DocumentType.VOTER_ID
+                || type == DocumentType.BOOKING_FORM
+                || type == DocumentType.AGREEMENT;
+    }
+
     private void syncSingleWorkDriveFile(ZohoWorkDriveResponse.WorkDriveItem item, WorkDriveFolder folder, Workflow workflow, String parentFolderId) {
         String fileId = item.getId();
         String fileName = item.getAttributes() != null && item.getAttributes().getName() != null ? item.getAttributes().getName() : "Drawing_Plan.pdf";
@@ -325,7 +339,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
         List<Document> existingDocs = documentRepository.findByWorkflowId(workflow.getId());
         Document doc = existingDocs.stream()
-                .filter(d -> fileId.equalsIgnoreCase(d.getWorkDriveFileId()) || fileName.equalsIgnoreCase(d.getFileName()))
+                .filter(d -> !isBuyerKycDocument(d))
+                .filter(d -> fileId.equalsIgnoreCase(d.getWorkDriveFileId()))
                 .findFirst()
                 .orElseGet(() -> {
                     Document newDoc = new Document();
@@ -401,16 +416,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
             return DocumentType.APPROVAL;
         } else if (lower.contains("photo")) {
             return DocumentType.PHOTO;
-        } else if (lower.contains("offer") || lower.contains("booking")) {
-            return DocumentType.BOOKING_FORM;
-        } else if (lower.contains("agreement") || lower.contains("contract")) {
-            return DocumentType.AGREEMENT;
-        } else if (lower.contains("invoice")) {
-            return DocumentType.INVOICE;
-        } else if (lower.contains("receipt")) {
-            return DocumentType.RECEIPT;
         }
-        return DocumentType.OTHER;
+        return DocumentType.DOCUMENT;
     }
 
     @Override

@@ -836,7 +836,6 @@ public class KycServiceImpl implements KycService {
             newDoc.setDocumentType(docType);
             newDoc.setIsRequired(slotConfig.isRequired());
             newDoc.setStatus(com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE);
-            newDoc.setWorkDriveFileId("WD-FILE-SLOT-" + UUID.randomUUID());
             newDoc.setFileName(docType.name() + "_" + applicantType.name() + "_SLOT");
             documentRepository.save(newDoc);
         }

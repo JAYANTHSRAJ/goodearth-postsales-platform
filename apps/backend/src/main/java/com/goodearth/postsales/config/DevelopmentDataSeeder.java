@@ -306,8 +306,8 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
                         versionHist.setVersion(ver);
                         versionHist.setFileName(doc.getFileName().replace("Rev_" + doc.getVersion(), "Rev_" + ver).replace("Final", "Rev_" + ver));
                         versionHist.setMimeType(doc.getMimeType());
-                        versionHist.setPreviewUrl("https://workdrive.zoho.in/file/preview/" + file.getFileId());
-                        versionHist.setDownloadUrl("https://workdrive.zoho.in/file/download/" + file.getFileId());
+                        versionHist.setPreviewUrl("https://workdrive.zoho.com/file/preview/" + file.getFileId());
+                        versionHist.setDownloadUrl("https://workdrive.zoho.com/file/download/" + file.getFileId());
                         versionHist.setUploadedBy(doc.getUploadedBy());
                         if (versionHist.getUploadedAt() == null) {
                             versionHist.setUploadedAt(doc.getUploadedAt().minusDays((long) (doc.getVersion() - ver) * 15));
@@ -321,8 +321,8 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
                     versionLatest.setVersion(doc.getVersion());
                     versionLatest.setFileName(doc.getFileName());
                     versionLatest.setMimeType(doc.getMimeType());
-                    versionLatest.setPreviewUrl("https://workdrive.zoho.in/file/preview/" + file.getFileId());
-                    versionLatest.setDownloadUrl("https://workdrive.zoho.in/file/download/" + file.getFileId());
+                    versionLatest.setPreviewUrl("https://workdrive.zoho.com/file/preview/" + file.getFileId());
+                    versionLatest.setDownloadUrl("https://workdrive.zoho.com/file/download/" + file.getFileId());
                     versionLatest.setUploadedBy(doc.getUploadedBy());
                     if (versionLatest.getUploadedAt() == null) {
                         versionLatest.setUploadedAt(doc.getUploadedAt());
@@ -335,8 +335,8 @@ public class DevelopmentDataSeeder implements CommandLineRunner {
                     versionSingle.setVersion(1);
                     versionSingle.setFileName(doc.getFileName());
                     versionSingle.setMimeType(doc.getMimeType());
-                    versionSingle.setPreviewUrl("https://workdrive.zoho.in/file/preview/" + file.getFileId());
-                    versionSingle.setDownloadUrl("https://workdrive.zoho.in/file/download/" + file.getFileId());
+                    versionSingle.setPreviewUrl("https://workdrive.zoho.com/file/preview/" + file.getFileId());
+                    versionSingle.setDownloadUrl("https://workdrive.zoho.com/file/download/" + file.getFileId());
                     versionSingle.setUploadedBy(doc.getUploadedBy());
                     if (versionSingle.getUploadedAt() == null) {
                         versionSingle.setUploadedAt(doc.getUploadedAt());

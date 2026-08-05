@@ -965,7 +965,27 @@ public class ZohoKycSyncServiceImpl implements ZohoKycSyncService {
         for (DocumentVersion ver : failedVersions) {
             if (Boolean.TRUE.equals(ver.getIsCurrent()) && ver.getDocument() != null && ver.getDocument().getKycApplication() != null) {
                 try {
-                    byte[] content = ("Retried document binary for version " + ver.getVersionNumber() + " - " + ver.getFileName()).getBytes(StandardCharsets.UTF_8);
+                    byte[] content = ver.getFileData();
+                    if (content == null || content.length == 0) {
+                        try {
+                            java.nio.file.Path storageDir = java.nio.file.Paths.get("uploads", "documents");
+                            java.nio.file.Path diskVer = storageDir.resolve(ver.getId().toString());
+                            java.nio.file.Path diskDoc = ver.getDocument().getId() != null ? storageDir.resolve(ver.getDocument().getId().toString()) : null;
+                            if (java.nio.file.Files.exists(diskVer)) {
+                                content = java.nio.file.Files.readAllBytes(diskVer);
+                            } else if (diskDoc != null && java.nio.file.Files.exists(diskDoc)) {
+                                content = java.nio.file.Files.readAllBytes(diskDoc);
+                            }
+                        } catch (Exception e) {
+                            log.warn("[ZOHO_ATTACHMENT_RETRY_WARN] Could not read file binary from disk for version ID {}: {}", ver.getId(), e.getMessage());
+                        }
+                    }
+
+                    if (content == null || content.length == 0) {
+                        log.warn("[ZOHO_ATTACHMENT_RETRY_SKIP] No valid binary content available for version ID {}. Skipping retry.", ver.getId());
+                        continue;
+                    }
+
                     syncAttachmentToCrm(
                             ver.getDocument().getKycApplication(),
                             ver.getDocument(),

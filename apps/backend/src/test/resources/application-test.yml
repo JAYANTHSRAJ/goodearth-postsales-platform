@@ -41,7 +41,7 @@ app:
     sync:
       enabled: false
   workdrive:
-    api-url: https://workdrive.zoho.in/api/v1
+    api-url: https://workdrive.zoho.com/api/v1
   books:
     api-url: https://books.zoho.in/api/v3
   sign:
