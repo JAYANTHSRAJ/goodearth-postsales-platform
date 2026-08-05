@@ -77,9 +77,9 @@ public class ZohoProjectSyncServiceImpl implements ZohoProjectSyncService {
                 Project existingProject = existingProjectOpt.get();
                 boolean changed = false;
 
-                String dealName = crmDeal.getDealName() != null ? crmDeal.getDealName() : "Unnamed Deal";
-                if (!dealName.equals(existingProject.getProjectName())) {
-                    existingProject.setProjectName(dealName);
+                String projectName = crmDeal.getProjectName() != null ? crmDeal.getProjectName() : "Unnamed Project";
+                if (!projectName.equals(existingProject.getProjectName())) {
+                    existingProject.setProjectName(projectName);
                     changed = true;
                 }
 

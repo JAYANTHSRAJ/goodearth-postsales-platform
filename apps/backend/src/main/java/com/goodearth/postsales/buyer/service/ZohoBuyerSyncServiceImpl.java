@@ -283,8 +283,11 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyer.setLastSyncAt(LocalDateTime.now());
             buyer.setCoApplicantName(crmDeal.getResolvedCoApplicantName() != null 
                     ? crmDeal.getResolvedCoApplicantName() : buyer.getCoApplicantName());
-            buyer.setUnitName(crmDeal.getUnitName() != null && crmDeal.getUnitName().getName() != null 
-                    ? crmDeal.getUnitName().getName() : buyer.getUnitName());
+            String resolvedUnit = crmDeal.getUnitName() != null ? crmDeal.getUnitName().getName() : null;
+            if (resolvedUnit == null || resolvedUnit.isBlank()) {
+                resolvedUnit = crmDeal.getDealName();
+            }
+            buyer.setUnitName(resolvedUnit);
             log.info("Saving Buyer entity for email: {}", email);
             buyerRepository.save(buyer);
             summary.put("buyersUpdated", (int) summary.get("buyersUpdated") + 1);
@@ -303,7 +306,12 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyer.setLastSyncAt(LocalDateTime.now());
             buyer.setSyncStatus("PENDING");
             buyer.setCoApplicantName(crmDeal.getResolvedCoApplicantName());
-            buyer.setUnitName(crmDeal.getUnitName() != null ? crmDeal.getUnitName().getName() : null);
+            
+            String resolvedUnit = crmDeal.getUnitName() != null ? crmDeal.getUnitName().getName() : null;
+            if (resolvedUnit == null || resolvedUnit.isBlank()) {
+                resolvedUnit = crmDeal.getDealName();
+            }
+            buyer.setUnitName(resolvedUnit);
             log.info("Saving Buyer entity for email: {}", email);
             buyerRepository.save(buyer);
             summary.put("buyersCreated", (int) summary.get("buyersCreated") + 1);
@@ -313,24 +321,19 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         log.info("[TRACE_IDENTIFIER]\nStage: Webhook / Zoho Deal Sync -> processSingleDeal()\nBuyer Email: {}\nBuyer ID: {}\nUnit Name: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
                 email, buyer.getId(), buyer.getUnitName(), crmDeal.getDealName(), dealId);
 
-        // 3. Project Creation/Lookup
-        String projectName = crmDeal.getDealName();
-        if (projectName == null || projectName.trim().isEmpty()) {
-            projectName = crmDeal.getProjectName();
+        // 3. Project Creation/Lookup (MANDATORY: MUST come from Project_Name, NOT Deal_Name!)
+        String projectName = crmDeal.getProjectName();
+        if (projectName == null || projectName.isBlank()) {
+            throw new CustomException("Cannot sync deal ID " + dealId + ": Project Site Name is null or blank in Zoho CRM", HttpStatus.BAD_REQUEST);
         }
+        projectName = projectName.trim();
+
         String projectCode = crmDeal.getProjectCode();
         if (projectCode == null || projectCode.trim().isEmpty()) {
-            if (projectName != null) {
-                projectCode = projectName.toUpperCase().replaceAll("[^A-Z]", "");
-                if (projectCode.length() > 5) {
-                    projectCode = projectCode.substring(0, 5);
-                }
-            } else {
-                projectCode = "DEAL";
+            projectCode = projectName.toUpperCase().replaceAll("[^A-Z]", "");
+            if (projectCode.length() > 5) {
+                projectCode = projectCode.substring(0, 5);
             }
-        }
-        if (projectName == null || projectName.trim().isEmpty()) {
-            projectName = "Project " + projectCode;
         }
 
         String location = crmDeal.getLocation();
@@ -394,7 +397,9 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
 
         // Auto-provision WorkDrive folder hierarchy immediately upon Deal/Booking unit sync
         try {
-            String unitName = (buyer.getUnitName() != null && !buyer.getUnitName().isBlank()) ? buyer.getUnitName() : buyer.getZohoDealId();
+            String unitName = (buyer.getUnitName() != null && !buyer.getUnitName().isBlank()) 
+                    ? buyer.getUnitName() 
+                    : (crmDeal.getDealName() != null ? crmDeal.getDealName() : dealId);
             if (unitName != null && !unitName.isBlank() && project.getProjectName() != null) {
                 log.info("Auto-provisioning WorkDrive unit folder for Project '{}', Unit '{}'", project.getProjectName(), unitName);
                 com.goodearth.postsales.workdrive.entity.WorkDriveFolder wdFolder = workDriveSyncService.syncUnitFolder(project.getProjectName(), unitName);

@@ -13,7 +13,7 @@ public class ProjectMapper {
         }
         Project project = new Project();
         project.setZohoDealId(crmDeal.getId());
-        project.setProjectName(crmDeal.getDealName() != null ? crmDeal.getDealName() : "Unnamed Deal");
+        project.setProjectName(crmDeal.getProjectName() != null ? crmDeal.getProjectName() : "Unnamed Project");
         project.setProjectCode(crmDeal.getProjectCode());
         project.setLocation(crmDeal.getLocation());
         project.setStatus(crmDeal.getStage());

@@ -18,6 +18,12 @@ public class ZohoProjectResponse {
         @JsonProperty("Deal_Name")
         private String dealName;
         
+        @JsonProperty("Project_Name")
+        private String rawProjectName;
+
+        @JsonProperty("Project_Site_Name")
+        private String rawProjectSiteName;
+
         @JsonProperty("Project_Code")
         private String projectCode;
         
@@ -26,5 +32,15 @@ public class ZohoProjectResponse {
         
         @JsonProperty("Stage")
         private String stage;
+
+        public String getProjectName() {
+            if (rawProjectName != null && !rawProjectName.trim().isEmpty()) {
+                return rawProjectName.trim();
+            }
+            if (rawProjectSiteName != null && !rawProjectSiteName.trim().isEmpty()) {
+                return rawProjectSiteName.trim();
+            }
+            return dealName;
+        }
     }
 }
