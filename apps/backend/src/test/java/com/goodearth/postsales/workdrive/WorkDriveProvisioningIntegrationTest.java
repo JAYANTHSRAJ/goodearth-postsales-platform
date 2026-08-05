@@ -28,6 +28,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -98,20 +99,46 @@ public class WorkDriveProvisioningIntegrationTest {
 
         Mockito.when(zohoTokenManager.getAccessToken()).thenReturn("mock-valid-access-token");
 
-        // Mock ZohoApiClient GET responses
-        ZohoWorkDriveResponse emptyResponse = new ZohoWorkDriveResponse();
-        emptyResponse.setData(Collections.emptyList());
-        Mockito.when(zohoApiClient.get(anyString(), eq(ZohoWorkDriveResponse.class))).thenReturn(emptyResponse);
+        // Dynamic mock file system mapping parentId -> list of items
+        Map<String, List<ZohoWorkDriveResponse.WorkDriveItem>> mockDriveFileSystem = new HashMap<>();
 
-        // Mock RestTemplate postForEntity for folder creation
-        ZohoWorkDriveResponse mockDriveResponse = new ZohoWorkDriveResponse();
-        ZohoWorkDriveResponse.WorkDriveItem item = new ZohoWorkDriveResponse.WorkDriveItem();
-        item.setId("WD-PROVISIONED-FLDR-ID");
-        item.setType("files");
-        mockDriveResponse.setData(Collections.singletonList(item));
+        Mockito.when(zohoApiClient.get(anyString(), eq(ZohoWorkDriveResponse.class)))
+                .thenAnswer(invocation -> {
+                    String url = invocation.getArgument(0);
+                    ZohoWorkDriveResponse response = new ZohoWorkDriveResponse();
+                    if (url.contains("/files/") && url.endsWith("/files")) {
+                        String parentId = url.substring(url.indexOf("/files/") + 7, url.lastIndexOf("/files"));
+                        response.setData(mockDriveFileSystem.getOrDefault(parentId, Collections.emptyList()));
+                    } else {
+                        response.setData(Collections.emptyList());
+                    }
+                    return response;
+                });
 
-        ResponseEntity<ZohoWorkDriveResponse> responseEntity = new ResponseEntity<>(mockDriveResponse, HttpStatus.CREATED);
-        Mockito.doReturn(responseEntity).when(restTemplate).postForEntity(anyString(), any(), eq(ZohoWorkDriveResponse.class));
+        // Mock RestTemplate postForEntity for folder creation with dynamic ID and file system registration
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(ZohoWorkDriveResponse.class)))
+                .thenAnswer(invocation -> {
+                    HttpEntity<Map<String, Object>> entity = invocation.getArgument(1);
+                    Map<String, Object> body = entity.getBody();
+                    Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    Map<String, Object> attributes = (Map<String, Object>) data.get("attributes");
+                    String folderName = (String) attributes.get("name");
+                    String parentId = (String) attributes.get("parent_id");
+
+                    String newId = "WD-FLDR-" + UUID.randomUUID();
+                    ZohoWorkDriveResponse.WorkDriveItem item = new ZohoWorkDriveResponse.WorkDriveItem();
+                    item.setId(newId);
+                    item.setType("files");
+                    ZohoWorkDriveResponse.WorkDriveAttributes attrs = new ZohoWorkDriveResponse.WorkDriveAttributes();
+                    attrs.setName(folderName);
+                    item.setAttributes(attrs);
+
+                    mockDriveFileSystem.computeIfAbsent(parentId, k -> new ArrayList<>()).add(item);
+
+                    ZohoWorkDriveResponse mockDriveResponse = new ZohoWorkDriveResponse();
+                    mockDriveResponse.setData(Collections.singletonList(item));
+                    return new ResponseEntity<>(mockDriveResponse, HttpStatus.CREATED);
+                });
 
         Buyer buyer = new Buyer();
         buyer.setFullName("Arjun Test");
@@ -275,7 +302,86 @@ public class WorkDriveProvisioningIntegrationTest {
 
         assertNotNull(realFolderId, "REAL folder ID must not be null");
         assertNotNull(parentId, "parent_id must not be null");
-        assertEquals("5bgp045dc56c28ae545a293f9b444c377db6a", parentId, "Parent ID must match resolved Team Folder ID");
+        assertEquals("6wbga105d85b36926403d8edcbbaaf29c7583", parentId, "Parent ID must match resolved Team Folder ID");
         assertEquals(realFolderId, folder.getFolderId());
     }
+
+    @Test
+    @Transactional
+    public void testMultiProjectAndMultiUnitProvisioningNoDuplicates() {
+        // 1. Setup Project 1 (GoodEarth Motif) and Unit 1 (Motif-16)
+        Project project1 = new Project();
+        project1.setProjectName("GoodEarth Motif");
+        project1.setProjectCode("MOTIF");
+        project1.setZohoDealId("DEAL_MOTIF_PROJ1");
+        project1 = projectRepository.save(project1);
+
+        Buyer buyer1 = new Buyer();
+        buyer1.setFullName("Buyer Motif 16");
+        buyer1.setEmail("motif16@goodearth.com");
+        buyer1.setZohoContactId("CNT_MOTIF_16");
+        buyer1.setZohoDealId("Motif-16");
+        buyer1 = buyerRepository.save(buyer1);
+
+        Workflow wf1 = new Workflow();
+        wf1.setProject(project1);
+        wf1.setBuyer(buyer1);
+        wf1.setStatus(WorkflowStatus.ACTIVE);
+        wf1 = workflowRepository.save(wf1);
+
+        workDriveSyncService.syncFolder(wf1.getId());
+
+        WorkDriveFolder folder1 = workDriveFolderRepository.findByWorkflowId(wf1.getId()).orElseThrow();
+        assertEquals("6wbga105d85b36926403d8edcbbaaf29c7583", folder1.getTestSandboxFolderId());
+        assertNotNull(folder1.getProjectFolderId());
+        assertNotNull(folder1.getUnitFolderId());
+
+        // 2. Setup Unit 2 (Motif-17) under Project 1 (GoodEarth Motif)
+        Buyer buyer2 = new Buyer();
+        buyer2.setFullName("Buyer Motif 17");
+        buyer2.setEmail("motif17@goodearth.com");
+        buyer2.setZohoContactId("CNT_MOTIF_17");
+        buyer2.setZohoDealId("Motif-17");
+        buyer2 = buyerRepository.save(buyer2);
+
+        Workflow wf2 = new Workflow();
+        wf2.setProject(project1);
+        wf2.setBuyer(buyer2);
+        wf2.setStatus(WorkflowStatus.ACTIVE);
+        wf2 = workflowRepository.save(wf2);
+
+        workDriveSyncService.syncFolder(wf2.getId());
+
+        WorkDriveFolder folder2 = workDriveFolderRepository.findByWorkflowId(wf2.getId()).orElseThrow();
+        // Project folder ID for Unit 17 must equal Project folder ID for Unit 16 (reused, no duplication)
+        assertEquals(folder1.getProjectFolderId(), folder2.getProjectFolderId(), "Project folder must be reused for second unit under same project");
+
+        // 3. Setup Project 2 (GoodEarth Malhar) and Unit 1 (Malhar-01)
+        Project project2 = new Project();
+        project2.setProjectName("GoodEarth Malhar");
+        project2.setProjectCode("MALHAR");
+        project2.setZohoDealId("DEAL_MALHAR_PROJ2");
+        project2 = projectRepository.save(project2);
+
+        Buyer buyer3 = new Buyer();
+        buyer3.setFullName("Buyer Malhar 01");
+        buyer3.setEmail("malhar01@goodearth.com");
+        buyer3.setZohoContactId("CNT_MALHAR_01");
+        buyer3.setZohoDealId("Malhar-01");
+        buyer3 = buyerRepository.save(buyer3);
+
+        Workflow wf3 = new Workflow();
+        wf3.setProject(project2);
+        wf3.setBuyer(buyer3);
+        wf3.setStatus(WorkflowStatus.ACTIVE);
+        wf3 = workflowRepository.save(wf3);
+
+        workDriveSyncService.syncFolder(wf3.getId());
+
+        WorkDriveFolder folder3 = workDriveFolderRepository.findByWorkflowId(wf3.getId()).orElseThrow();
+        assertEquals("6wbga105d85b36926403d8edcbbaaf29c7583", folder3.getTestSandboxFolderId(), "Root must remain TestSandbox Team Folder");
+        assertNotNull(folder3.getProjectFolderId());
+        assertNotEquals(folder1.getProjectFolderId(), folder3.getProjectFolderId(), "Different projects must have different project folder IDs");
+    }
 }
+

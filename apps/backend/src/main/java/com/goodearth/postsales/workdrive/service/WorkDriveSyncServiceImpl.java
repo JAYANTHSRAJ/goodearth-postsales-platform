@@ -45,8 +45,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(WorkDriveSyncServiceImpl.class);
 
-    // Connected Zoho WorkDrive CRM TeamFolder ID
-    private static final String DEFAULT_TEAM_FOLDER_ID = "5bgp045dc56c28ae545a293f9b444c377db6a";
+    // TestSandbox WorkDrive TeamFolder ID
+    private static final String DEFAULT_TEAM_FOLDER_ID = "6wbga105d85b36926403d8edcbbaaf29c7583";
 
     private final ZohoApiClient apiClient;
     private final ZohoTokenManager tokenManager;
@@ -116,20 +116,17 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         folder.setTeamFolderId(teamFolderId);
 
         try {
-            // 1. Check or create 'TestSandbox' folder inside TeamFolder
-            log.info("Creating TestSandbox under parent: {}", teamFolderId);
-            String sandboxFolderId = findOrCreateFolder("TestSandbox", teamFolderId, workflowId, bookingId);
-            folder.setFolderId(sandboxFolderId);
-            folder.setTestSandboxFolderId(sandboxFolderId);
-            log.info("Provisioned TestSandbox Folder ID: {}", sandboxFolderId);
+            // Root is TestSandbox Team Folder
+            folder.setFolderId(teamFolderId);
+            folder.setTestSandboxFolderId(teamFolderId);
 
-            // 2. Check or create '<Project Name>' folder inside TestSandbox
+            // 1. Check or create '<Project Name>' folder under TestSandbox
             log.info("Creating Project folder '{}' under TestSandbox", projectName);
-            String projectFolderId = findOrCreateFolder(projectName, sandboxFolderId, workflowId, bookingId);
+            String projectFolderId = findOrCreateFolder(projectName, teamFolderId, workflowId, bookingId);
             folder.setProjectFolderId(projectFolderId);
             log.info("Provisioned Project Folder '{}' ID: {}", projectName, projectFolderId);
 
-            // 3. Check or create '<Unit Number>' folder inside Project folder
+            // 2. Check or create '<Unit Number>' folder inside Project folder
             log.info("Creating Unit folder '{}' under Project", unitNumber);
             String unitFolderId = findOrCreateFolder(unitNumber, projectFolderId, workflowId, bookingId);
             folder.setUnitFolderId(unitFolderId);
@@ -261,7 +258,7 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                         if (tfResponse != null && tfResponse.getData() != null && !tfResponse.getData().isEmpty()) {
                             for (ZohoWorkDriveResponse.WorkDriveItem item : tfResponse.getData()) {
                                 String name = item.getAttributes() != null ? item.getAttributes().getName() : "";
-                                if ("Zoho CRM - WorkDrive".equalsIgnoreCase(name) || "TestSandbox".equalsIgnoreCase(name)) {
+                                if ("TestSandbox".equalsIgnoreCase(name)) {
                                     log.info("Resolved Team Folder ID: {} (Team Folder Name: '{}')", item.getId(), name);
                                     return item.getId();
                                 }

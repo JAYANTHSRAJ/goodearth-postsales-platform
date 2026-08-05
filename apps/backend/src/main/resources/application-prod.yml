@@ -49,7 +49,7 @@ app:
     crm-api-url: ${ZOHO_CRM_API_URL:https://crmsandbox.zoho.in/crm/v2}
   workdrive:
     api-url: ${ZOHO_WORKDRIVE_API_URL:https://workdrive.zoho.com/api/v1}
-    team-folder-id: ${ZOHO_WORKDRIVE_TEAM_FOLDER_ID:}
+    team-folder-id: ${ZOHO_WORKDRIVE_TEAM_FOLDER_ID:6wbga105d85b36926403d8edcbbaaf29c7583}
   books:
     api-url: ${ZOHO_BOOKS_API_URL:https://www.zohoapis.in/books/v3}
   sign:
