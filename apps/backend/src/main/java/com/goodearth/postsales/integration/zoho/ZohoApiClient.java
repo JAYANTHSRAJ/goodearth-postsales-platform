@@ -230,8 +230,12 @@ public class ZohoApiClient {
             String uriString = request.getURI().toString().toLowerCase();
             
             // WorkDrive uses Bearer scheme; CRM/Books use Zoho-oauthtoken scheme
-            String authHeader = uriString.contains("workdrive") ? "Bearer " + token : "Zoho-oauthtoken " + token;
-            request.getHeaders().set("Authorization", authHeader);
+            if (uriString.contains("workdrive")) {
+                request.getHeaders().set("Authorization", "Bearer " + token);
+                request.getHeaders().set("Accept", "application/vnd.api+json");
+            } else {
+                request.getHeaders().set("Authorization", "Zoho-oauthtoken " + token);
+            }
 
             int attempt = 0;
             long backoffMs = 500;
