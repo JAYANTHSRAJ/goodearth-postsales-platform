@@ -88,89 +88,85 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
     @Override
     @Transactional
+    public String syncProjectFolder(String projectName) {
+        if (projectName == null || projectName.isBlank()) {
+            throw new CustomException("Cannot provision WorkDrive Project folder: Project Name is required", HttpStatus.BAD_REQUEST);
+        }
+        String trimmedProjectName = projectName.trim();
+        String teamFolderId = resolveTeamFolderId();
+        log.info("Provisioning WorkDrive Project folder '{}' under TestSandbox Team Folder {}", trimmedProjectName, teamFolderId);
+        return findOrCreateFolder(trimmedProjectName, teamFolderId, null, trimmedProjectName);
+    }
+
+    @Override
+    @Transactional
+    public WorkDriveFolder syncUnitFolder(String projectName, String unitName) {
+        if (projectName == null || projectName.isBlank()) {
+            throw new CustomException("Cannot provision WorkDrive Unit folder: Project Name is required", HttpStatus.BAD_REQUEST);
+        }
+        if (unitName == null || unitName.isBlank()) {
+            throw new CustomException("Cannot provision WorkDrive Unit folder: Unit Name is required", HttpStatus.BAD_REQUEST);
+        }
+        String trimmedProjectName = projectName.trim();
+        String trimmedUnitName = unitName.trim();
+
+        String projectFolderId = syncProjectFolder(trimmedProjectName);
+
+        WorkDriveFolder folder = folderRepository.findByUnitNumberAndProjectName(trimmedUnitName, trimmedProjectName)
+                .orElseGet(() -> folderRepository.findByBookingId(trimmedUnitName)
+                        .orElseGet(() -> {
+                            WorkDriveFolder newFolder = new WorkDriveFolder();
+                            newFolder.setUnitNumber(trimmedUnitName);
+                            newFolder.setProjectName(trimmedProjectName);
+                            return newFolder;
+                        }));
+
+        String teamFolderId = resolveTeamFolderId();
+        folder.setBookingId(trimmedUnitName);
+        folder.setProjectName(trimmedProjectName);
+        folder.setUnitNumber(trimmedUnitName);
+        folder.setTeamFolderId(teamFolderId);
+        folder.setFolderId(teamFolderId);
+        folder.setTestSandboxFolderId(teamFolderId);
+        folder.setProjectFolderId(projectFolderId);
+
+        String unitFolderId = findOrCreateFolder(trimmedUnitName, projectFolderId, null, trimmedUnitName);
+        folder.setUnitFolderId(unitFolderId);
+        folder.setBookingFolderId(unitFolderId);
+        folder.setFolderName(trimmedProjectName + " - " + trimmedUnitName);
+
+        folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, null, trimmedUnitName));
+        folder.setArchitecturalFolderId(findOrCreateFolder("Architectural Drawings", unitFolderId, null, trimmedUnitName));
+        folder.setStructuralFolderId(findOrCreateFolder("Structural Drawings", unitFolderId, null, trimmedUnitName));
+        folder.setElectricalFolderId(findOrCreateFolder("Electrical", unitFolderId, null, trimmedUnitName));
+        folder.setPlumbingFolderId(findOrCreateFolder("Plumbing", unitFolderId, null, trimmedUnitName));
+        folder.setInteriorFolderId(findOrCreateFolder("Interior", unitFolderId, null, trimmedUnitName));
+        folder.setSitePhotosFolderId(findOrCreateFolder("Site Photos", unitFolderId, null, trimmedUnitName));
+        folder.setApprovalsFolderId(findOrCreateFolder("Approvals", unitFolderId, null, trimmedUnitName));
+        folder.setDocumentsFolderId(findOrCreateFolder("Documents", unitFolderId, null, trimmedUnitName));
+
+        return folderRepository.save(folder);
+    }
+
+    @Override
+    @Transactional
     public void syncFolder(UUID workflowId) {
         log.info("Starting automated WorkDrive folder provisioning for workflow ID: {}", workflowId);
         Workflow workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new CustomException("Workflow not found: " + workflowId, HttpStatus.NOT_FOUND));
 
-        String projectName = null;
-        if (workflow.getProject() != null && workflow.getProject().getProjectName() != null && !workflow.getProject().getProjectName().isBlank()) {
-            projectName = workflow.getProject().getProjectName().trim();
+        String projectName = (workflow.getProject() != null) ? workflow.getProject().getProjectName() : null;
+        String unitName = (workflow.getBuyer() != null) ? workflow.getBuyer().getUnitName() : null;
+        if ((unitName == null || unitName.isBlank()) && workflow.getBuyer() != null) {
+            unitName = workflow.getBuyer().getZohoDealId();
         }
 
-        if (projectName == null || projectName.isBlank()) {
-            throw new CustomException("Cannot provision WorkDrive folder: Workflow " + workflowId + " has no valid Project Name assigned", HttpStatus.BAD_REQUEST);
-        }
-
-        String unitNumber = null;
-        if (workflow.getBuyer() != null) {
-            Buyer buyer = workflow.getBuyer();
-            if (buyer.getUnitName() != null && !buyer.getUnitName().isBlank()) {
-                unitNumber = buyer.getUnitName().trim();
-            } else if (buyer.getZohoDealId() != null && !buyer.getZohoDealId().isBlank()) {
-                unitNumber = buyer.getZohoDealId().trim();
-            }
-        }
-
-        if (unitNumber == null || unitNumber.isBlank()) {
-            throw new CustomException("Cannot provision WorkDrive folder: Workflow " + workflowId + " has no valid Unit Name assigned", HttpStatus.BAD_REQUEST);
-        }
-
-        String bookingId = unitNumber;
-
-        WorkDriveFolder folder = folderRepository.findByWorkflowId(workflowId)
-                .orElseGet(() -> {
-                    WorkDriveFolder newFolder = new WorkDriveFolder();
-                    newFolder.setWorkflow(workflow);
-                    return newFolder;
-                });
-
-        String teamFolderId = resolveTeamFolderId();
-        folder.setBookingId(bookingId);
-        folder.setProjectName(projectName);
-        folder.setUnitNumber(unitNumber);
-        folder.setTeamFolderId(teamFolderId);
-
-        try {
-            // Root is TestSandbox Team Folder
-            folder.setFolderId(teamFolderId);
-            folder.setTestSandboxFolderId(teamFolderId);
-
-            // 1. Check or create '<Project Name>' folder under TestSandbox
-            log.info("Creating Project folder '{}' under TestSandbox", projectName);
-            String projectFolderId = findOrCreateFolder(projectName, teamFolderId, workflowId, bookingId);
-            folder.setProjectFolderId(projectFolderId);
-            log.info("Provisioned Project Folder '{}' ID: {}", projectName, projectFolderId);
-
-            // 2. Check or create '<Unit Number>' folder inside Project folder
-            log.info("Creating Unit folder '{}' under Project", unitNumber);
-            String unitFolderId = findOrCreateFolder(unitNumber, projectFolderId, workflowId, bookingId);
-            folder.setUnitFolderId(unitFolderId);
-            folder.setBookingFolderId(unitFolderId);
-            folder.setFolderName(projectName + " - " + unitNumber);
-            log.info("Provisioned Unit Folder '{}' ID: {}", unitNumber, unitFolderId);
-
-            // 4. Create all 9 subfolders inside Unit Folder
-            folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, workflowId, bookingId));
-            folder.setArchitecturalFolderId(findOrCreateFolder("Architectural Drawings", unitFolderId, workflowId, bookingId));
-            folder.setStructuralFolderId(findOrCreateFolder("Structural Drawings", unitFolderId, workflowId, bookingId));
-            folder.setElectricalFolderId(findOrCreateFolder("Electrical", unitFolderId, workflowId, bookingId));
-            folder.setPlumbingFolderId(findOrCreateFolder("Plumbing", unitFolderId, workflowId, bookingId));
-            folder.setInteriorFolderId(findOrCreateFolder("Interior", unitFolderId, workflowId, bookingId));
-            folder.setSitePhotosFolderId(findOrCreateFolder("Site Photos", unitFolderId, workflowId, bookingId));
-            folder.setApprovalsFolderId(findOrCreateFolder("Approvals", unitFolderId, workflowId, bookingId));
-            folder.setDocumentsFolderId(findOrCreateFolder("Documents", unitFolderId, workflowId, bookingId));
-
+        WorkDriveFolder folder = syncUnitFolder(projectName, unitName);
+        if (folder.getWorkflow() == null) {
+            folder.setWorkflow(workflow);
             folderRepository.save(folder);
-            log.info("Successfully provisioned WorkDrive folder hierarchy for workflow {}: Unit Folder ID: {}", workflowId, unitFolderId);
-        } catch (Exception e) {
-            log.error("WorkDrive folder creation failed - Folder ID: N/A, File ID: N/A, Workflow ID: {}, Booking ID: {}, Error: {}",
-                    workflowId, bookingId, e.getMessage(), e);
-            if (e instanceof CustomException) {
-                throw (CustomException) e;
-            }
-            throw new CustomException("WorkDrive folder creation failed for workflow " + workflowId + ": " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
+        log.info("Successfully linked WorkDrive folder hierarchy to workflow ID: {}", workflowId);
     }
 
     private String findOrCreateFolder(String folderName, String parentId, UUID workflowId, String bookingId) {

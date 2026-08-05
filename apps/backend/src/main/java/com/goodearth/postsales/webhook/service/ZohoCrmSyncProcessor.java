@@ -26,16 +26,19 @@ public class ZohoCrmSyncProcessor {
     private final ProjectRepository projectRepository;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService;
 
     public ZohoCrmSyncProcessor(
             BuyerRepository buyerRepository,
             ProjectRepository projectRepository,
             ObjectMapper objectMapper,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService) {
         this.buyerRepository = buyerRepository;
         this.projectRepository = projectRepository;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
+        this.workDriveSyncService = workDriveSyncService;
     }
 
     public void process(String eventType, String payload, UUID correlationId) throws Exception {
@@ -128,6 +131,14 @@ public class ZohoCrmSyncProcessor {
         project.setStatus("ACTIVE");
 
         Project saved = projectRepository.save(project);
+
+        if (saved.getProjectName() != null && !saved.getProjectName().isBlank()) {
+            try {
+                workDriveSyncService.syncProjectFolder(saved.getProjectName());
+            } catch (Exception e) {
+                log.warn("[CorrelationId: {}] Webhook WorkDrive project folder provisioning warning for '{}': {}", correlationId, saved.getProjectName(), e.getMessage());
+            }
+        }
 
         if (isNew) {
             // Fire sync event

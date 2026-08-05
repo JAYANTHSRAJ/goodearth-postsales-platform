@@ -392,12 +392,18 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             log.info("Created new Workflow for Buyer: {} on Project: {}", email, projectName);
         }
 
-        // Auto-provision WorkDrive folder hierarchy immediately upon Deal/Booking sync
+        // Auto-provision WorkDrive folder hierarchy immediately upon Deal/Booking unit sync
         try {
-            log.info("Auto-provisioning WorkDrive folder hierarchy for Deal/Booking workflow ID: {}", targetWorkflow.getId());
-            workDriveSyncService.syncFolder(targetWorkflow.getId());
+            String unitName = (buyer.getUnitName() != null && !buyer.getUnitName().isBlank()) ? buyer.getUnitName() : buyer.getZohoDealId();
+            if (unitName != null && !unitName.isBlank() && project.getProjectName() != null) {
+                log.info("Auto-provisioning WorkDrive unit folder for Project '{}', Unit '{}'", project.getProjectName(), unitName);
+                com.goodearth.postsales.workdrive.entity.WorkDriveFolder wdFolder = workDriveSyncService.syncUnitFolder(project.getProjectName(), unitName);
+                if (wdFolder.getWorkflow() == null && targetWorkflow != null) {
+                    wdFolder.setWorkflow(targetWorkflow);
+                }
+            }
         } catch (Exception ex) {
-            log.error("WorkDrive folder auto-provisioning exception for workflow {}: {}", targetWorkflow.getId(), ex.getMessage(), ex);
+            log.error("WorkDrive folder auto-provisioning exception for unit {}: {}", buyer.getUnitName(), ex.getMessage(), ex);
         }
 
         // 5. Send Welcome Email

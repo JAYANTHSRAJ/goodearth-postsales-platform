@@ -26,16 +26,19 @@ public class ZohoProjectSyncServiceImpl implements ZohoProjectSyncService {
     private final ZohoProperties properties;
     private final ProjectRepository projectRepository;
     private final ProjectMapper projectMapper;
+    private final com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService;
 
     public ZohoProjectSyncServiceImpl(
             ZohoApiClient apiClient,
             ZohoProperties properties,
             ProjectRepository projectRepository,
-            ProjectMapper projectMapper) {
+            ProjectMapper projectMapper,
+            com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService) {
         this.apiClient = apiClient;
         this.properties = properties;
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
+        this.workDriveSyncService = workDriveSyncService;
     }
 
     @Override
@@ -99,14 +102,17 @@ public class ZohoProjectSyncServiceImpl implements ZohoProjectSyncService {
                 }
 
                 if (changed) {
-                    projectRepository.save(existingProject);
+                    Project savedProject = projectRepository.save(existingProject);
+                    provisionWorkDriveProjectFolder(savedProject.getProjectName());
                     updated++;
                 } else {
+                    provisionWorkDriveProjectFolder(existingProject.getProjectName());
                     skipped++;
                 }
             } else {
                 Project newProject = projectMapper.toEntity(crmDeal);
-                projectRepository.save(newProject);
+                Project savedProject = projectRepository.save(newProject);
+                provisionWorkDriveProjectFolder(savedProject.getProjectName());
                 created++;
             }
         }
@@ -114,5 +120,14 @@ public class ZohoProjectSyncServiceImpl implements ZohoProjectSyncService {
         log.info("Zoho CRM Project synchronization completed. Total fetched: {}, Created: {}, Updated: {}, Skipped: {}",
                 totalFetched, created, updated, skipped);
         return new ProjectSyncResponse(totalFetched, created, updated, skipped);
+    }
+
+    private void provisionWorkDriveProjectFolder(String projectName) {
+        if (projectName != null && !projectName.isBlank()) {
+            try {
+                workDriveSyncService.syncProjectFolder(projectName);
+            } catch (Exception e) {
+            }
+        }
     }
 }

@@ -13,4 +13,5 @@ public interface WorkDriveFolderRepository extends JpaRepository<WorkDriveFolder
     Optional<WorkDriveFolder> findByFolderId(String folderId);
     Optional<WorkDriveFolder> findFirstByBookingIdOrderByCreatedAtDesc(String bookingId);
     Optional<WorkDriveFolder> findByBookingId(String bookingId);
+    Optional<WorkDriveFolder> findByUnitNumberAndProjectName(String unitNumber, String projectName);
 }
