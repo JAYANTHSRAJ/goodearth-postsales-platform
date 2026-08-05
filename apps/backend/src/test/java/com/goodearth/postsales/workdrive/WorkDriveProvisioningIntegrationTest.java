@@ -197,8 +197,8 @@ public class WorkDriveProvisioningIntegrationTest {
         version1.setVersion(1);
         version1.setFileName(sampleFileName);
         version1.setMimeType("application/pdf");
-        version1.setPreviewUrl("https://workdrive.zoho.in/file/preview/" + sampleFileId);
-        version1.setDownloadUrl("https://workdrive.zoho.in/file/download/" + sampleFileId);
+        version1.setPreviewUrl("https://workdrive.zoho.com/file/preview/" + sampleFileId);
+        version1.setDownloadUrl("https://workdrive.zoho.com/file/download/" + sampleFileId);
         version1.setUploadedBy("Designer Studio");
         version1.setUploadedAt(LocalDateTime.now());
         workDriveFileVersionRepository.save(version1);
@@ -211,7 +211,7 @@ public class WorkDriveProvisioningIntegrationTest {
 
         List<WorkDriveFileVersion> versionsInDb = workDriveFileVersionRepository.findByWorkDriveFileIdOrderByVersionAsc(savedFile.getId());
         assertEquals(1, versionsInDb.size());
-        assertEquals("https://workdrive.zoho.in/file/preview/" + sampleFileId, versionsInDb.get(0).getPreviewUrl());
+        assertEquals("https://workdrive.zoho.com/file/preview/" + sampleFileId, versionsInDb.get(0).getPreviewUrl());
 
         // 5. Test FloorPlanService (Client Portal GET /api/v1/client/floor-plans)
         UserDetails userDetails = new User(testBuyer.getEmail(), "password", Collections.singletonList(new SimpleGrantedAuthority("ROLE_CLIENT")));
@@ -219,9 +219,63 @@ public class WorkDriveProvisioningIntegrationTest {
 
         assertNotNull(floorPlansDto.getLatestDrawing(), "Latest drawing must be populated");
         assertEquals(sampleFileName, floorPlansDto.getLatestDrawing().getFileName());
-        assertEquals("https://workdrive.zoho.in/file/preview/" + sampleFileId, floorPlansDto.getPreviewUrl());
-        assertEquals("https://workdrive.zoho.in/file/download/" + sampleFileId, floorPlansDto.getDownloadUrl());
+        assertEquals("https://workdrive.zoho.com/file/preview/" + sampleFileId, floorPlansDto.getPreviewUrl());
+        assertEquals("https://workdrive.zoho.com/file/download/" + sampleFileId, floorPlansDto.getDownloadUrl());
         assertNotNull(floorPlansDto.getRevisionHistory());
         assertEquals(1, floorPlansDto.getRevisionHistory().size());
+    }
+
+    @Test
+    @Transactional
+    public void testBrandNewWorkflowProvisioningQueryAndVerification() {
+        // 1. Create a brand-new Buyer, Project, and Workflow
+        Buyer newBuyer = new Buyer();
+        newBuyer.setFullName("Brand New Buyer");
+        newBuyer.setEmail("brandnew.buyer@goodearth.com");
+        newBuyer.setPhone("+919988776655");
+        newBuyer.setZohoContactId("ZOHO_CNT_BRANDNEW_001");
+        newBuyer.setZohoDealId("motif99");
+        newBuyer.setUnitName("motif99");
+        newBuyer.setStatus("BOOKING_CONFIRMED");
+        newBuyer.setPortalActivated(true);
+        Buyer savedBuyer = buyerRepository.save(newBuyer);
+
+        Project newProject = new Project();
+        newProject.setProjectName("GoodEarth Motif Horizon");
+        newProject.setProjectCode("MOTIF-HORIZON");
+        newProject.setZohoDealId("motif99");
+        newProject.setLocation("Bengaluru");
+        newProject.setStatus("ACTIVE");
+        Project savedProject = projectRepository.save(newProject);
+
+        Workflow newWorkflow = new Workflow();
+        newWorkflow.setBuyer(savedBuyer);
+        newWorkflow.setProject(savedProject);
+        newWorkflow.setStatus(WorkflowStatus.ACTIVE);
+        newWorkflow.setStartedAt(LocalDateTime.now());
+        Workflow savedWorkflow = workflowRepository.save(newWorkflow);
+
+        // 2. Trigger syncFolder for the brand-new workflow
+        workDriveSyncService.syncFolder(savedWorkflow.getId());
+
+        // 3. Retrieve provisioned WorkDriveFolder record
+        WorkDriveFolder folder = workDriveFolderRepository.findByWorkflowId(savedWorkflow.getId())
+                .orElseThrow(() -> new AssertionError("WorkDriveFolder record must exist for new workflow"));
+
+        String realFolderId = folder.getTestSandboxFolderId();
+        String parentId = folder.getTeamFolderId();
+        String permalink = "https://workdrive.zoho.com/folder/" + realFolderId;
+
+        // Print exact required verification fields
+        System.out.println("=== NEW WORKFLOW PROVISIONING VERIFICATION ===");
+        System.out.println("REAL Folder ID: " + realFolderId);
+        System.out.println("Parent ID: " + parentId);
+        System.out.println("Permalink: " + permalink);
+        System.out.println("==============================================");
+
+        assertNotNull(realFolderId, "REAL folder ID must not be null");
+        assertNotNull(parentId, "parent_id must not be null");
+        assertEquals("5bgp045dc56c28ae545a293f9b444c377db6a", parentId, "Parent ID must match resolved Team Folder ID");
+        assertEquals(realFolderId, folder.getFolderId());
     }
 }

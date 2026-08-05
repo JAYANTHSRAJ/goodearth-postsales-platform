@@ -117,17 +117,20 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
         try {
             // 1. Check or create 'TestSandbox' folder inside TeamFolder
+            log.info("Creating TestSandbox under parent: {}", teamFolderId);
             String sandboxFolderId = findOrCreateFolder("TestSandbox", teamFolderId, workflowId, bookingId);
             folder.setFolderId(sandboxFolderId);
             folder.setTestSandboxFolderId(sandboxFolderId);
             log.info("Provisioned TestSandbox Folder ID: {}", sandboxFolderId);
 
             // 2. Check or create '<Project Name>' folder inside TestSandbox
+            log.info("Creating Project folder '{}' under TestSandbox", projectName);
             String projectFolderId = findOrCreateFolder(projectName, sandboxFolderId, workflowId, bookingId);
             folder.setProjectFolderId(projectFolderId);
             log.info("Provisioned Project Folder '{}' ID: {}", projectName, projectFolderId);
 
             // 3. Check or create '<Unit Number>' folder inside Project folder
+            log.info("Creating Unit folder '{}' under Project", unitNumber);
             String unitFolderId = findOrCreateFolder(unitNumber, projectFolderId, workflowId, bookingId);
             folder.setUnitFolderId(unitFolderId);
             folder.setBookingFolderId(unitFolderId);
@@ -241,18 +244,44 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
     }
 
     private String resolveTeamFolderId() {
+        if (properties.getTeamFolderId() != null && !properties.getTeamFolderId().isBlank()) {
+            log.info("Resolved Team Folder ID: {} (from properties)", properties.getTeamFolderId());
+            return properties.getTeamFolderId();
+        }
         try {
             String endpoint = properties.getApiUrl() + "/users/me";
-            ZohoWorkDriveResponse response = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
-            if (response != null && response.getData() != null && !response.getData().isEmpty()) {
-                ZohoWorkDriveResponse.WorkDriveItem item = response.getData().get(0);
-                if (item.getAttributes() != null && item.getAttributes().getTeamId() != null) {
-                    return item.getAttributes().getTeamId();
+            ZohoWorkDriveResponse userResponse = apiClient.get(endpoint, ZohoWorkDriveResponse.class);
+            if (userResponse != null && userResponse.getData() != null && !userResponse.getData().isEmpty()) {
+                ZohoWorkDriveResponse.WorkDriveItem userItem = userResponse.getData().get(0);
+                if (userItem.getAttributes() != null && userItem.getAttributes().getTeamId() != null) {
+                    String teamId = userItem.getAttributes().getTeamId();
+                    String teamFoldersEndpoint = properties.getApiUrl() + "/teams/" + teamId + "/teamfolders";
+                    try {
+                        ZohoWorkDriveResponse tfResponse = apiClient.get(teamFoldersEndpoint, ZohoWorkDriveResponse.class);
+                        if (tfResponse != null && tfResponse.getData() != null && !tfResponse.getData().isEmpty()) {
+                            for (ZohoWorkDriveResponse.WorkDriveItem item : tfResponse.getData()) {
+                                String name = item.getAttributes() != null ? item.getAttributes().getName() : "";
+                                if ("Zoho CRM - WorkDrive".equalsIgnoreCase(name) || "TestSandbox".equalsIgnoreCase(name)) {
+                                    log.info("Resolved Team Folder ID: {} (Team Folder Name: '{}')", item.getId(), name);
+                                    return item.getId();
+                                }
+                            }
+                            String fallbackTfId = tfResponse.getData().get(0).getId();
+                            String fallbackName = tfResponse.getData().get(0).getAttributes() != null ? tfResponse.getData().get(0).getAttributes().getName() : "Unknown";
+                            log.info("Resolved Team Folder ID: {} (Team Folder Name: '{}')", fallbackTfId, fallbackName);
+                            return fallbackTfId;
+                        }
+                    } catch (Exception tfEx) {
+                        log.warn("Could not list teamfolders via WorkDrive API for teamId {}: {}. Falling back to teamId.", teamId, tfEx.getMessage());
+                    }
+                    log.info("Resolved Team Folder ID: {} (Team ID)", teamId);
+                    return teamId;
                 }
             }
         } catch (Exception ex) {
-            log.warn("Could not dynamically resolve team folder ID via /users/me: {}. Utilizing standard configured team folder ID.", ex.getMessage());
+            log.warn("Could not dynamically resolve team folder ID via WorkDrive API: {}. Utilizing standard configured team folder ID.", ex.getMessage());
         }
+        log.info("Resolved Team Folder ID: {} (default)", DEFAULT_TEAM_FOLDER_ID);
         return DEFAULT_TEAM_FOLDER_ID;
     }
 
@@ -423,8 +452,8 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                 version.setFileName(item.getAttributes() != null && item.getAttributes().getName() != null ? item.getAttributes().getName() : file.getFileName());
                 version.setMimeType(item.getResolvedMimeType() != null ? item.getResolvedMimeType() : file.getMimeType());
 
-                String realPreviewUrl = "https://workdrive.zoho.in/file/preview/" + file.getFileId();
-                String realDownloadUrl = "https://workdrive.zoho.in/file/download/" + file.getFileId();
+                String realPreviewUrl = "https://workdrive.zoho.com/file/preview/" + file.getFileId();
+                String realDownloadUrl = "https://workdrive.zoho.com/file/download/" + file.getFileId();
 
                 if (item.getAttributes() != null) {
                     if (item.getAttributes().getPreviewUrl() != null && !item.getAttributes().getPreviewUrl().isBlank()) {
@@ -487,11 +516,11 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
 
             String previewUrl = (attrs != null && attrs.getPreviewUrl() != null && !attrs.getPreviewUrl().isBlank())
                     ? attrs.getPreviewUrl()
-                    : "https://workdrive.zoho.in/file/preview/" + file.getFileId();
+                    : "https://workdrive.zoho.com/file/preview/" + file.getFileId();
 
             String downloadUrl = (attrs != null && attrs.getDownloadUrl() != null && !attrs.getDownloadUrl().isBlank())
                     ? attrs.getDownloadUrl()
-                    : "https://workdrive.zoho.in/file/download/" + file.getFileId();
+                    : "https://workdrive.zoho.com/file/download/" + file.getFileId();
 
             version.setPreviewUrl(previewUrl);
             version.setDownloadUrl(downloadUrl);

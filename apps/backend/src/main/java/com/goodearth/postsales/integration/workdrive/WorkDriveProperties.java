@@ -14,4 +14,6 @@ public class WorkDriveProperties {
 
     @NotBlank
     private String apiUrl;
+
+    private String teamFolderId;
 }
