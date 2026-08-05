@@ -31,6 +31,7 @@ public class WebhookReceiverController {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final ZohoDealsOnboardingService onboardingService;
+    private final com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService;
 
     @Value("${zoho.webhook.crm-secret}")
     private String crmSecret;
@@ -50,12 +51,14 @@ public class WebhookReceiverController {
             WebhookService service,
             ApplicationEventPublisher eventPublisher,
             ObjectMapper objectMapper,
-            ZohoDealsOnboardingService onboardingService) {
+            ZohoDealsOnboardingService onboardingService,
+            com.goodearth.postsales.workdrive.service.WorkDriveSyncService workDriveSyncService) {
         this.signatureVerifier = signatureVerifier;
         this.service = service;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
         this.onboardingService = onboardingService;
+        this.workDriveSyncService = workDriveSyncService;
     }
 
     @PostMapping("/zoho-crm")
@@ -262,5 +265,47 @@ public class WebhookReceiverController {
             
             return ResponseEntity.status(status).body(errorResponse);
         }
+    }
+
+    @PostMapping("/zoho-projects")
+    public ResponseEntity<ApiResponse<String>> receiveZohoProjectWebhook(@RequestBody Map<String, Object> payload) {
+        log.info("Received Zoho CRM Project Site webhook. Payload: {}", payload);
+        String projectName = null;
+        if (payload.containsKey("project_name")) {
+            projectName = (String) payload.get("project_name");
+        } else if (payload.containsKey("Project_Name")) {
+            projectName = (String) payload.get("Project_Name");
+        } else if (payload.containsKey("name")) {
+            projectName = (String) payload.get("name");
+        } else if (payload.containsKey("Deal_Name")) {
+            projectName = (String) payload.get("Deal_Name");
+        }
+
+        if (projectName == null || projectName.isBlank()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name in payload."));
+        }
+
+        String projectFolderId = onboardingService.getProperties() != null ? 
+                workDriveSyncService.syncProjectFolder(projectName) : workDriveSyncService.syncProjectFolder(projectName);
+        return ResponseEntity.ok(new ApiResponse<>("Project WorkDrive folder provisioned successfully: " + projectFolderId));
+    }
+
+    @PostMapping("/zoho-units")
+    public ResponseEntity<ApiResponse<String>> receiveZohoUnitWebhook(@RequestBody Map<String, Object> payload) {
+        log.info("Received Zoho CRM Unit webhook. Payload: {}", payload);
+        String projectName = null;
+        if (payload.containsKey("project_name")) projectName = (String) payload.get("project_name");
+        else if (payload.containsKey("Project_Name")) projectName = (String) payload.get("Project_Name");
+
+        String unitName = null;
+        if (payload.containsKey("unit_name")) unitName = (String) payload.get("unit_name");
+        else if (payload.containsKey("Unit_Name")) unitName = (String) payload.get("Unit_Name");
+
+        if (projectName == null || projectName.isBlank() || unitName == null || unitName.isBlank()) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name or unit_name in payload."));
+        }
+
+        com.goodearth.postsales.workdrive.entity.WorkDriveFolder folder = workDriveSyncService.syncUnitFolder(projectName, unitName);
+        return ResponseEntity.ok(new ApiResponse<>("Unit WorkDrive folder provisioned successfully: " + folder.getUnitFolderId()));
     }
 }
