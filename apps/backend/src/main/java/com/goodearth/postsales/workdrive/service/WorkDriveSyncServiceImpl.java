@@ -107,6 +107,9 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         if (unitName == null || unitName.isBlank()) {
             throw new CustomException("Cannot provision WorkDrive Unit folder: Unit Name is required", HttpStatus.BAD_REQUEST);
         }
+        if ("TestSandbox".equalsIgnoreCase(projectName.trim()) || DEFAULT_TEAM_FOLDER_ID.equalsIgnoreCase(projectName.trim()) || (properties.getTeamFolderId() != null && properties.getTeamFolderId().equalsIgnoreCase(projectName.trim()))) {
+            throw new CustomException("Invalid Project Name '" + projectName + "': Unit '" + unitName + "' must be assigned to a specific Project Site folder, not directly under TestSandbox root.", HttpStatus.BAD_REQUEST);
+        }
         String trimmedProjectName = projectName.trim();
         String trimmedUnitName = unitName.trim();
 

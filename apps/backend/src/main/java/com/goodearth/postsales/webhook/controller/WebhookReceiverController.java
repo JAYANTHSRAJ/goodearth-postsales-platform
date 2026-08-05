@@ -267,45 +267,61 @@ public class WebhookReceiverController {
         }
     }
 
+    private String extractStringField(Map<String, Object> payload, String... keys) {
+        if (payload == null) return null;
+        for (String key : keys) {
+            if (payload.containsKey(key) && payload.get(key) != null) {
+                Object val = payload.get(key);
+                if (val instanceof String && !((String) val).isBlank()) {
+                    return ((String) val).trim();
+                } else if (val instanceof Map) {
+                    Map<?, ?> m = (Map<?, ?>) val;
+                    if (m.get("name") != null) return m.get("name").toString().trim();
+                    if (m.get("value") != null) return m.get("value").toString().trim();
+                    if (m.get("display_value") != null) return m.get("display_value").toString().trim();
+                } else {
+                    String str = val.toString().trim();
+                    if (!str.isBlank()) return str;
+                }
+            }
+        }
+        return null;
+    }
+
     @PostMapping("/zoho-projects")
     public ResponseEntity<ApiResponse<String>> receiveZohoProjectWebhook(@RequestBody Map<String, Object> payload) {
-        log.info("Received Zoho CRM Project Site webhook. Payload: {}", payload);
-        String projectName = null;
-        if (payload.containsKey("project_name")) {
-            projectName = (String) payload.get("project_name");
-        } else if (payload.containsKey("Project_Name")) {
-            projectName = (String) payload.get("Project_Name");
-        } else if (payload.containsKey("name")) {
-            projectName = (String) payload.get("name");
-        } else if (payload.containsKey("Deal_Name")) {
-            projectName = (String) payload.get("Deal_Name");
-        }
+        log.info("[WEBHOOK_TRACE] Received Zoho CRM Project Site webhook. Raw Payload: {}", payload);
+        String projectName = extractStringField(payload, "project_name", "Project_Name", "Project_Site", "Project_Site_Name", "Project", "project", "name", "Deal_Name");
+
+        log.info("[WEBHOOK_TRACE] Extracted projectName: '{}'", projectName);
 
         if (projectName == null || projectName.isBlank()) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name in payload."));
+            log.error("[WEBHOOK_TRACE] Missing project_name in payload: {}", payload);
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name in payload. Payload received: " + payload));
         }
 
-        String projectFolderId = onboardingService.getProperties() != null ? 
-                workDriveSyncService.syncProjectFolder(projectName) : workDriveSyncService.syncProjectFolder(projectName);
+        String projectFolderId = workDriveSyncService.syncProjectFolder(projectName);
+        log.info("[WEBHOOK_TRACE] Project folder provisioned under TestSandbox -> Project Name: '{}', Returned projectFolderId: '{}'", projectName, projectFolderId);
         return ResponseEntity.ok(new ApiResponse<>("Project WorkDrive folder provisioned successfully: " + projectFolderId));
     }
 
     @PostMapping("/zoho-units")
     public ResponseEntity<ApiResponse<String>> receiveZohoUnitWebhook(@RequestBody Map<String, Object> payload) {
-        log.info("Received Zoho CRM Unit webhook. Payload: {}", payload);
-        String projectName = null;
-        if (payload.containsKey("project_name")) projectName = (String) payload.get("project_name");
-        else if (payload.containsKey("Project_Name")) projectName = (String) payload.get("Project_Name");
+        log.info("[WEBHOOK_TRACE] Received Zoho CRM Unit webhook. Raw Payload: {}", payload);
+        
+        String projectName = extractStringField(payload, "project_name", "Project_Name", "Project_Site", "Project_Site_Name", "Project", "project", "Deal_Name", "deal_name");
+        String unitName = extractStringField(payload, "unit_name", "Unit_Name", "Unit", "unit", "Unit_Number", "unit_number", "name", "Deal_Name");
 
-        String unitName = null;
-        if (payload.containsKey("unit_name")) unitName = (String) payload.get("unit_name");
-        else if (payload.containsKey("Unit_Name")) unitName = (String) payload.get("Unit_Name");
+        log.info("[WEBHOOK_TRACE] Extracted projectName: '{}', unitName: '{}'", projectName, unitName);
 
         if (projectName == null || projectName.isBlank() || unitName == null || unitName.isBlank()) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name or unit_name in payload."));
+            log.error("[WEBHOOK_TRACE] Missing project_name or unit_name in payload. Extracted projectName: '{}', unitName: '{}', Raw Payload: {}", projectName, unitName, payload);
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Missing project_name or unit_name in payload. Extracted projectName: " + projectName + ", unitName: " + unitName));
         }
 
         com.goodearth.postsales.workdrive.entity.WorkDriveFolder folder = workDriveSyncService.syncUnitFolder(projectName, unitName);
-        return ResponseEntity.ok(new ApiResponse<>("Unit WorkDrive folder provisioned successfully: " + folder.getUnitFolderId()));
+        log.info("[WEBHOOK_TRACE] Unit folder provisioned -> Project Name: '{}', Unit Name: '{}', projectFolderId (parent): '{}', unitFolderId: '{}'",
+                projectName, unitName, folder.getProjectFolderId(), folder.getUnitFolderId());
+        return ResponseEntity.ok(new ApiResponse<>("Unit WorkDrive folder provisioned successfully under project folder '" + folder.getProjectFolderId() + "': " + folder.getUnitFolderId()));
     }
 }
