@@ -18,7 +18,7 @@ databaseChangeLog:
               - column:
                   name: unit_number
                   type: VARCHAR(255)
-               - column:
+              - column:
                   name: team_folder_id
                   type: VARCHAR(255)
               - column:
