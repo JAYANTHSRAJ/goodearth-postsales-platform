@@ -1,5 +1,6 @@
 package com.goodearth.postsales.workdrive.service;
 
+import com.goodearth.postsales.buyer.entity.Buyer;
 import com.goodearth.postsales.changerequest.entity.ChangeRequest;
 import com.goodearth.postsales.changerequest.repository.ChangeRequestRepository;
 import com.goodearth.postsales.document.entity.Document;
@@ -92,13 +93,28 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         Workflow workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new CustomException("Workflow not found: " + workflowId, HttpStatus.NOT_FOUND));
 
-        String projectName = (workflow.getProject() != null && workflow.getProject().getProjectName() != null)
-                ? workflow.getProject().getProjectName()
-                : "GoodEarth Motif";
+        String projectName = null;
+        if (workflow.getProject() != null && workflow.getProject().getProjectName() != null && !workflow.getProject().getProjectName().isBlank()) {
+            projectName = workflow.getProject().getProjectName().trim();
+        }
 
-        String unitNumber = (workflow.getBuyer() != null && workflow.getBuyer().getZohoDealId() != null)
-                ? workflow.getBuyer().getZohoDealId()
-                : "motif16";
+        if (projectName == null || projectName.isBlank()) {
+            throw new CustomException("Cannot provision WorkDrive folder: Workflow " + workflowId + " has no valid Project Name assigned", HttpStatus.BAD_REQUEST);
+        }
+
+        String unitNumber = null;
+        if (workflow.getBuyer() != null) {
+            Buyer buyer = workflow.getBuyer();
+            if (buyer.getUnitName() != null && !buyer.getUnitName().isBlank()) {
+                unitNumber = buyer.getUnitName().trim();
+            } else if (buyer.getZohoDealId() != null && !buyer.getZohoDealId().isBlank()) {
+                unitNumber = buyer.getZohoDealId().trim();
+            }
+        }
+
+        if (unitNumber == null || unitNumber.isBlank()) {
+            throw new CustomException("Cannot provision WorkDrive folder: Workflow " + workflowId + " has no valid Unit Name assigned", HttpStatus.BAD_REQUEST);
+        }
 
         String bookingId = unitNumber;
 
