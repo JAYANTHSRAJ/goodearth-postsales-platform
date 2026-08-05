@@ -90,30 +90,46 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
     @Transactional
     public String syncProjectFolder(String projectName) {
         if (projectName == null || projectName.isBlank()) {
-            throw new CustomException("Cannot provision WorkDrive Project folder: Project Name is required", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Cannot provision WorkDrive Project folder: Project Site Name is null or blank", HttpStatus.BAD_REQUEST);
         }
         String trimmedProjectName = projectName.trim();
         String teamFolderId = resolveTeamFolderId();
-        log.info("Provisioning WorkDrive Project folder '{}' under TestSandbox Team Folder {}", trimmedProjectName, teamFolderId);
-        return findOrCreateFolder(trimmedProjectName, teamFolderId, null, trimmedProjectName);
+        log.info("[WORKDRIVE_HIERARCHY] Searching Project Folder '{}' under TestSandbox Team Folder {}", trimmedProjectName, teamFolderId);
+        
+        String projectFolderId = findOrCreateFolder(trimmedProjectName, teamFolderId, null, trimmedProjectName);
+        log.info("[WORKDRIVE_HIERARCHY] Project Folder Found/Created: {} for Project Site '{}'", projectFolderId, trimmedProjectName);
+        return projectFolderId;
     }
 
     @Override
     @Transactional
     public WorkDriveFolder syncUnitFolder(String projectName, String unitName) {
         if (projectName == null || projectName.isBlank()) {
-            throw new CustomException("Cannot provision WorkDrive Unit folder: Project Name is required", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Cannot provision WorkDrive Unit folder: Project Site Name is null or blank", HttpStatus.BAD_REQUEST);
         }
         if (unitName == null || unitName.isBlank()) {
-            throw new CustomException("Cannot provision WorkDrive Unit folder: Unit Name is required", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Cannot provision WorkDrive Unit folder: Unit Name is null or blank", HttpStatus.BAD_REQUEST);
         }
-        if ("TestSandbox".equalsIgnoreCase(projectName.trim()) || DEFAULT_TEAM_FOLDER_ID.equalsIgnoreCase(projectName.trim()) || (properties.getTeamFolderId() != null && properties.getTeamFolderId().equalsIgnoreCase(projectName.trim()))) {
-            throw new CustomException("Invalid Project Name '" + projectName + "': Unit '" + unitName + "' must be assigned to a specific Project Site folder, not directly under TestSandbox root.", HttpStatus.BAD_REQUEST);
-        }
+        
         String trimmedProjectName = projectName.trim();
         String trimmedUnitName = unitName.trim();
+        String teamFolderId = resolveTeamFolderId();
 
+        if ("TestSandbox".equalsIgnoreCase(trimmedProjectName) || DEFAULT_TEAM_FOLDER_ID.equalsIgnoreCase(trimmedProjectName) || (properties.getTeamFolderId() != null && properties.getTeamFolderId().equalsIgnoreCase(trimmedProjectName))) {
+            throw new CustomException("Invalid Project Site Name '" + projectName + "': Unit '" + unitName + "' must be assigned to a specific Project Site folder, not directly under TestSandbox root.", HttpStatus.BAD_REQUEST);
+        }
+
+        log.info("[WORKDRIVE_HIERARCHY] Webhook Received -> Project Site: '{}', Unit: '{}'", trimmedProjectName, trimmedUnitName);
+        
+        // Step 1 & Step 2: Find or create Project Folder directly under TestSandbox
         String projectFolderId = syncProjectFolder(trimmedProjectName);
+
+        // Step 3 (Parent-Child Validation): Parent ID for Unit MUST be the Project Folder ID, NEVER TestSandbox ID!
+        if (projectFolderId == null || projectFolderId.isBlank() || projectFolderId.equalsIgnoreCase(teamFolderId)) {
+            throw new CustomException("Parent-Child Validation Error: Unit folder '" + trimmedUnitName + "' cannot use TestSandbox (" + teamFolderId + ") as parent_id. A valid Project Folder ID is required.", HttpStatus.BAD_REQUEST);
+        }
+
+        log.info("[WORKDRIVE_HIERARCHY] Searching/Creating Unit Folder '{}' under Parent Project Folder ID: {}", trimmedUnitName, projectFolderId);
 
         WorkDriveFolder folder = folderRepository.findByUnitNumberAndProjectName(trimmedUnitName, trimmedProjectName)
                 .orElseGet(() -> folderRepository.findByBookingId(trimmedUnitName)
@@ -124,7 +140,6 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
                             return newFolder;
                         }));
 
-        String teamFolderId = resolveTeamFolderId();
         folder.setBookingId(trimmedUnitName);
         folder.setProjectName(trimmedProjectName);
         folder.setUnitNumber(trimmedUnitName);
@@ -133,11 +148,16 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         folder.setTestSandboxFolderId(teamFolderId);
         folder.setProjectFolderId(projectFolderId);
 
+        // Step 4: Find or create Unit Folder inside Project Folder
         String unitFolderId = findOrCreateFolder(trimmedUnitName, projectFolderId, null, trimmedUnitName);
         folder.setUnitFolderId(unitFolderId);
         folder.setBookingFolderId(unitFolderId);
         folder.setFolderName(trimmedProjectName + " - " + trimmedUnitName);
 
+        log.info("[WORKDRIVE_HIERARCHY] Created/Reused Unit Folder ID: {} under Parent Project Folder ID: {}", unitFolderId, projectFolderId);
+        log.info("[WORKDRIVE_HIERARCHY] Provisioning 9 Standard Engineering Subfolders under Unit Folder {}", unitFolderId);
+
+        // Step 5: Provision 9 Standard Engineering Subfolders inside Unit Folder
         folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, null, trimmedUnitName));
         folder.setArchitecturalFolderId(findOrCreateFolder("Architectural Drawings", unitFolderId, null, trimmedUnitName));
         folder.setStructuralFolderId(findOrCreateFolder("Structural Drawings", unitFolderId, null, trimmedUnitName));
@@ -148,6 +168,7 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         folder.setApprovalsFolderId(findOrCreateFolder("Approvals", unitFolderId, null, trimmedUnitName));
         folder.setDocumentsFolderId(findOrCreateFolder("Documents", unitFolderId, null, trimmedUnitName));
 
+        log.info("[WORKDRIVE_HIERARCHY] Provisioning Completed Successfully for Unit '{}' under Project '{}'.", trimmedUnitName, trimmedProjectName);
         return folderRepository.save(folder);
     }
 
