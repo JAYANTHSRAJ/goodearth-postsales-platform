@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
@@ -177,7 +176,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
     }
 
     private void processSingleDeal(ZohoDealResponse.ZohoDeal crmDeal, Map<String, Object> summary) {
-        log.info(">>> ENTER processSingleDeal");
+        log.info(">>> ENTER processSingleDeal for Deal ID: {}", crmDeal.getId());
         String dealId = crmDeal.getId();
         if (dealId == null || dealId.trim().isEmpty()) {
             summary.put("buyersSkipped", (int) summary.get("buyersSkipped") + 1);
@@ -221,12 +220,10 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             return;
         }
 
-        // 1. User Creation/Lookup (matches onboarding logic)
+        // 1. User Creation/Lookup
         Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
         User user;
-        boolean isNewUser = false;
         if (userOpt.isEmpty()) {
-            isNewUser = true;
             user = new User();
             user.setEmail(email);
             user.setFullName(buyerName != null ? buyerName : email);
@@ -267,10 +264,8 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyerOpt = buyerRepository.findByEmailIgnoreCase(email);
         }
 
-        boolean isNewBuyer = false;
         Buyer buyer;
         if (buyerOpt.isPresent()) {
-            isNewBuyer = false;
             buyer = buyerOpt.get();
             buyer.setFullName(buyerName != null ? buyerName : buyer.getFullName());
             buyer.setEmail(email);
@@ -293,7 +288,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             summary.put("buyersUpdated", (int) summary.get("buyersUpdated") + 1);
             log.info("Buyer updated for email: {}", email);
         } else {
-            isNewBuyer = true;
             buyer = new Buyer();
             buyer.setZohoContactId(crmDeal.getContactName() != null && crmDeal.getContactName().getId() != null
                     ? crmDeal.getContactName().getId() : "ZOHO_DEAL_" + dealId);
@@ -321,10 +315,13 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         log.info("[TRACE_IDENTIFIER]\nStage: Webhook / Zoho Deal Sync -> processSingleDeal()\nBuyer Email: {}\nBuyer ID: {}\nUnit Name: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
                 email, buyer.getId(), buyer.getUnitName(), crmDeal.getDealName(), dealId);
 
-        // 3. Project Creation/Lookup (MANDATORY: MUST come from Project_Name, NOT Deal_Name!)
+        // 3. Project Creation/Lookup (Fallback to Deal_Name or GoodEarth Community if Project_Site is null/blank)
         String projectName = crmDeal.getProjectName();
         if (projectName == null || projectName.isBlank()) {
-            throw new CustomException("Cannot sync deal ID " + dealId + ": Project Site Name is null or blank in Zoho CRM", HttpStatus.BAD_REQUEST);
+            projectName = crmDeal.getDealName();
+        }
+        if (projectName == null || projectName.isBlank()) {
+            projectName = "GoodEarth Community";
         }
         projectName = projectName.trim();
 
@@ -333,6 +330,9 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             projectCode = projectName.toUpperCase().replaceAll("[^A-Z]", "");
             if (projectCode.length() > 5) {
                 projectCode = projectCode.substring(0, 5);
+            }
+            if (projectCode.isBlank()) {
+                projectCode = "GEPRJ";
             }
         }
 
@@ -367,7 +367,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
 
         // 4. Workflow Creation/Update
         Optional<Workflow> workflowOpt = workflowRepository.findByBuyerId(buyer.getId()).stream()
-                .filter(w -> w.getProject().getId().equals(project.getId()))
+                .filter(w -> w.getProject() != null && w.getProject().getId().equals(project.getId()))
                 .findFirst();
 
         Stage resolvedStage = stageRepository.findByCode(stageName)
@@ -411,76 +411,77 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             log.error("WorkDrive folder auto-provisioning exception for unit {}: {}", buyer.getUnitName(), ex.getMessage(), ex);
         }
 
-        // 5. Send Welcome Email
-        log.info("ENTER processSingleDeal");
-        log.info("isNewBuyer={}", isNewBuyer);
-        log.info("welcomeEmailSent={}", buyer.isWelcomeEmailSent());
-        log.info("Email decision reached");
-        if (isNewBuyer && !buyer.isWelcomeEmailSent()) {
-            log.info(">>> CALLING sendWelcomeEmail");
+        // 5. Send Welcome Email (Triggers whenever welcomeEmailSent is false)
+        log.info("Evaluating welcome email condition for buyer: {}, welcomeEmailSent={}", email, buyer.isWelcomeEmailSent());
+        if (!buyer.isWelcomeEmailSent()) {
+            log.info(">>> CALLING sendWelcomeEmail for buyer: {}", email);
             sendWelcomeEmail(buyer);
         } else {
-            log.info("Skipping welcome email send from processSingleDeal because: isNewBuyer={} or welcomeEmailSent={}", isNewBuyer, buyer.isWelcomeEmailSent());
+            log.info("Skipping welcome email send because welcomeEmailSent=true for buyer: {}", email);
             buyer.setSyncStatus("SUCCESS");
             buyerRepository.save(buyer);
         }
-        log.info(">>> EXIT processSingleDeal");
+        log.info(">>> EXIT processSingleDeal for Deal ID: {}", dealId);
     }
 
     private void sendWelcomeEmail(Buyer buyer) {
-        log.info("ENTER sendWelcomeEmail");
-        log.info("Reached email step");
-        log.info("welcomeEmailSent={}", buyer.isWelcomeEmailSent());
-        log.info("portalActivated={}", buyer.isPortalActivated());
-
-        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(buyer.getEmail());
-        boolean userExists = userOpt.isPresent();
-        log.info("userExists={}", userExists);
-
-        String activationToken = null;
-        if (userOpt.isPresent()) {
-            activationToken = userOpt.get().getActivationToken();
-        }
-        log.info("activationToken={}", activationToken);
-
-        if (buyer.getEmail() == null) {
-            log.info("Skipping welcome email: buyer email is null");
-            log.info(">>> EXIT sendWelcomeEmail");
+        log.info("ENTER sendWelcomeEmail for buyer email: {}", buyer.getEmail());
+        if (buyer.getEmail() == null || buyer.getEmail().isBlank()) {
+            log.info("Skipping welcome email: buyer email is null or blank");
             return;
         }
 
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(buyer.getEmail());
+        String activationToken = null;
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (user.getActivationToken() == null || user.getActivationToken().isBlank() ||
+                (user.getActivationTokenExpiry() != null && user.getActivationTokenExpiry().isBefore(LocalDateTime.now()))) {
+                activationToken = activationTokenService.generateToken(user);
+            } else {
+                activationToken = user.getActivationToken();
+            }
+        } else {
+            User user = new User();
+            user.setEmail(buyer.getEmail());
+            user.setFullName(buyer.getFullName() != null ? buyer.getFullName() : buyer.getEmail());
+            user.setPassword(passwordEncoder.encode("GoodEarth@123"));
+            user.setRole(UserRole.CLIENT);
+            user.setEnabled(true);
+            user.setEmailVerified(true);
+            user.setPortalActivated(true);
+            userRepository.save(user);
+            activationToken = activationTokenService.generateToken(user);
+        }
+
         try {
-            String activationUrl = "https://goodearth-postsales-platform.vercel.app/activate?token=" + (activationToken != null ? activationToken : "");
-            log.info("Generated activation URL");
+            String activationUrl = "https://goodearth-postsales-platform.vercel.app/activate?token=" + activationToken;
+            log.info("Generated activation URL: {}", activationUrl);
             String subject = "Welcome to GoodEarth Homeowner Portal";
             String body = String.format(
                     "Dear %s,\n\n" +
                     "Welcome to GoodEarth.\n\n" +
                     "Your homeowner portal has been created.\n\n" +
-                    "Please activate your account by clicking below.\n\n" +
+                    "Please activate your account by clicking below:\n\n" +
                     "%s\n\n" +
                     "This link expires in 24 hours.\n\n" +
-                    "If you did not request this account, ignore this email.\n\n" +
+                    "If you did not request this account, please ignore this email.\n\n" +
                     "Regards,\n" +
                     "GoodEarth Team",
                     buyer.getFullName(),
                     activationUrl
             );
-            log.info("Preparing EmailRequest");
-            log.info("Calling EmailService.sendEmail()");
             emailService.sendEmail(buyer.getEmail(), subject, body);
-            log.info("EmailService returned successfully");
-            log.info("Updating buyer.welcomeEmailSent=true");
+            log.info("EmailService.sendEmail completed successfully for {}", buyer.getEmail());
             buyer.setWelcomeEmailSent(true);
             buyer.setSyncStatus("SUCCESS");
             buyerRepository.save(buyer);
-            log.info("Buyer saved after email");
         } catch (Exception ex) {
-            log.error("Email sending failed with complete exception and stack trace:", ex);
+            log.error("Email sending failed for buyer {}: {}", buyer.getEmail(), ex.getMessage(), ex);
             buyer.setWelcomeEmailSent(false);
             buyer.setSyncStatus("EMAIL_FAILED");
             buyerRepository.save(buyer);
         }
-        log.info(">>> EXIT sendWelcomeEmail");
+        log.info(">>> EXIT sendWelcomeEmail for buyer: {}", buyer.getEmail());
     }
 }
