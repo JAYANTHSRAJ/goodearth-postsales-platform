@@ -236,7 +236,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         }
 
         // 1. User Creation/Lookup
-        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        Optional<User> userOpt = userRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         User user;
         if (userOpt.isEmpty()) {
             user = new User();
@@ -266,19 +266,19 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             log.info("User updated for email: {}", email);
         }
 
-        // 2. Buyer Creation/Lookup (Search by Zoho Contact ID, then by Zoho Deal ID, then by Email as fallback)
+        // 2. Buyer Creation/Lookup (Search by Zoho Deal ID first, then by Zoho Contact ID, then by Email as fallback)
         if (contactId == null || contactId.trim().isEmpty()) {
             contactId = crmDeal.getResolvedContactId();
         }
         Optional<Buyer> buyerOpt = Optional.empty();
-        if (contactId != null && !contactId.trim().isEmpty()) {
-            buyerOpt = buyerRepository.findByZohoContactId(contactId);
+        if (dealId != null && !dealId.trim().isEmpty()) {
+            buyerOpt = buyerRepository.findFirstByZohoDealId(dealId);
+        }
+        if (buyerOpt.isEmpty() && contactId != null && !contactId.trim().isEmpty()) {
+            buyerOpt = buyerRepository.findFirstByZohoContactIdOrderByIdDesc(contactId);
         }
         if (buyerOpt.isEmpty()) {
-            buyerOpt = buyerRepository.findByZohoDealId(dealId);
-        }
-        if (buyerOpt.isEmpty()) {
-            buyerOpt = buyerRepository.findByEmailIgnoreCase(email);
+            buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         }
 
         Buyer buyer;
@@ -356,9 +356,9 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         String location = crmDeal.getLocation();
 
         Project project;
-        Optional<Project> projOpt = projectRepository.findByZohoDealId(dealId);
+        Optional<Project> projOpt = projectRepository.findFirstByZohoDealId(dealId);
         if (projOpt.isEmpty()) {
-            projOpt = projectRepository.findByProjectNameIgnoreCase(projectName);
+            projOpt = projectRepository.findFirstByProjectNameIgnoreCaseOrderByIdDesc(projectName);
         }
 
         if (projOpt.isPresent()) {

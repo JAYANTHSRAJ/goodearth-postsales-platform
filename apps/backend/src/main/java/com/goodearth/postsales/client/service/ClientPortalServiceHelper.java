@@ -65,7 +65,7 @@ public class ClientPortalServiceHelper {
         if (userDetails == null) {
             throw new CustomException("Client is not authenticated", HttpStatus.UNAUTHORIZED);
         }
-        java.util.Optional<Buyer> buyerOpt = buyerRepository.findByEmailIgnoreCase(userDetails.getUsername());
+        java.util.Optional<Buyer> buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(userDetails.getUsername());
         System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Buyer found? = " + buyerOpt.isPresent());
         if (buyerOpt.isPresent()) {
             Buyer b = buyerOpt.get();
