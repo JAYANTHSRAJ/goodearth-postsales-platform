@@ -1,0 +1,340 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.23-add-project-name
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: project_name
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: project_name
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-unit-number
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: unit_number
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: unit_number
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-team-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: team_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: team_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-test-sandbox-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: test_sandbox_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: test_sandbox_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-project-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: project_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: project_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-unit-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: unit_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: unit_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-floor-plans-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: floor_plans_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: floor_plans_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-architectural-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: architectural_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: architectural_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-structural-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: structural_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: structural_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-electrical-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: electrical_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: electrical_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-plumbing-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: plumbing_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: plumbing_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-interior-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: interior_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: interior_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-site-photos-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: site_photos_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: site_photos_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-approvals-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: approvals_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: approvals_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-documents-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: documents_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: documents_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-booking-folder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: booking_folder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: booking_folder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-kyc-subfolder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: kyc_subfolder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: kyc_subfolder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-agreements-subfolder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: agreements_subfolder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: agreements_subfolder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-payments-subfolder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: payments_subfolder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: payments_subfolder_id
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 3.23-add-handover-subfolder-id
+      author: antigravity
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: workdrive_folders
+            columnName: handover_subfolder_id
+      changes:
+        - addColumn:
+            tableName: workdrive_folders
+            columns:
+              - column:
+                  name: handover_subfolder_id
+                  type: VARCHAR(255)
