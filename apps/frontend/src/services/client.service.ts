@@ -43,6 +43,24 @@ export interface ClientDrawingSummary {
   fileSize?: number;
 }
 
+export interface ClientAttachment {
+  id: string;
+  attachmentId: string;
+  fileName: string;
+  category: string;
+  version: number;
+  mimeType: string;
+  fileType: string;
+  fileSize: number;
+  isPreviewable: boolean;
+  previewUrl: string;
+  downloadUrl: string;
+  uploadedBy: string;
+  uploadedTime?: string;
+  uploadedAt: string;
+  revisions?: ClientAttachment[];
+}
+
 export interface ClientChangeRequestSummary {
   id: string;
   annotationId: string;
@@ -188,6 +206,19 @@ export const clientService = {
 
   getFloorPlanById(attachmentId: string): Promise<ClientDrawingSummary> {
     return api.get<ClientDrawingSummary>(`/client/floor-plans/${attachmentId}`);
+  },
+
+  getAttachments(category?: string, search?: string, sort?: string): Promise<ClientAttachment[]> {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+    if (sort) params.append('sort', sort);
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    return api.get<ClientAttachment[]>(`/client/attachments${queryStr}`);
+  },
+
+  getAttachmentById(attachmentId: string): Promise<ClientAttachment> {
+    return api.get<ClientAttachment>(`/client/attachments/${attachmentId}`);
   },
 
   getDocuments(): Promise<ClientDocumentsGrouped> {
