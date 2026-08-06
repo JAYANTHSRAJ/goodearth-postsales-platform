@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Home, FileSpreadsheet, FolderGit2, Hammer, Users, CreditCard, HelpCircle } from 'lucide-react';
+import { Home, FileSpreadsheet, FolderGit2, Hammer, Users, CreditCard, HelpCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { clientService } from '../../../services/client.service';
 import { useUnitStore } from '../../../store/unitStore';
 import { ProjectHeader } from '../components/myhome/ProjectHeader';
@@ -9,6 +9,7 @@ import { FloorPlansTab } from '../components/myhome/FloorPlansTab';
 import { DocumentsTab } from '../components/myhome/DocumentsTab';
 import { ProjectUpdatesTab } from '../components/myhome/ProjectUpdatesTab';
 import { FamilyAccessTab } from '../components/myhome/FamilyAccessTab';
+import { Card } from '../../../components/ui/Card';
 
 export type TabType = 'unit-details' | 'floor-plans' | 'documents' | 'project-updates' | 'family-access' | 'finance' | 'support';
 
@@ -16,7 +17,13 @@ export const MyHomePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('unit-details');
   const { activeUnit } = useUnitStore();
 
-  const { data: homeDetails, isLoading } = useQuery({
+  const {
+    data: homeDetails,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['clientHomeDetails', activeUnit?.id || activeUnit?.workflowId],
     queryFn: () => clientService.getHomeDetails(activeUnit?.workflowId || null),
   });
@@ -35,6 +42,29 @@ export const MyHomePage: React.FC = () => {
     setActiveTab(tabId as TabType);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (isError) {
+    return (
+      <div className="space-y-6 text-left max-w-7xl mx-auto pb-16">
+        <Card>
+          <div className="p-8 text-center space-y-4">
+            <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
+            <h3 className="text-lg font-bold text-brand-900 dark:text-white">Unable to Load My Home Dashboard</h3>
+            <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
+              {(error as Error)?.message || 'A network error occurred while querying your property details from Zoho CRM.'}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-md"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry Connection
+            </button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-left max-w-7xl mx-auto pb-16">

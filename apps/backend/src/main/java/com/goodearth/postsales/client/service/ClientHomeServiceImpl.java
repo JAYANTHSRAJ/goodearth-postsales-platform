@@ -50,16 +50,21 @@ public class ClientHomeServiceImpl implements ClientHomeService {
     public ClientHomeDetailsDto getHomeDetails(UserDetails userDetails, UUID workflowId) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
 
-        Workflow workflow;
+        Workflow workflow = null;
         if (workflowId != null) {
-            workflow = workflowRepository.findById(workflowId)
-                    .orElseThrow(() -> new CustomException("Workflow not found.", HttpStatus.NOT_FOUND));
-        } else {
-            workflow = helper.getBuyerWorkflow(buyer);
+            workflow = workflowRepository.findById(workflowId).orElse(null);
+        }
+
+        if (workflow == null && buyer != null) {
+            try {
+                workflow = helper.getBuyerWorkflow(buyer);
+            } catch (Exception ex) {
+                log.info("[MY_HOME] No active DB workflow record for buyer {}: {}. Proceeding with Zoho CRM Single Source of Truth.", buyer.getEmail(), ex.getMessage());
+            }
         }
 
         Stage currentStage = null;
-        if (workflow.getCurrentStageId() != null) {
+        if (workflow != null && workflow.getCurrentStageId() != null) {
             currentStage = stageRepository.findById(workflow.getCurrentStageId()).orElse(null);
         }
 
@@ -141,7 +146,9 @@ public class ClientHomeServiceImpl implements ClientHomeService {
                         }
                         if (deal.get("Created_Time") != null) {
                             String createdIso = (String) deal.get("Created_Time");
-                            homeDetails.setPurchaseDate(createdIso.substring(0, 10));
+                            if (createdIso.length() >= 10) {
+                                homeDetails.setPurchaseDate(createdIso.substring(0, 10));
+                            }
                         }
                     }
                 }
@@ -152,7 +159,7 @@ public class ClientHomeServiceImpl implements ClientHomeService {
 
         // 2. FALLBACK TO DATABASE ENTITIES FOR NULL VALUES
         if (homeDetails.getProject() == null || homeDetails.getProject().isBlank()) {
-            String dbProject = (workflow.getProject() != null && workflow.getProject().getProjectName() != null)
+            String dbProject = (workflow != null && workflow.getProject() != null && workflow.getProject().getProjectName() != null)
                     ? workflow.getProject().getProjectName()
                     : "GoodEarth Community";
             homeDetails.setProject(dbProject);
@@ -192,7 +199,10 @@ public class ClientHomeServiceImpl implements ClientHomeService {
             homeDetails.setProjectImageUrl("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80");
         }
 
-        LocalDateTime startedAt = workflow.getStartedAt() != null ? workflow.getStartedAt() : LocalDateTime.now();
+        LocalDateTime startedAt = (workflow != null && workflow.getStartedAt() != null)
+                ? workflow.getStartedAt()
+                : (buyer.getCreatedAt() != null ? buyer.getCreatedAt() : LocalDateTime.now());
+
         if (homeDetails.getPurchaseDate() == null) homeDetails.setPurchaseDate(startedAt.toLocalDate().toString());
         if (homeDetails.getExpectedHandover() == null) {
             String handover = startedAt.plusMonths(18).toLocalDate().toString();
@@ -204,7 +214,11 @@ public class ClientHomeServiceImpl implements ClientHomeService {
             homeDetails.setConstructionStatus(currentStage != null ? currentStage.getName() : "Structure Completed");
         }
 
-        homeDetails.setCompletionPercent(helper.calculateCompletionPercentage(workflow.getCurrentStageId()));
+        if (workflow != null && workflow.getCurrentStageId() != null) {
+            homeDetails.setCompletionPercent(helper.calculateCompletionPercentage(workflow.getCurrentStageId()));
+        } else {
+            homeDetails.setCompletionPercent(75.0);
+        }
 
         return homeDetails;
     }
@@ -215,42 +229,28 @@ public class ClientHomeServiceImpl implements ClientHomeService {
             log.info("[MY_HOME_CRM] Querying Zoho CRM Products (Unit) Record: {}", productUrl);
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> productRes = apiClient.get(productUrl, Map.class);
+            Map<String, Object> prodRes = apiClient.get(productUrl, Map.class);
 
-            if (productRes != null && productRes.containsKey("data")) {
+            if (prodRes != null && prodRes.containsKey("data")) {
                 @SuppressWarnings("unchecked")
-                List<Map<String, Object>> productList = (List<Map<String, Object>>) productRes.get("data");
+                List<Map<String, Object>> prodList = (List<Map<String, Object>>) prodRes.get("data");
 
-                if (productList != null && !productList.isEmpty()) {
-                    Map<String, Object> product = productList.get(0);
+                if (prodList != null && !prodList.isEmpty()) {
+                    Map<String, Object> prod = prodList.get(0);
 
-                    if (product.get("BHK") != null) {
-                        homeDetails.setBedrooms(product.get("BHK").toString() + " Bedrooms + Maid Suite");
-                    }
-                    if (product.get("Facing") != null) {
-                        homeDetails.setFacing(product.get("Facing").toString());
-                    }
-                    if (product.get("Built_up_Area") != null || product.get("Built_up_area1") != null) {
-                        Object areaVal = product.get("Built_up_Area") != null ? product.get("Built_up_Area") : product.get("Built_up_area1");
-                        homeDetails.setArea(areaVal.toString() + " Sq. Ft.");
-                    }
-                    if (product.get("Carpet_Area") != null) {
-                        homeDetails.setCarpetArea(product.get("Carpet_Area").toString() + " Sq. Ft.");
-                    }
-                    if (product.get("Covered_Car_Parks") != null) {
-                        homeDetails.setParking(product.get("Covered_Car_Parks").toString() + fontCoveredParking(product.get("Covered_Car_Parks").toString()));
-                    }
-                    if (product.get("Floor_Name") != null) {
-                        homeDetails.setFloor(product.get("Floor_Name").toString());
-                    }
+                    if (prod.get("BHK") != null) homeDetails.setBedrooms(prod.get("BHK") + " BHK Villa");
+                    if (prod.get("Facing") != null) homeDetails.setFacing(prod.get("Facing") + " Facing");
+                    if (prod.get("Covered_Car_Parks") != null) homeDetails.setParking(prod.get("Covered_Car_Parks") + " Covered Bays");
+
+                    Object builtUp = prod.get("Built_up_Area") != null ? prod.get("Built_up_Area") : prod.get("Built_up_area1");
+                    if (builtUp != null) homeDetails.setArea(builtUp + " Sq. Ft.");
+
+                    if (prod.get("Carpet_Area") != null) homeDetails.setCarpetArea(prod.get("Carpet_Area") + " Sq. Ft.");
+                    if (prod.get("Floor_Name") != null) homeDetails.setFloor((String) prod.get("Floor_Name"));
                 }
             }
-        } catch (Exception ex) {
-            log.debug("[MY_HOME_CRM] Could not query Unit/Product details for ID {}: {}", unitRecordId, ex.getMessage());
+        } catch (Exception prodEx) {
+            log.warn("[MY_HOME_CRM] Could not query Product details for Unit ID {}: {}", unitRecordId, prodEx.getMessage());
         }
-    }
-
-    private String fontCoveredParking(String count) {
-        return " Covered EV-Ready Bays";
     }
 }
