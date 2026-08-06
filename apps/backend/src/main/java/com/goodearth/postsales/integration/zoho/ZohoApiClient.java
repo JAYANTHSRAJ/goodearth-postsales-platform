@@ -227,15 +227,7 @@ public class ZohoApiClient {
 
             // Dynamically inject the access token from the token manager
             String token = tokenManager.getAccessToken();
-            String uriString = request.getURI().toString().toLowerCase();
-            
-            // WorkDrive uses Bearer scheme; CRM/Books use Zoho-oauthtoken scheme
-            if (uriString.contains("workdrive")) {
-                request.getHeaders().set("Authorization", "Bearer " + token);
-                request.getHeaders().set("Accept", "application/vnd.api+json");
-            } else {
-                request.getHeaders().set("Authorization", "Zoho-oauthtoken " + token);
-            }
+            setAuthHeader(request, token);
 
             int attempt = 0;
             long backoffMs = 500;
@@ -254,6 +246,15 @@ public class ZohoApiClient {
                     long duration = System.currentTimeMillis() - startTime;
                     log.info("Zoho API Request - Method: {}, URL: {}, Status: {}, Duration: {}ms (Attempt: {})",
                             request.getMethod(), request.getURI(), statusCode, duration, attempt);
+
+                    if (statusCode == 401 && attempt < MAX_ATTEMPTS) {
+                        log.warn("Zoho API returned 401 Unauthorized for URL: {}. Forcing access token refresh and retrying...", request.getURI());
+                        String newToken = tokenManager.forceRefreshAccessToken();
+                        setAuthHeader(request, newToken);
+                        sleep(backoffMs);
+                        backoffMs *= 2;
+                        continue;
+                    }
 
                     if (shouldRetry(statusCode)) {
                         if (attempt < MAX_ATTEMPTS) {
@@ -284,6 +285,16 @@ public class ZohoApiClient {
                 throw lastException;
             }
             return response;
+        }
+
+        private void setAuthHeader(HttpRequest request, String token) {
+            String uriString = request.getURI().toString().toLowerCase();
+            if (uriString.contains("workdrive")) {
+                request.getHeaders().set("Authorization", "Bearer " + token);
+                request.getHeaders().set("Accept", "application/vnd.api+json");
+            } else {
+                request.getHeaders().set("Authorization", "Zoho-oauthtoken " + token);
+            }
         }
 
         private boolean shouldRetry(int statusCode) {

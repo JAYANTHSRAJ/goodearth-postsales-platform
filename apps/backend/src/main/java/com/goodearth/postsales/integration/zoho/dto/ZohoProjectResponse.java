@@ -1,5 +1,6 @@
 package com.goodearth.postsales.integration.zoho.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,9 @@ public class ZohoProjectResponse {
         @JsonProperty("Deal_Name")
         private String dealName;
         
+        @JsonProperty("Project_Site")
+        private ProjectSite projectSite;
+
         @JsonProperty("Project_Name")
         private String rawProjectName;
 
@@ -34,6 +38,9 @@ public class ZohoProjectResponse {
         private String stage;
 
         public String getProjectName() {
+            if (projectSite != null && projectSite.getName() != null && !projectSite.getName().trim().isEmpty()) {
+                return projectSite.getName().trim();
+            }
             if (rawProjectName != null && !rawProjectName.trim().isEmpty()) {
                 return rawProjectName.trim();
             }
@@ -43,4 +50,19 @@ public class ZohoProjectResponse {
             return dealName;
         }
     }
+
+    @Getter
+    @Setter
+    public static class ProjectSite {
+        private String id;
+        private String name;
+
+        public ProjectSite() {}
+
+        @JsonCreator
+        public ProjectSite(String name) {
+            this.name = name;
+        }
+    }
 }
+

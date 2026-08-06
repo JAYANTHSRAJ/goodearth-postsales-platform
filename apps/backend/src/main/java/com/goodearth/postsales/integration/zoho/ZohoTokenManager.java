@@ -40,6 +40,30 @@ public class ZohoTokenManager {
         }
     }
 
+    public void invalidateToken() {
+        lock.lock();
+        try {
+            log.warn("Invalidating cached Zoho access token due to 401 Unauthorized response from Zoho API.");
+            this.cachedToken = null;
+            this.expiryTime = null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String forceRefreshAccessToken() {
+        lock.lock();
+        try {
+            log.warn("Forcing immediate refresh of Zoho access token after 401 Unauthorized.");
+            this.cachedToken = null;
+            this.expiryTime = null;
+            refreshAccessToken();
+            return cachedToken;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public void testTokenRefresh() {
         lock.lock();
         try {
