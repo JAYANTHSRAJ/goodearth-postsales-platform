@@ -252,3 +252,40 @@ export interface ZohoSignDto {
   licenseWarningMessage?: string;
   createdAt?: string;
 }
+
+export interface OfferLetterMilestoneDto {
+  sequenceNumber?: number;
+  milestoneName: string;
+  paymentPercentageFormatted?: string;
+  dueDateFormatted?: string;
+  unitAmountFormatted?: string;
+  gstAmountFormatted?: string;
+  installmentAmountFormatted?: string;
+}
+
+export interface OfferLetterDto {
+  offerLetterNo?: string;
+  offerLetterDate?: string;
+  projectName?: string;
+  unitName?: string;
+  carpetAreaSqm?: string;
+  superBuiltUpAreaSqm?: string;
+  exclusiveCommonAreaSqm?: string;
+  associationCommonAreaSqm?: string;
+  udsAllotteeSqm?: string;
+  totalUdsSqm?: string;
+  exclusiveBalconySqm?: string;
+  openTerraceSqm?: string;
+  coveredCarParks?: string;
+  costOfUnitFormatted?: string;
+  gstRate?: string;
+  gstAmountFormatted?: string;
+  costOfHomeFormatted?: string;
+  maintenanceDepositsFormatted?: string;
+  amountInWords?: string;
+  milestones?: OfferLetterMilestoneDto[];
+  totalMilestonePercent?: string;
+  totalUnitCostFormatted?: string;
+  totalGstAmountFormatted?: string;
+  totalInstallmentCostFormatted?: string;
+}

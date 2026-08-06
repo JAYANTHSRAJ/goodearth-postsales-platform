@@ -11,6 +11,7 @@ import {
   DocumentDownloadResponseDto,
   KycValidationSummaryResponseDto,
   OfferLetterStatusDto,
+  OfferLetterDto,
   ZohoSignDto,
 } from '../types/kyc';
 
@@ -99,6 +100,10 @@ export const kycService = {
 
   getOfferLetterStatus: (dealIdOrBookingId: string): Promise<OfferLetterStatusDto> => {
     return api.get<OfferLetterStatusDto>(`/deals/${dealIdOrBookingId}/offer-letter/status`);
+  },
+
+  getOfferLetterDetails: (dealIdOrBookingId: string): Promise<OfferLetterDto> => {
+    return api.get<OfferLetterDto>(`/deals/${dealIdOrBookingId}/offer-letter/details`);
   },
 
   sendOfferLetter: (dealIdOrBookingId: string): Promise<OfferLetterStatusDto> => {

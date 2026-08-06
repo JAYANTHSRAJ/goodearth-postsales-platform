@@ -49,6 +49,20 @@ public class OfferLetterController {
         return ResponseEntity.ok(new ApiResponse<>(status));
     }
 
+    @GetMapping("/{dealIdOrBookingId}/offer-letter/details")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
+    @Operation(summary = "Get structured Offer Letter details JSON", description = "Returns full Offer Letter DTO containing unit details, pricing, and payment milestone tables")
+    public ResponseEntity<ApiResponse<com.goodearth.postsales.offerletter.dto.OfferLetterDto>> getOfferLetterDetails(
+            @PathVariable String dealIdOrBookingId) {
+
+        long startTime = System.currentTimeMillis();
+        com.goodearth.postsales.offerletter.dto.OfferLetterDto dto = offerLetterService.buildOfferLetterDto(dealIdOrBookingId);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("Endpoint: GET /api/v1/deals/{}/offer-letter/details, Execution Time: {}ms", dealIdOrBookingId, duration);
+        return ResponseEntity.ok(new ApiResponse<>(dto));
+    }
+
     @PostMapping("/{dealIdOrBookingId}/offer-letter/send")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM')")
     @Operation(summary = "Send Offer Letter to Buyer", description = "Marks Offer Letter as sent, enables Buyer Portal access, and emails PDF to buyer")
