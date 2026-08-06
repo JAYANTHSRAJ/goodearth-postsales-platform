@@ -79,16 +79,16 @@ public class ClientPortalMapper {
         if (version == null) {
             return null;
         }
-        return new ClientDrawingSummaryDto(
-                version.getId(),
-                version.getFileName(),
-                version.getVersion(),
-                version.getMimeType(),
-                version.getPreviewUrl(),
-                version.getDownloadUrl(),
-                version.getUploadedBy(),
-                version.getUploadedAt()
-        );
+        ClientDrawingSummaryDto dto = new ClientDrawingSummaryDto();
+        dto.setId(version.getId());
+        dto.setFileName(version.getFileName());
+        dto.setVersion(version.getVersion());
+        dto.setMimeType(version.getMimeType());
+        dto.setPreviewUrl(version.getPreviewUrl());
+        dto.setDownloadUrl(version.getDownloadUrl());
+        dto.setUploadedBy(version.getUploadedBy());
+        dto.setUploadedAt(version.getUploadedAt());
+        return dto;
     }
 
     public ClientChangeRequestSummaryDto toChangeRequestSummary(ChangeRequestDto cr) {

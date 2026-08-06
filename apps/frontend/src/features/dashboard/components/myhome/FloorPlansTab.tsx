@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ZoomIn,
@@ -14,14 +14,25 @@ import {
   RefreshCw,
   Eye,
   Layers,
+  RotateCw,
+  ChevronLeft,
+  ChevronRight,
+  FileCode,
+  Image as ImageIcon,
+  CheckCircle2,
 } from 'lucide-react';
 import { clientService, ClientDrawingSummary } from '../../../../services/client.service';
 import { Card } from '../../../../components/ui/Card';
 
 export const FloorPlansTab: React.FC = () => {
   const [zoom, setZoom] = useState<number>(100);
+  const [rotation, setRotation] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const totalPages = 1;
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [selectedVersion, setSelectedVersion] = useState<ClientDrawingSummary | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     data: floorPlansData,
@@ -51,18 +62,39 @@ export const FloorPlansTab: React.FC = () => {
     return list;
   }, [floorPlansData]);
 
-  // Active drawing currently displayed in the PDF viewer
+  // Active drawing currently displayed in the viewer
   const activeDrawing = selectedVersion || floorPlansData?.latestDrawing || (allVersions.length > 0 ? allVersions[0] : null);
 
   const previewUrl = activeDrawing?.previewUrl || floorPlansData?.previewUrl;
   const downloadUrl = activeDrawing?.downloadUrl || floorPlansData?.downloadUrl;
+  const isImage = activeDrawing?.mimeType?.startsWith('image/') || activeDrawing?.fileName?.toLowerCase().match(/\.(png|jpg|jpeg)$/);
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 250));
+  // Zoom and rotation handlers
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 300));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 25, 50));
-  const handleResetZoom = () => setZoom(100);
+  const handleResetZoom = () => {
+    setZoom(100);
+    setRotation(0);
+  };
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
+
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
+  };
+
+  // Mouse Wheel Zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        handleZoomIn();
+      } else {
+        handleZoomOut();
+      }
+    }
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -77,8 +109,8 @@ export const FloorPlansTab: React.FC = () => {
         <div className="h-16 rounded-2xl bg-brand-100/50 dark:bg-brand-900/40 animate-pulse border border-brand-200/50 dark:border-brand-850" />
         <div className="h-96 rounded-3xl bg-brand-100/40 dark:bg-brand-900/30 animate-pulse border border-brand-200/50 dark:border-brand-850 flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-brand-400">
-            <RefreshCw className="h-8 w-8 animate-spin" />
-            <span className="text-xs font-semibold">Fetching Floor Plans from Zoho CRM...</span>
+            <RefreshCw className="h-8 w-8 animate-spin text-amber-500" />
+            <span className="text-xs font-semibold">Fetching Floor Plans from Zoho CRM Deals...</span>
           </div>
         </div>
       </div>
@@ -92,11 +124,11 @@ export const FloorPlansTab: React.FC = () => {
           <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
           <h3 className="text-lg font-bold text-brand-900 dark:text-white">Unable to Load Floor Plans</h3>
           <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
-            {(error as Error)?.message || 'A network error occurred while connecting to Zoho CRM.'}
+            {(error as Error)?.message || 'A network error occurred while querying Zoho CRM Deal attachments.'}
           </p>
           <button
             onClick={() => refetch()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-brand-700 hover:bg-brand-800 text-white transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-md"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Retry Connection
@@ -106,7 +138,7 @@ export const FloorPlansTab: React.FC = () => {
     );
   }
 
-  // Premium Empty State if no floor plan PDF exists
+  // Premium Empty State if no floor plan exists in Zoho CRM
   if (!activeDrawing && !previewUrl) {
     return (
       <Card>
@@ -117,17 +149,17 @@ export const FloorPlansTab: React.FC = () => {
 
           <div className="space-y-2">
             <h3 className="font-serif text-2xl font-bold text-brand-900 dark:text-white">
-              No Floor Plans Uploaded Yet
+              No Floor Plans Available
             </h3>
             <p className="text-sm text-brand-500 dark:text-brand-400 max-w-md mx-auto leading-relaxed">
-              Your CRM Team will upload architectural drawings and approved floor plans directly to your Zoho CRM Deal attachments.
+              Your GoodEarth Relationship Manager will upload approved floor plans here once they are available in your Zoho CRM Deal record.
             </p>
           </div>
 
           <div className="pt-2">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-brand-100/70 text-brand-700 dark:bg-brand-800 dark:text-brand-300">
-              <RefreshCw className="h-3.5 w-3.5" />
-              Zoho CRM Attachment Direct Sync Enabled
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              Zoho CRM Single Source Sync Active
             </span>
           </div>
         </div>
@@ -136,181 +168,218 @@ export const FloorPlansTab: React.FC = () => {
   }
 
   return (
-    <div className={`space-y-6 text-left ${isFullscreen ? 'fixed inset-0 z-50 bg-brand-950 p-6 overflow-y-auto' : ''}`}>
-      {/* Top Header & Version Switcher */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-brand-900 p-4 rounded-2xl border border-brand-200/80 dark:border-brand-800 shadow-sm">
-        <div>
-          <h2 className="font-serif text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2">
+    <div
+      ref={containerRef}
+      onWheel={handleWheel}
+      className={`space-y-6 text-left ${
+        isFullscreen ? 'fixed inset-0 z-50 bg-brand-950 p-6 overflow-y-auto' : ''
+      }`}
+    >
+      {/* 1. Top Header & Metadata */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-brand-900 p-5 rounded-2xl border border-brand-200/80 dark:border-brand-800 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+              {isImage ? 'Architectural Image' : 'PDF Drawing'}
+            </span>
+            <span className="text-xs text-brand-400 font-medium">
+              Version {activeDrawing?.version || 1}
+            </span>
+          </div>
+          <h2 className="font-serif text-xl font-bold text-brand-900 dark:text-white flex items-center gap-2">
             <FileText className="h-5 w-5 text-amber-500" />
             {activeDrawing?.fileName || 'Approved Floor Plan Drawing'}
           </h2>
-          <p className="text-xs text-brand-500 dark:text-brand-400">
-            Zoho CRM Attachment ID: <code className="font-mono text-[11px] font-semibold text-brand-700 dark:text-brand-300">{activeDrawing?.id || 'N/A'}</code>
-          </p>
+          <div className="flex flex-wrap items-center gap-4 text-xs text-brand-500 dark:text-brand-400 pt-1">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5 text-brand-400" />
+              Uploaded: {activeDrawing?.uploadedTime ? new Date(activeDrawing.uploadedTime).toLocaleDateString() : 'Recent'}
+            </span>
+            <span className="flex items-center gap-1">
+              <User className="h-3.5 w-3.5 text-brand-400" />
+              By: {activeDrawing?.uploadedBy || 'GoodEarth CRM Team'}
+            </span>
+            <span className="flex items-center gap-1">
+              <HardDrive className="h-3.5 w-3.5 text-brand-400" />
+              Size: {formatFileSize(activeDrawing?.fileSize)}
+            </span>
+          </div>
         </div>
 
-        {/* Version Switcher (V1, V2, V3...) */}
-        {allVersions.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-brand-500 dark:text-brand-400">Version:</span>
-            <div className="inline-flex rounded-xl p-1 bg-brand-100/70 dark:bg-brand-850 border border-brand-200 dark:border-brand-800">
+        {/* Top Right Action Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleFullscreen}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-100 dark:bg-brand-850 hover:bg-brand-200 dark:hover:bg-brand-800 text-brand-800 dark:text-brand-200 text-xs font-bold transition-colors"
+          >
+            <Maximize2 className="h-4 w-4" />
+            <span>{isFullscreen ? 'Exit Full Screen' : 'Full Screen'}</span>
+          </button>
+
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              download
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors shadow-md"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download</span>
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Main Viewer Grid (Left Panel Revisions + Center Viewer) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+        {/* Left Revision Panel / Strip */}
+        <div className="lg:col-span-1 space-y-3 bg-white dark:bg-brand-900 p-4 rounded-3xl border border-brand-200/80 dark:border-brand-800 shadow-sm flex flex-col justify-between">
+          <div className="space-y-3">
+            <h3 className="font-serif text-sm font-bold text-brand-900 dark:text-white flex items-center gap-2 border-b border-brand-100 dark:border-brand-850 pb-2">
+              <Layers className="h-4 w-4 text-amber-500" />
+              Revision History ({allVersions.length})
+            </h3>
+
+            <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
               {allVersions.map((ver, i) => {
                 const isActive = (activeDrawing?.id === ver.id) || (!selectedVersion && i === 0);
-                const versionLabel = ver.version ? `Floor Plan V${ver.version}` : `Floor Plan V${allVersions.length - i}`;
+                const versionLabel = ver.version ? `Floor Plan V${ver.version}` : `Revision V${allVersions.length - i}`;
+                const isVerImg = ver.mimeType?.startsWith('image/') || ver.fileName?.toLowerCase().match(/\.(png|jpg|jpeg)$/);
 
                 return (
                   <button
                     key={ver.id || i}
                     onClick={() => setSelectedVersion(ver)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`w-full p-3 rounded-2xl text-left border transition-all flex items-start gap-3 ${
                       isActive
-                        ? 'bg-amber-500 text-white shadow-sm'
-                        : 'text-brand-600 hover:text-brand-900 dark:text-brand-300 dark:hover:text-white'
+                        ? 'bg-amber-500/10 border-amber-500/50 text-brand-900 dark:text-white shadow-sm'
+                        : 'border-brand-100 dark:border-brand-850 hover:bg-brand-50 dark:hover:bg-brand-850 text-brand-600 dark:text-brand-300'
                     }`}
                   >
-                    {versionLabel}
+                    <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-amber-500 text-white' : 'bg-brand-100 dark:bg-brand-800 text-brand-500'
+                    }`}>
+                      {isVerImg ? <ImageIcon className="h-4 w-4" /> : <FileCode className="h-4 w-4" />}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-serif text-xs font-bold truncate">{versionLabel}</span>
+                        {isActive && <Eye className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-brand-400 truncate mt-0.5">{ver.fileName}</p>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Embedded PDF Viewer Container */}
-      <div className="relative rounded-3xl border border-brand-200/90 dark:border-brand-800 bg-brand-900 overflow-hidden shadow-xl">
-        {/* PDF Viewer Toolbar Controls */}
-        <div className="flex items-center justify-between px-4 py-3 bg-brand-950/90 border-b border-brand-800 text-white text-xs">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-amber-400 font-bold text-[11px] uppercase tracking-wider">
-              Zoho CRM PDF Viewer
-            </span>
-            <span className="text-brand-500">|</span>
-            <span className="text-brand-300 font-semibold">{zoom}% Zoom</span>
+          <div className="pt-3 border-t border-brand-100 dark:border-brand-850 text-[11px] text-brand-400 text-center font-medium">
+            Zoho CRM Deal Attachment Stream
           </div>
+        </div>
 
-          {/* Controls: Zoom In, Zoom Out, Reset, Fullscreen, Download */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={handleZoomOut}
-              title="Zoom Out"
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={handleZoomIn}
-              title="Zoom In"
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={handleResetZoom}
-              title="Fit Width"
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors hidden sm:inline-flex"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-
-            {downloadUrl && (
-              <a
-                href={downloadUrl}
-                download
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors shadow-sm"
+        {/* Center PDF / Image Viewer Area */}
+        <div className="lg:col-span-3 relative rounded-3xl border border-brand-200/90 dark:border-brand-800 bg-brand-950 overflow-hidden shadow-xl flex flex-col justify-between">
+          {/* Main Display Canvas */}
+          <div className="relative min-h-[520px] max-h-[750px] bg-brand-950 flex items-center justify-center overflow-auto p-4">
+            {previewUrl ? (
+              <div
+                className="transition-all duration-300 origin-center flex items-center justify-center w-full h-full"
+                style={{
+                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                }}
               >
-                <Download className="h-3.5 w-3.5" />
-                <span>Download</span>
-              </a>
+                {isImage ? (
+                  <img
+                    src={previewUrl}
+                    alt={activeDrawing?.fileName || 'Floor Plan'}
+                    className="max-h-[600px] w-auto object-contain rounded-xl shadow-2xl border border-brand-800 bg-white"
+                  />
+                ) : (
+                  <iframe
+                    src={previewUrl}
+                    title={activeDrawing?.fileName || 'Floor Plan PDF'}
+                    className="w-full min-h-[600px] rounded-xl border border-brand-800 bg-white shadow-2xl"
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="text-center space-y-3 p-8 text-brand-400">
+                <FileSpreadsheet className="h-12 w-12 mx-auto text-brand-500" />
+                <p className="text-sm font-semibold">Preview stream unavailable for this drawing.</p>
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Dynamic PDF Canvas / Iframe */}
-        <div className="relative min-h-[500px] max-h-[750px] bg-brand-950 flex items-center justify-center overflow-auto p-4">
-          {previewUrl ? (
-            <div
-              className="transition-transform duration-200 origin-top flex items-center justify-center w-full h-full"
-              style={{ transform: `scale(${zoom / 100})` }}
-            >
-              <iframe
-                src={previewUrl}
-                title={activeDrawing?.fileName || 'Floor Plan Drawing'}
-                className="w-full min-h-[600px] rounded-xl border border-brand-800 bg-white shadow-2xl"
-              />
-            </div>
-          ) : (
-            <div className="text-center space-y-3 p-8 text-brand-400">
-              <FileSpreadsheet className="h-12 w-12 mx-auto text-brand-500" />
-              <p className="text-sm font-semibold">Preview stream unavailable for this drawing.</p>
-            </div>
-          )}
-        </div>
+          {/* Bottom Interactive Control Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-brand-900 border-t border-brand-800 text-white text-xs z-10">
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleZoomOut}
+                title="Zoom Out (-25%)"
+                className="p-2 rounded-xl bg-brand-800 hover:bg-brand-700 text-white transition-colors shadow-sm"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </button>
 
-        {/* Thumbnail Preview Strip */}
-        {allVersions.length > 1 && (
-          <div className="bg-brand-950/95 border-t border-brand-800 p-3 flex items-center gap-3 overflow-x-auto">
-            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-              <Layers className="h-3.5 w-3.5" />
-              Drawings:
-            </span>
-            {allVersions.map((v) => {
-              const isSelected = activeDrawing?.id === v.id;
-              return (
-                <button
-                  key={v.id}
-                  onClick={() => setSelectedVersion(v)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 border transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
-                      : 'bg-brand-900 text-brand-300 border-brand-800 hover:bg-brand-850'
-                  }`}
-                >
-                  <Eye className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{v.fileName}</span>
-                </button>
-              );
-            })}
+              <span className="font-mono text-amber-400 font-bold text-xs min-w-[50px] text-center">
+                {zoom}%
+              </span>
+
+              <button
+                onClick={handleZoomIn}
+                title="Zoom In (+25%)"
+                className="p-2 rounded-xl bg-brand-800 hover:bg-brand-700 text-white transition-colors shadow-sm"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={handleResetZoom}
+                title="Fit Width / Reset Zoom"
+                className="px-3 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-700 text-white text-xs font-semibold transition-colors ml-1 hidden sm:inline-flex"
+              >
+                Fit Width
+              </button>
+            </div>
+
+            {/* Rotation Control */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRotate}
+                title="Rotate 90°"
+                className="p-2 rounded-xl bg-brand-800 hover:bg-brand-700 text-white transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                <RotateCw className="h-4 w-4" />
+                <span className="hidden sm:inline">Rotate {rotation}°</span>
+              </button>
+            </div>
+
+            {/* Page Navigation Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage <= 1}
+                className="p-1.5 rounded-lg bg-brand-800 hover:bg-brand-700 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs text-brand-300 font-medium">
+                Page <strong className="text-white">{currentPage}</strong> of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage >= totalPages}
+                className="p-1.5 rounded-lg bg-brand-800 hover:bg-brand-700 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
-
-      {/* File Metadata Card */}
-      <Card>
-        <div className="p-5 flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-300">
-            <FileText className="h-4 w-4 text-amber-500" />
-            <span className="font-semibold">{activeDrawing?.fileName || 'Drawing.pdf'}</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-brand-500 dark:text-brand-400 flex-wrap">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5 text-brand-400" />
-              <span>Uploaded: {activeDrawing?.uploadedAt ? new Date(activeDrawing.uploadedAt).toLocaleDateString() : 'Recent'}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <User className="h-3.5 w-3.5 text-brand-400" />
-              <span>By: {activeDrawing?.uploadedBy || 'GoodEarth CRM Team'}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <HardDrive className="h-3.5 w-3.5 text-brand-400" />
-              <span>Size: {formatFileSize(activeDrawing?.fileSize)}</span>
-            </div>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 };

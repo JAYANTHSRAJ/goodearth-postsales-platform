@@ -14,11 +14,15 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClientDrawingSummaryDto {
     private UUID id;
+    private String attachmentId;
     private String fileName;
     private int version;
     private String mimeType;
+    private String fileType;
+    private long fileSize;
     private String previewUrl;
     private String downloadUrl;
     private String uploadedBy;
+    private String uploadedTime;
     private LocalDateTime uploadedAt;
 }

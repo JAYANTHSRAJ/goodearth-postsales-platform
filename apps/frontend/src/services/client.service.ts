@@ -30,12 +30,15 @@ export interface ClientStageSummary {
 
 export interface ClientDrawingSummary {
   id: string;
+  attachmentId?: string;
   fileName: string;
   version: number;
   mimeType: string;
+  fileType?: string;
   previewUrl: string;
   downloadUrl: string;
   uploadedBy: string;
+  uploadedTime?: string;
   uploadedAt: string;
   fileSize?: number;
 }
@@ -174,6 +177,10 @@ export const clientService = {
 
   getFloorPlans(): Promise<ClientFloorPlans> {
     return api.get<ClientFloorPlans>('/client/floor-plans');
+  },
+
+  getFloorPlanById(attachmentId: string): Promise<ClientDrawingSummary> {
+    return api.get<ClientDrawingSummary>(`/client/floor-plans/${attachmentId}`);
   },
 
   getDocuments(): Promise<ClientDocumentsGrouped> {

@@ -143,6 +143,14 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
+    @GetMapping({"/floor-plans/{attachmentId}", "/floorplans/{attachmentId}"})
+    public ResponseEntity<ApiResponse<ClientDrawingSummaryDto>> getFloorPlanById(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String attachmentId) {
+        ClientDrawingSummaryDto result = floorPlanService.getFloorPlanById(userDetails, attachmentId);
+        return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
     @GetMapping({"/floor-plans/attachment/{dealId}/{attachmentId}", "/floorplans/attachment/{dealId}/{attachmentId}"})
     public ResponseEntity<byte[]> streamFloorPlanAttachment(
             @PathVariable String dealId,

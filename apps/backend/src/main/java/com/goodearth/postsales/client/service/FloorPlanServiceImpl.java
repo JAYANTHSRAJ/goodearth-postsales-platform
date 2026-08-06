@@ -32,7 +32,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class FloorPlanServiceImpl implements FloorPlanService {
 
     private static final Logger log = LoggerFactory.getLogger(FloorPlanServiceImpl.class);
@@ -71,88 +71,26 @@ public class FloorPlanServiceImpl implements FloorPlanService {
 
         // 1. PRIMARY SOURCE OF TRUTH: Fetch Deal attachments directly from Zoho CRM
         if (zohoDealId != null && !zohoDealId.isBlank()) {
-            try {
-                String crmAttachmentsUrl = properties.getCrmApiUrl() + "/Deals/" + zohoDealId + "/Attachments";
-                log.info("Fetching attachments directly from Zoho CRM for Deal ID: {}", zohoDealId);
-                
-                @SuppressWarnings("unchecked")
-                Map<String, Object> crmResponse = apiClient.get(crmAttachmentsUrl, Map.class);
-                
-                if (crmResponse != null && crmResponse.containsKey("data")) {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> attachmentsData = (List<Map<String, Object>>) crmResponse.get("data");
+            List<ClientDrawingSummaryDto> drawingSummaries = fetchAttachmentsFromZoho(zohoDealId);
 
-                    if (attachmentsData != null && !attachmentsData.isEmpty()) {
-                        List<ClientDrawingSummaryDto> drawingSummaries = new ArrayList<>();
-                        int versionCounter = attachmentsData.size();
+            if (!drawingSummaries.isEmpty()) {
+                drawingSummaries.sort(Comparator.comparing(ClientDrawingSummaryDto::getVersion).reversed());
 
-                        for (Map<String, Object> att : attachmentsData) {
-                            String fileName = (String) att.get("File_Name");
-                            if (fileName == null) fileName = "Floor_Plan_Drawing.pdf";
-                            
-                            String lowerName = fileName.toLowerCase();
-                            // Filter for Floor Plans / Drawings / PDFs
-                            boolean isFloorPlan = lowerName.contains("plan")
-                                    || lowerName.contains("drawing")
-                                    || lowerName.contains("floor")
-                                    || lowerName.contains("layout")
-                                    || lowerName.contains("architectural")
-                                    || lowerName.endsWith(".pdf")
-                                    || lowerName.endsWith(".png")
-                                    || lowerName.endsWith(".jpg")
-                                    || lowerName.endsWith(".jpeg");
+                ClientDrawingSummaryDto latest = drawingSummaries.get(0);
+                floorPlansDto.setLatestDrawing(latest);
+                floorPlansDto.setPreviewUrl(latest.getPreviewUrl());
+                floorPlansDto.setDownloadUrl(latest.getDownloadUrl());
 
-                            if (isFloorPlan) {
-                                String attachmentId = (String) att.get("id");
-                                String uploadedBy = "GoodEarth CRM Team";
-                                if (att.get("Created_By") instanceof Map) {
-                                    @SuppressWarnings("unchecked")
-                                    Map<String, Object> createdByMap = (Map<String, Object>) att.get("Created_By");
-                                    if (createdByMap.containsKey("name")) {
-                                        uploadedBy = (String) createdByMap.get("name");
-                                    }
-                                }
+                List<ClientDrawingSummaryDto> previous = drawingSummaries.stream().skip(1).collect(Collectors.toList());
+                floorPlansDto.setAllPreviousVersions(previous);
+                floorPlansDto.setRevisionHistory(drawingSummaries);
 
-                                String streamUrl = "/api/v1/client/floor-plans/attachment/" + zohoDealId + "/" + attachmentId;
-
-                                ClientDrawingSummaryDto summary = new ClientDrawingSummaryDto();
-                                summary.setId(UUID.nameUUIDFromBytes(attachmentId.getBytes()));
-                                summary.setFileName(fileName);
-                                summary.setVersion(versionCounter--);
-                                summary.setMimeType(fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
-                                summary.setPreviewUrl(streamUrl);
-                                summary.setDownloadUrl(streamUrl + "?download=true");
-                                summary.setUploadedBy(uploadedBy);
-                                summary.setUploadedAt(LocalDateTime.now());
-
-                                drawingSummaries.add(summary);
-                            }
-                        }
-
-                        if (!drawingSummaries.isEmpty()) {
-                            // Sort by version descending (newest version first)
-                            drawingSummaries.sort(Comparator.comparing(ClientDrawingSummaryDto::getVersion).reversed());
-
-                            ClientDrawingSummaryDto latest = drawingSummaries.get(0);
-                            floorPlansDto.setLatestDrawing(latest);
-                            floorPlansDto.setPreviewUrl(latest.getPreviewUrl());
-                            floorPlansDto.setDownloadUrl(latest.getDownloadUrl());
-
-                            List<ClientDrawingSummaryDto> previous = drawingSummaries.stream().skip(1).collect(Collectors.toList());
-                            floorPlansDto.setAllPreviousVersions(previous);
-                            floorPlansDto.setRevisionHistory(drawingSummaries);
-
-                            log.info("Successfully loaded {} floor plan attachments from Zoho CRM for Deal ID: {}", drawingSummaries.size(), zohoDealId);
-                            return floorPlansDto;
-                        }
-                    }
-                }
-            } catch (Exception crmEx) {
-                log.warn("Could not query Zoho CRM Deal attachments for Deal ID: {}: {}. Checking database fallback.", zohoDealId, crmEx.getMessage());
+                log.info("Successfully loaded {} floor plan attachments from Zoho CRM for Deal ID: {}", drawingSummaries.size(), zohoDealId);
+                return floorPlansDto;
             }
         }
 
-        // 2. FALLBACK SOURCE: Query local database WorkDrive file records if available
+        // 2. FALLBACK SOURCE: Query local database files (for backward compatibility and integration test assertions)
         try {
             Workflow workflow = helper.getBuyerWorkflow(buyer);
             Optional<WorkDriveFolder> folderOpt = workDriveFolderRepository.findByWorkflowId(workflow.getId());
@@ -192,9 +130,121 @@ public class FloorPlanServiceImpl implements FloorPlanService {
     }
 
     @Override
+    public ClientDrawingSummaryDto getFloorPlanById(UserDetails userDetails, String attachmentId) {
+        Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
+        String zohoDealId = buyer.getZohoDealId();
+
+        if (zohoDealId != null && !zohoDealId.isBlank()) {
+            List<ClientDrawingSummaryDto> attachments = fetchAttachmentsFromZoho(zohoDealId);
+            Optional<ClientDrawingSummaryDto> match = attachments.stream()
+                    .filter(a -> attachmentId.equals(a.getAttachmentId()) || attachmentId.equals(a.getId().toString()))
+                    .findFirst();
+            if (match.isPresent()) {
+                return match.get();
+            }
+        }
+
+        ClientFloorPlansDto allPlans = getFloorPlans(userDetails);
+        if (allPlans.getLatestDrawing() != null &&
+                (attachmentId.equals(allPlans.getLatestDrawing().getAttachmentId()) || attachmentId.equals(allPlans.getLatestDrawing().getId().toString()))) {
+            return allPlans.getLatestDrawing();
+        }
+
+        throw new CustomException("Floor plan attachment not found: " + attachmentId, HttpStatus.NOT_FOUND);
+    }
+
+    @Override
     public byte[] downloadAttachment(String dealId, String attachmentId) {
         String crmDownloadUrl = properties.getCrmApiUrl() + "/Deals/" + dealId + "/Attachments/" + attachmentId;
         log.info("Downloading Zoho CRM Deal attachment binary from URL: {}", crmDownloadUrl);
         return apiClient.downloadCrmAttachment(crmDownloadUrl);
+    }
+
+    private List<ClientDrawingSummaryDto> fetchAttachmentsFromZoho(String zohoDealId) {
+        List<ClientDrawingSummaryDto> drawingSummaries = new ArrayList<>();
+        try {
+            String crmAttachmentsUrl = properties.getCrmApiUrl() + "/Deals/" + zohoDealId + "/Attachments";
+            log.info("Fetching attachments directly from Zoho CRM for Deal ID: {}", zohoDealId);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> crmResponse = apiClient.get(crmAttachmentsUrl, Map.class);
+
+            if (crmResponse != null && crmResponse.containsKey("data")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> attachmentsData = (List<Map<String, Object>>) crmResponse.get("data");
+
+                if (attachmentsData != null && !attachmentsData.isEmpty()) {
+                    int versionCounter = attachmentsData.size();
+
+                    for (Map<String, Object> att : attachmentsData) {
+                        String fileName = (String) att.get("File_Name");
+                        if (fileName == null) fileName = "Floor_Plan_Drawing.pdf";
+
+                        String lowerName = fileName.toLowerCase();
+                        boolean isFloorPlan = lowerName.contains("plan")
+                                || lowerName.contains("drawing")
+                                || lowerName.contains("floor")
+                                || lowerName.contains("layout")
+                                || lowerName.contains("architectural")
+                                || lowerName.endsWith(".pdf")
+                                || lowerName.endsWith(".png")
+                                || lowerName.endsWith(".jpg")
+                                || lowerName.endsWith(".jpeg");
+
+                        if (isFloorPlan) {
+                            String attachmentId = (String) att.get("id");
+                            String createdTime = (String) att.get("Created_Time");
+                            String sizeStr = (String) att.get("Size");
+                            long fileSize = 1048576L;
+                            if (sizeStr != null) {
+                                try {
+                                    fileSize = Long.parseLong(sizeStr);
+                                } catch (NumberFormatException ignored) {}
+                            }
+
+                            String uploadedBy = "GoodEarth CRM Team";
+                            if (att.get("Created_By") instanceof Map) {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> createdByMap = (Map<String, Object>) att.get("Created_By");
+                                if (createdByMap.containsKey("name")) {
+                                    uploadedBy = (String) createdByMap.get("name");
+                                }
+                            }
+
+                            String mimeType = "application/pdf";
+                            String fileType = "PDF";
+                            if (lowerName.endsWith(".png")) {
+                                mimeType = "image/png";
+                                fileType = "PNG Image";
+                            } else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+                                mimeType = "image/jpeg";
+                                fileType = "JPEG Image";
+                            }
+
+                            String streamUrl = "/api/v1/client/floor-plans/attachment/" + zohoDealId + "/" + attachmentId;
+
+                            ClientDrawingSummaryDto summary = new ClientDrawingSummaryDto();
+                            summary.setId(UUID.nameUUIDFromBytes(attachmentId.getBytes()));
+                            summary.setAttachmentId(attachmentId);
+                            summary.setFileName(fileName);
+                            summary.setVersion(versionCounter--);
+                            summary.setMimeType(mimeType);
+                            summary.setFileType(fileType);
+                            summary.setFileSize(fileSize);
+                            summary.setPreviewUrl(streamUrl);
+                            summary.setDownloadUrl(streamUrl + "?download=true");
+                            summary.setUploadedBy(uploadedBy);
+                            summary.setUploadedTime(createdTime != null ? createdTime : java.time.LocalDateTime.now().toString());
+                            summary.setUploadedAt(LocalDateTime.now());
+
+                            drawingSummaries.add(summary);
+                        }
+                    }
+                }
+            }
+        } catch (Exception crmEx) {
+            log.warn("Could not query Zoho CRM Deal attachments for Deal ID: {}: {}", zohoDealId, crmEx.getMessage());
+        }
+        return drawingSummaries;
     }
 }
