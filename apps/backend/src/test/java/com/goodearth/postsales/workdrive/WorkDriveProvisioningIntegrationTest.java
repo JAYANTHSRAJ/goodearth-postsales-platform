@@ -186,14 +186,6 @@ public class WorkDriveProvisioningIntegrationTest {
         assertNotNull(folder.getProjectFolderId(), "Project folder ID must not be null");
         assertNotNull(folder.getUnitFolderId(), "Unit folder ID must not be null");
         assertNotNull(folder.getFloorPlansFolderId(), "Floor Plans folder ID must not be null");
-        assertNotNull(folder.getArchitecturalFolderId(), "Architectural Drawings folder ID must not be null");
-        assertNotNull(folder.getStructuralFolderId(), "Structural Drawings folder ID must not be null");
-        assertNotNull(folder.getElectricalFolderId(), "Electrical folder ID must not be null");
-        assertNotNull(folder.getPlumbingFolderId(), "Plumbing folder ID must not be null");
-        assertNotNull(folder.getInteriorFolderId(), "Interior folder ID must not be null");
-        assertNotNull(folder.getSitePhotosFolderId(), "Site Photos folder ID must not be null");
-        assertNotNull(folder.getApprovalsFolderId(), "Approvals folder ID must not be null");
-        assertNotNull(folder.getDocumentsFolderId(), "Documents folder ID must not be null");
 
         // 3. Simulate Uploading a PDF into Floor Plans subfolder
         String sampleFileId = "WD-FILE-MOTIF16-FP-001";

@@ -155,18 +155,10 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         folder.setFolderName(trimmedProjectName + " - " + trimmedUnitName);
 
         log.info("[WORKDRIVE_HIERARCHY] Created/Reused Unit Folder ID: {} under Parent Project Folder ID: {}", unitFolderId, projectFolderId);
-        log.info("[WORKDRIVE_HIERARCHY] Provisioning 9 Standard Engineering Subfolders under Unit Folder {}", unitFolderId);
+        log.info("[WORKDRIVE_HIERARCHY] Provisioning Floor Plans folder under Unit Folder {}", unitFolderId);
 
-        // Step 5: Provision 9 Standard Engineering Subfolders inside Unit Folder
+        // Step 5: Provision Floor Plans subfolder inside Unit Folder
         folder.setFloorPlansFolderId(findOrCreateFolder("Floor Plans", unitFolderId, null, trimmedUnitName));
-        folder.setArchitecturalFolderId(findOrCreateFolder("Architectural Drawings", unitFolderId, null, trimmedUnitName));
-        folder.setStructuralFolderId(findOrCreateFolder("Structural Drawings", unitFolderId, null, trimmedUnitName));
-        folder.setElectricalFolderId(findOrCreateFolder("Electrical", unitFolderId, null, trimmedUnitName));
-        folder.setPlumbingFolderId(findOrCreateFolder("Plumbing", unitFolderId, null, trimmedUnitName));
-        folder.setInteriorFolderId(findOrCreateFolder("Interior", unitFolderId, null, trimmedUnitName));
-        folder.setSitePhotosFolderId(findOrCreateFolder("Site Photos", unitFolderId, null, trimmedUnitName));
-        folder.setApprovalsFolderId(findOrCreateFolder("Approvals", unitFolderId, null, trimmedUnitName));
-        folder.setDocumentsFolderId(findOrCreateFolder("Documents", unitFolderId, null, trimmedUnitName));
 
         log.info("[WORKDRIVE_HIERARCHY] Provisioning Completed Successfully for Unit '{}' under Project '{}'.", trimmedUnitName, trimmedProjectName);
         return folderRepository.save(folder);
