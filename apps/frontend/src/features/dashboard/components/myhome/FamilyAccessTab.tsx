@@ -13,6 +13,8 @@ import {
   Heart,
   AlertCircle,
   X,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { clientService, FamilyMember, ClientHomeDetails } from '../../../../services/client.service';
 import { useAuthStore } from '../../../../store/authStore';
@@ -42,7 +44,6 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
   });
 
   // Verify whether logged-in user is Primary Buyer
-  // If user's email matches primary buyer email, or role is buyer/admin, treat as primary
   const primaryEmail = details?.primaryBuyerEmail?.toLowerCase();
   const userEmail = user?.email?.toLowerCase();
   const isPrimaryBuyer = user?.role === 'admin' || user?.role === 'buyer' || (!!primaryEmail && primaryEmail === userEmail);
@@ -182,7 +183,7 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-700 dark:text-amber-300 text-xs">
           <Lock className="h-4 w-4 shrink-0 text-amber-500" />
           <span>
-            <strong>Read-Only Access:</strong> Only the Primary Homeowner is authorized to invite, update, or revoke family member access.
+            <strong>Read-Only Access:</strong> Secondary family members cannot add, edit, or remove household access permissions. Contact the Primary Homeowner for access updates.
           </span>
         </div>
       )}
@@ -197,7 +198,10 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
                 <Shield className="h-3 w-3" />
                 Primary Buyer
               </span>
-              <span className="text-[10px] font-semibold text-amber-300/80">Root Account</span>
+              <span className="text-[10px] font-semibold text-amber-300/80 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                Active Account
+              </span>
             </div>
 
             <div>
@@ -224,7 +228,10 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
                   <UserCheck className="h-3 w-3 text-amber-500" />
                   Co-Owner
                 </span>
-                <span className="text-[10px] font-semibold text-brand-400">Joint Holder</span>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Verified Holder
+                </span>
               </div>
 
               <div>
@@ -236,8 +243,9 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
               </div>
             </div>
 
-            <div className="pt-3 border-t border-brand-100 dark:border-brand-850 text-[11px] text-brand-500 font-medium">
-              Co-Applicant Property Access
+            <div className="pt-3 border-t border-brand-100 dark:border-brand-850 text-[11px] text-brand-500 font-medium flex items-center justify-between">
+              <span>Co-Applicant Property Access</span>
+              <span className="text-emerald-600 font-semibold">Active Access</span>
             </div>
           </div>
         )}
@@ -297,8 +305,14 @@ export const FamilyAccessTab: React.FC<FamilyAccessTabProps> = ({ details }) => 
               </div>
 
               <div className="pt-3 border-t border-brand-100 dark:border-brand-850 text-[11px] text-brand-400 flex items-center justify-between">
-                <span>Relationship: {member.relation}</span>
-                <span className="text-green-600 font-semibold">Active Access</span>
+                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Active Status
+                </span>
+                <span className="flex items-center gap-1 text-brand-400">
+                  <Clock className="h-3 w-3" />
+                  Verified
+                </span>
               </div>
             </div>
           ))

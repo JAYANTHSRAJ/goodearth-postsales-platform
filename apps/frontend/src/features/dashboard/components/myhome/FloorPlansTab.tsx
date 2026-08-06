@@ -4,7 +4,6 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Expand,
   Download,
   FileSpreadsheet,
   Calendar,
@@ -13,6 +12,8 @@ import {
   FileText,
   AlertCircle,
   RefreshCw,
+  Eye,
+  Layers,
 } from 'lucide-react';
 import { clientService, ClientDrawingSummary } from '../../../../services/client.service';
 import { Card } from '../../../../components/ui/Card';
@@ -77,7 +78,7 @@ export const FloorPlansTab: React.FC = () => {
         <div className="h-96 rounded-3xl bg-brand-100/40 dark:bg-brand-900/30 animate-pulse border border-brand-200/50 dark:border-brand-850 flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-brand-400">
             <RefreshCw className="h-8 w-8 animate-spin" />
-            <span className="text-xs font-semibold">Fetching Floor Plans from WorkDrive...</span>
+            <span className="text-xs font-semibold">Fetching Floor Plans from Zoho CRM...</span>
           </div>
         </div>
       </div>
@@ -91,7 +92,7 @@ export const FloorPlansTab: React.FC = () => {
           <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
           <h3 className="text-lg font-bold text-brand-900 dark:text-white">Unable to Load Floor Plans</h3>
           <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
-            {(error as Error)?.message || 'A network error occurred while connecting to WorkDrive.'}
+            {(error as Error)?.message || 'A network error occurred while connecting to Zoho CRM.'}
           </p>
           <button
             onClick={() => refetch()}
@@ -105,7 +106,7 @@ export const FloorPlansTab: React.FC = () => {
     );
   }
 
-  // Premium Empty State if no floor plan PDF exists in WorkDrive
+  // Premium Empty State if no floor plan PDF exists
   if (!activeDrawing && !previewUrl) {
     return (
       <Card>
@@ -119,14 +120,14 @@ export const FloorPlansTab: React.FC = () => {
               No Floor Plans Uploaded Yet
             </h3>
             <p className="text-sm text-brand-500 dark:text-brand-400 max-w-md mx-auto leading-relaxed">
-              Your CRM Team will upload architectural drawings and approved floor plans to your WorkDrive folder here.
+              Your CRM Team will upload architectural drawings and approved floor plans directly to your Zoho CRM Deal attachments.
             </p>
           </div>
 
           <div className="pt-2">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-brand-100/70 text-brand-700 dark:bg-brand-800 dark:text-brand-300">
               <RefreshCw className="h-3.5 w-3.5" />
-              Automated WorkDrive Vault Sync Enabled
+              Zoho CRM Attachment Direct Sync Enabled
             </span>
           </div>
         </div>
@@ -144,7 +145,7 @@ export const FloorPlansTab: React.FC = () => {
             {activeDrawing?.fileName || 'Approved Floor Plan Drawing'}
           </h2>
           <p className="text-xs text-brand-500 dark:text-brand-400">
-            WorkDrive File ID: <code className="font-mono text-[11px] font-semibold text-brand-700 dark:text-brand-300">{activeDrawing?.id || 'N/A'}</code>
+            Zoho CRM Attachment ID: <code className="font-mono text-[11px] font-semibold text-brand-700 dark:text-brand-300">{activeDrawing?.id || 'N/A'}</code>
           </p>
         </div>
 
@@ -182,7 +183,7 @@ export const FloorPlansTab: React.FC = () => {
         <div className="flex items-center justify-between px-4 py-3 bg-brand-950/90 border-b border-brand-800 text-white text-xs">
           <div className="flex items-center gap-3">
             <span className="font-mono text-amber-400 font-bold text-[11px] uppercase tracking-wider">
-              PDF Viewer
+              Zoho CRM PDF Viewer
             </span>
             <span className="text-brand-500">|</span>
             <span className="text-brand-300 font-semibold">{zoom}% Zoom</span>
@@ -219,95 +220,97 @@ export const FloorPlansTab: React.FC = () => {
               title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
-              <Expand className="h-4 w-4" />
+              <Maximize2 className="h-4 w-4" />
             </button>
 
             {downloadUrl && (
               <a
                 href={downloadUrl}
                 download
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Download PDF"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 font-bold text-white transition-colors shadow-sm ml-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors shadow-sm"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Download</span>
+                <span>Download</span>
               </a>
             )}
           </div>
         </div>
 
-        {/* Embedded Viewer Canvas */}
-        <div className="relative w-full h-[550px] bg-brand-950 flex items-center justify-center overflow-auto p-4">
-          <div
-            style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-            className="w-full h-full transition-transform duration-200"
-          >
-            {previewUrl ? (
+        {/* Dynamic PDF Canvas / Iframe */}
+        <div className="relative min-h-[500px] max-h-[750px] bg-brand-950 flex items-center justify-center overflow-auto p-4">
+          {previewUrl ? (
+            <div
+              className="transition-transform duration-200 origin-top flex items-center justify-center w-full h-full"
+              style={{ transform: `scale(${zoom / 100})` }}
+            >
               <iframe
                 src={previewUrl}
-                title="WorkDrive Floor Plan Viewer"
-                className="w-full h-full rounded-xl border border-brand-800 shadow-2xl bg-white"
+                title={activeDrawing?.fileName || 'Floor Plan Drawing'}
+                className="w-full min-h-[600px] rounded-xl border border-brand-800 bg-white shadow-2xl"
               />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-white space-y-3 p-8">
-                <FileText className="h-16 w-16 text-amber-500 opacity-80" />
-                <p className="text-sm font-semibold">Floor Plan Drawing Loaded</p>
-                {downloadUrl && (
-                  <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-xl bg-amber-500 font-bold text-xs text-white shadow-lg"
-                  >
-                    Open Document Link
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center space-y-3 p-8 text-brand-400">
+              <FileSpreadsheet className="h-12 w-12 mx-auto text-brand-500" />
+              <p className="text-sm font-semibold">Preview stream unavailable for this drawing.</p>
+            </div>
+          )}
         </div>
+
+        {/* Thumbnail Preview Strip */}
+        {allVersions.length > 1 && (
+          <div className="bg-brand-950/95 border-t border-brand-800 p-3 flex items-center gap-3 overflow-x-auto">
+            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <Layers className="h-3.5 w-3.5" />
+              Drawings:
+            </span>
+            {allVersions.map((v) => {
+              const isSelected = activeDrawing?.id === v.id;
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVersion(v)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 border transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                      : 'bg-brand-900 text-brand-300 border-brand-800 hover:bg-brand-850'
+                  }`}
+                >
+                  <Eye className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{v.fileName}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* File Metadata Details Footer */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl bg-white dark:bg-brand-900 border border-brand-200/80 dark:border-brand-800 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <Calendar className="h-5 w-5" />
+      {/* File Metadata Card */}
+      <Card>
+        <div className="p-5 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-300">
+            <FileText className="h-4 w-4 text-amber-500" />
+            <span className="font-semibold">{activeDrawing?.fileName || 'Drawing.pdf'}</span>
           </div>
-          <div>
-            <span className="block text-[10px] font-bold text-brand-400 uppercase">Upload Date</span>
-            <span className="text-sm font-bold text-brand-900 dark:text-white">
-              {activeDrawing?.uploadedAt ? new Date(activeDrawing.uploadedAt).toLocaleDateString() : 'Recent'}
-            </span>
-          </div>
-        </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-brand-900 border border-brand-200/80 dark:border-brand-800 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <HardDrive className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="block text-[10px] font-bold text-brand-400 uppercase">File Size</span>
-            <span className="text-sm font-bold text-brand-900 dark:text-white">
-              {formatFileSize(activeDrawing?.fileSize)}
-            </span>
-          </div>
-        </div>
+          <div className="flex items-center gap-4 text-brand-500 dark:text-brand-400 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5 text-brand-400" />
+              <span>Uploaded: {activeDrawing?.uploadedAt ? new Date(activeDrawing.uploadedAt).toLocaleDateString() : 'Recent'}</span>
+            </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-brand-900 border border-brand-200/80 dark:border-brand-800 flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <User className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="block text-[10px] font-bold text-brand-400 uppercase">Uploaded By</span>
-            <span className="text-sm font-bold text-brand-900 dark:text-white">
-              {activeDrawing?.uploadedBy || 'GoodEarth Design Team'}
-            </span>
+            <div className="flex items-center gap-1">
+              <User className="h-3.5 w-3.5 text-brand-400" />
+              <span>By: {activeDrawing?.uploadedBy || 'GoodEarth CRM Team'}</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <HardDrive className="h-3.5 w-3.5 text-brand-400" />
+              <span>Size: {formatFileSize(activeDrawing?.fileSize)}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Home, FileSpreadsheet, FolderGit2, Hammer, Users } from 'lucide-react';
+import { Home, FileSpreadsheet, FolderGit2, Hammer, Users, CreditCard, HelpCircle } from 'lucide-react';
 import { clientService } from '../../../services/client.service';
 import { useUnitStore } from '../../../store/unitStore';
 import { ProjectHeader } from '../components/myhome/ProjectHeader';
@@ -10,7 +10,7 @@ import { DocumentsTab } from '../components/myhome/DocumentsTab';
 import { ProjectUpdatesTab } from '../components/myhome/ProjectUpdatesTab';
 import { FamilyAccessTab } from '../components/myhome/FamilyAccessTab';
 
-export type TabType = 'unit-details' | 'floor-plans' | 'documents' | 'project-updates' | 'family-access';
+export type TabType = 'unit-details' | 'floor-plans' | 'documents' | 'project-updates' | 'family-access' | 'finance' | 'support';
 
 export const MyHomePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('unit-details');
@@ -22,12 +22,19 @@ export const MyHomePage: React.FC = () => {
   });
 
   const tabs = [
-    { id: 'unit-details' as TabType, label: 'Unit Details', icon: Home },
+    { id: 'unit-details' as TabType, label: 'Overview & Specs', icon: Home },
     { id: 'floor-plans' as TabType, label: 'Floor Plans', icon: FileSpreadsheet, priority: true },
     { id: 'documents' as TabType, label: 'Documents', icon: FolderGit2 },
-    { id: 'project-updates' as TabType, label: 'Project Updates', icon: Hammer },
-    { id: 'family-access' as TabType, label: 'Family Access', icon: Users },
+    { id: 'project-updates' as TabType, label: 'Construction Progress', icon: Hammer },
+    { id: 'family-access' as TabType, label: 'Family Members', icon: Users },
+    { id: 'finance' as TabType, label: 'Payments', icon: CreditCard },
+    { id: 'support' as TabType, label: 'Support', icon: HelpCircle },
   ];
+
+  const handleNavigateTab = (tabId: string) => {
+    setActiveTab(tabId as TabType);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="space-y-6 text-left max-w-7xl mx-auto pb-16">
@@ -44,7 +51,7 @@ export const MyHomePage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`group flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 shrink-0 ${
+              className={`group flex items-center gap-2.5 px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all duration-200 shrink-0 ${
                 isActive
                   ? 'bg-brand-900 text-white shadow-md dark:bg-amber-500 dark:text-brand-950'
                   : 'text-brand-600 hover:text-brand-900 hover:bg-brand-100/60 dark:text-brand-300 dark:hover:text-white dark:hover:bg-brand-850'
@@ -56,7 +63,7 @@ export const MyHomePage: React.FC = () => {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   isActive ? 'bg-amber-400 text-brand-950 dark:bg-brand-950 dark:text-amber-300' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                 }`}>
-                  WorkDrive
+                  Zoho CRM
                 </span>
               )}
             </button>
@@ -66,11 +73,15 @@ export const MyHomePage: React.FC = () => {
 
       {/* 3. Active Tab Content Rendering */}
       <div className="transition-all duration-300">
-        {activeTab === 'unit-details' && <UnitDetailsTab details={homeDetails} isLoading={isLoading} />}
+        {activeTab === 'unit-details' && (
+          <UnitDetailsTab details={homeDetails} isLoading={isLoading} onNavigateTab={handleNavigateTab} />
+        )}
         {activeTab === 'floor-plans' && <FloorPlansTab />}
         {activeTab === 'documents' && <DocumentsTab />}
         {activeTab === 'project-updates' && <ProjectUpdatesTab />}
         {activeTab === 'family-access' && <FamilyAccessTab details={homeDetails} />}
+        {activeTab === 'finance' && <DocumentsTab />}
+        {activeTab === 'support' && <DocumentsTab />}
       </div>
     </div>
   );

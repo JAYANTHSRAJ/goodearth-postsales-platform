@@ -17,8 +17,13 @@ public class ClientHomeDetailsDto {
     private String unitType;
     private String floor;
     private String area;
+    private String carpetArea;
     private String facing;
     private String bedrooms;
+    private String bathrooms;
+    private String parking;
+    private String registrationStatus;
+    private String projectImageUrl;
     private String purchaseDate;
     private String expectedHandover;
     private String possessionDate;

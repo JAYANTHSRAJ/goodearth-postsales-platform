@@ -78,8 +78,13 @@ public class ClientHomeServiceImpl implements ClientHomeService {
         homeDetails.setUnitType("4 BHK Eco-Luxury Villa");
         homeDetails.setFloor("Ground + 2 Upper Floors");
         homeDetails.setArea("3,850 Sq. Ft.");
-        homeDetails.setFacing("East Facing");
+        homeDetails.setCarpetArea("3,120 Sq. Ft.");
+        homeDetails.setFacing("East Facing (Vastu Compliant)");
         homeDetails.setBedrooms("4 Bedrooms + Maid Suite");
+        homeDetails.setBathrooms("4 Ensuite Bathrooms + Powder Room");
+        homeDetails.setParking("2 Covered EV-Ready Bays");
+        homeDetails.setRegistrationStatus("Registered / Agreement Executed");
+        homeDetails.setProjectImageUrl("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80");
         
         LocalDateTime startedAt = workflow.getStartedAt() != null ? workflow.getStartedAt() : LocalDateTime.now();
         homeDetails.setPurchaseDate(startedAt.toLocalDate().toString());

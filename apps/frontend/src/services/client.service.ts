@@ -79,9 +79,14 @@ export interface ClientHomeDetails {
   unitType?: string;
   floor?: string;
   area?: string;
+  carpetArea?: string;
   facing?: string;
   plot?: string;
   bedrooms?: string;
+  bathrooms?: string;
+  parking?: string;
+  registrationStatus?: string;
+  projectImageUrl?: string;
   purchaseDate?: string;
   expectedHandover?: string;
   possessionDate?: string;
