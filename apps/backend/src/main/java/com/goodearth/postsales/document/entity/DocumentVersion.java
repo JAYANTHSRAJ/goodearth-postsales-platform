@@ -29,7 +29,7 @@ public class DocumentVersion extends BaseEntity {
     @Column(name = "version_number", nullable = false)
     private Integer versionNumber;
 
-    @Column(name = "workdrive_file_id", nullable = false)
+    @Column(name = "workdrive_file_id")
     private String workDriveFileId;
 
     @Column(name = "workdrive_permalink", length = 1000)

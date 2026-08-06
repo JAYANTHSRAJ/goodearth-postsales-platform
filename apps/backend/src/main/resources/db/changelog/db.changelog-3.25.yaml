@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.25-drop-not-null-workdrive-file-id
+      author: antigravity
+      changes:
+        - dropNotNullConstraint:
+            tableName: document_versions
+            columnName: workdrive_file_id
+            columnDataType: VARCHAR(255)
