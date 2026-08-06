@@ -144,13 +144,13 @@ public class WorkDriveSyncServiceImpl implements WorkDriveSyncService {
         folder.setProjectName(trimmedProjectName);
         folder.setUnitNumber(trimmedUnitName);
         folder.setTeamFolderId(teamFolderId);
-        folder.setFolderId(teamFolderId);
         folder.setTestSandboxFolderId(teamFolderId);
         folder.setProjectFolderId(projectFolderId);
 
         // Step 4: Find or create Unit Folder inside Project Folder
         String unitFolderId = findOrCreateFolder(trimmedUnitName, projectFolderId, null, trimmedUnitName);
         folder.setUnitFolderId(unitFolderId);
+        folder.setFolderId(unitFolderId);
         folder.setBookingFolderId(unitFolderId);
         folder.setFolderName(trimmedProjectName + " - " + trimmedUnitName);
 

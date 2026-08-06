@@ -295,7 +295,7 @@ public class WorkDriveProvisioningIntegrationTest {
         assertNotNull(realFolderId, "REAL folder ID must not be null");
         assertNotNull(parentId, "parent_id must not be null");
         assertEquals("6wbga105d85b36926403d8edcbbaaf29c7583", parentId, "Parent ID must match resolved Team Folder ID");
-        assertEquals(realFolderId, folder.getFolderId());
+        assertEquals(folder.getUnitFolderId(), folder.getFolderId());
     }
 
     @Test
