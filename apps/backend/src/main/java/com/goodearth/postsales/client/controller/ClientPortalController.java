@@ -229,6 +229,31 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>("Family member removed successfully."));
     }
 
+    @PostMapping({"/family/{id}/invite", "/family-members/{id}/invite"})
+    public ResponseEntity<ApiResponse<FamilyMemberDto>> sendInvitation(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID id) {
+        FamilyMemberDto result = familyMemberService.sendInvitation(userDetails, id);
+        return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
+    @GetMapping({"/family/{id}/permissions", "/family-members/{id}/permissions"})
+    public ResponseEntity<ApiResponse<List<String>>> getPermissions(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID id) {
+        List<String> result = familyMemberService.getPermissions(userDetails, id);
+        return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
+    @PutMapping({"/family/{id}/permissions", "/family-members/{id}/permissions"})
+    public ResponseEntity<ApiResponse<FamilyMemberDto>> updatePermissions(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID id,
+            @RequestBody List<String> permissions) {
+        FamilyMemberDto result = familyMemberService.updatePermissions(userDetails, id, permissions);
+        return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<ClientProfileDto>> getProfile(
             @AuthenticationPrincipal UserDetails userDetails) {

@@ -8,7 +8,10 @@ import java.util.UUID;
 
 public interface FamilyMemberService {
     List<FamilyMemberDto> getFamilyMembers(UserDetails userDetails);
-    FamilyMemberDto addFamilyMember(UserDetails userDetails, FamilyMemberDto newMember);
-    FamilyMemberDto updateFamilyMember(UserDetails userDetails, UUID id, FamilyMemberDto memberDto);
+    FamilyMemberDto addFamilyMember(UserDetails userDetails, FamilyMemberDto dto);
+    FamilyMemberDto updateFamilyMember(UserDetails userDetails, UUID id, FamilyMemberDto dto);
     void removeFamilyMember(UserDetails userDetails, UUID id);
+    FamilyMemberDto sendInvitation(UserDetails userDetails, UUID id);
+    List<String> getPermissions(UserDetails userDetails, UUID id);
+    FamilyMemberDto updatePermissions(UserDetails userDetails, UUID id, List<String> permissions);
 }

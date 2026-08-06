@@ -154,6 +154,13 @@ export interface FamilyMember {
   relation: string;
   email?: string;
   phone?: string;
+  role?: string;
+  status?: string;
+  invitationStatus?: string;
+  createdDate?: string;
+  lastLogin?: string;
+  notes?: string;
+  permissions?: string[];
 }
 
 export const clientService = {
@@ -213,6 +220,18 @@ export const clientService = {
 
   removeFamilyMember(id: string): Promise<string> {
     return api.delete<string>(`/client/family-members/${id}`);
+  },
+
+  sendInvitation(id: string): Promise<FamilyMember> {
+    return api.post<FamilyMember>(`/client/family-members/${id}/invite`, {});
+  },
+
+  getPermissions(id: string): Promise<string[]> {
+    return api.get<string[]>(`/client/family-members/${id}/permissions`);
+  },
+
+  updatePermissions(id: string, permissions: string[]): Promise<FamilyMember> {
+    return api.put<FamilyMember>(`/client/family-members/${id}/permissions`, permissions);
   },
 
   getProfile(): Promise<any> {

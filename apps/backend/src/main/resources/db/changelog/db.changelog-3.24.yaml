@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.24-add-family-member-permission-columns
+      author: jayanth
+      changes:
+        - addColumn:
+            tableName: family_members
+            columns:
+              - column:
+                  name: role
+                  type: varchar(50)
+                  defaultValue: "FAMILY_MEMBER"
+              - column:
+                  name: status
+                  type: varchar(50)
+                  defaultValue: "ACTIVE"
+              - column:
+                  name: invitation_status
+                  type: varchar(50)
+                  defaultValue: "ACTIVATED"
+              - column:
+                  name: last_login
+                  type: timestamp
+              - column:
+                  name: notes
+                  type: text
+              - column:
+                  name: permissions
+                  type: text
+                  defaultValue: "VIEW_MY_HOME,VIEW_FLOOR_PLANS,DOWNLOAD_FLOOR_PLANS,VIEW_DOCUMENTS,DOWNLOAD_DOCUMENTS,VIEW_CONSTRUCTION_UPDATES,VIEW_PAYMENTS,CONTACT_SUPPORT"

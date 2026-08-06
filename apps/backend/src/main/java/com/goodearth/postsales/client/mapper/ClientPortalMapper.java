@@ -111,13 +111,22 @@ public class ClientPortalMapper {
         if (member == null) {
             return null;
         }
-        return new FamilyMemberDto(
-                member.getId(),
-                member.getName(),
-                member.getRelation(),
-                member.getEmail(),
-                member.getPhone()
-        );
+        FamilyMemberDto dto = new FamilyMemberDto();
+        dto.setId(member.getId());
+        dto.setName(member.getName());
+        dto.setRelation(member.getRelation());
+        dto.setEmail(member.getEmail());
+        dto.setPhone(member.getPhone());
+        dto.setRole(member.getRole() != null ? member.getRole() : "FAMILY_MEMBER");
+        dto.setStatus(member.getStatus() != null ? member.getStatus() : "ACTIVE");
+        dto.setInvitationStatus(member.getInvitationStatus() != null ? member.getInvitationStatus() : "ACTIVATED");
+        dto.setCreatedDate(member.getCreatedAt());
+        dto.setLastLogin(member.getLastLogin());
+        dto.setNotes(member.getNotes());
+        if (member.getPermissions() != null && !member.getPermissions().isBlank()) {
+            dto.setPermissions(java.util.Arrays.asList(member.getPermissions().split(",")));
+        }
+        return dto;
     }
 
     public com.goodearth.postsales.buyer.entity.FamilyMember toFamilyMember(FamilyMemberDto dto, Buyer buyer) {
@@ -130,6 +139,13 @@ public class ClientPortalMapper {
         member.setRelation(dto.getRelation());
         member.setEmail(dto.getEmail());
         member.setPhone(dto.getPhone());
+        if (dto.getRole() != null) member.setRole(dto.getRole());
+        if (dto.getStatus() != null) member.setStatus(dto.getStatus());
+        if (dto.getInvitationStatus() != null) member.setInvitationStatus(dto.getInvitationStatus());
+        if (dto.getNotes() != null) member.setNotes(dto.getNotes());
+        if (dto.getPermissions() != null && !dto.getPermissions().isEmpty()) {
+            member.setPermissions(String.join(",", dto.getPermissions()));
+        }
         member.setBuyer(buyer);
         return member;
     }

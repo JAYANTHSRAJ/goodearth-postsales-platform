@@ -85,5 +85,7 @@ databaseChangeLog:
       file: db/changelog/db.changelog-3.22.yaml
   - include:
       file: db/changelog/db.changelog-3.23.yaml
+  - include:
+      file: db/changelog/db.changelog-3.24.yaml
 
 
