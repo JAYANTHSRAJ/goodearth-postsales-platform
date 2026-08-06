@@ -74,6 +74,7 @@ export const Sidebar: React.FC = () => {
   }, [isClient, user, activeUnit]);
 
   const clientNavItems: NavItem[] = [
+    { name: 'My Home', path: '/my-home', icon: LayoutDashboard, requiresUnit: false },
     { name: 'KYC Information', path: '/client/kyc', icon: User, requiresUnit: false },
     ...(isKycApproved
       ? [{ name: 'View Offer Letter', path: '/client/offer-letter', icon: FileText, requiresUnit: false }]

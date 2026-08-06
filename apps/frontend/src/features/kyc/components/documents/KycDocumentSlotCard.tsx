@@ -3,7 +3,7 @@ import KycDocumentDropzone from './KycDocumentDropzone';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import { DocumentSlotDto } from '../../types/kyc';
 import kycService from '../../services/kyc.service';
-import { CheckCircle2, Eye, RefreshCw, Trash2, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Eye, RefreshCw, FileText, AlertCircle, Loader2 } from 'lucide-react';
 
 interface KycDocumentSlotCardProps {
   slot: DocumentSlotDto;
@@ -22,7 +22,6 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,16 +74,6 @@ export const KycDocumentSlotCard: React.FC<KycDocumentSlotCardProps> = ({
   const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       handleFileSelect(e.target.files[0]);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await kycService.deleteDocument(slot.documentId);
-      setShowConfirmDelete(false);
-      onRefresh();
-    } catch (err: any) {
-      alert(err?.message || 'Failed to delete document.');
     }
   };
 

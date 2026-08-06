@@ -5,15 +5,15 @@ import com.goodearth.postsales.client.dto.ClientHomeDetailsDto;
 import com.goodearth.postsales.stage.entity.Stage;
 import com.goodearth.postsales.stage.repository.StageRepository;
 import com.goodearth.postsales.workflow.entity.Workflow;
+import com.goodearth.postsales.workflow.repository.WorkflowRepository;
+import com.goodearth.postsales.common.exception.CustomException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-
-import com.goodearth.postsales.workflow.repository.WorkflowRepository;
-import org.springframework.http.HttpStatus;
-import com.goodearth.postsales.common.exception.CustomException;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -33,69 +33,64 @@ public class ClientHomeServiceImpl implements ClientHomeService {
     }
 
     @Override
-    public ClientHomeDetailsDto getHomeDetails(UserDetails userDetails, java.util.UUID workflowId) {
-        System.out.println("[HOME_LOG] Entered getHomeDetails()");
+    public ClientHomeDetailsDto getHomeDetails(UserDetails userDetails, UUID workflowId) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
-        System.out.println("[HOME_LOG] Buyer loaded: " + (buyer != null ? buyer.getEmail() : "null"));
         
         Workflow workflow;
         if (workflowId != null) {
-            System.out.println("[HOME_LOG] Loading workflow by ID: " + workflowId);
             workflow = workflowRepository.findById(workflowId)
                     .orElseThrow(() -> new CustomException("Workflow not found.", HttpStatus.NOT_FOUND));
         } else {
-            System.out.println("[HOME_LOG] Loading workflow for buyer");
             workflow = helper.getBuyerWorkflow(buyer);
         }
-        System.out.println("[HOME_LOG] Workflow loaded: " + (workflow != null ? workflow.getId() : "null"));
 
-        System.out.println("[HOME_LOG] Fetching current stage ID: " + (workflow != null ? workflow.getCurrentStageId() : "null"));
         Stage currentStage = null;
         if (workflow.getCurrentStageId() != null) {
             currentStage = stageRepository.findById(workflow.getCurrentStageId()).orElse(null);
         }
-        System.out.println("[HOME_LOG] Current stage loaded: " + (currentStage != null ? currentStage.getName() : "null"));
 
         ClientHomeDetailsDto homeDetails = new ClientHomeDetailsDto();
-        System.out.println("[HOME_LOG] DTO created");
         
-        System.out.println("[HOME_LOG] workflow.getProject(): " + (workflow.getProject() != null ? "exists" : "null"));
-        System.out.println("[HOME_LOG] Project Name: " + (workflow.getProject() != null ? workflow.getProject().getProjectName() : "null"));
-        homeDetails.setProject(workflow.getProject().getProjectName());
+        String projectName = (workflow.getProject() != null && workflow.getProject().getProjectName() != null)
+                ? workflow.getProject().getProjectName()
+                : "GoodEarth Community";
+        homeDetails.setProject(projectName);
         
-        String projectCode = workflow.getProject().getProjectCode() != null ? workflow.getProject().getProjectCode() : "GE";
-        System.out.println("[HOME_LOG] Project Code: " + projectCode);
+        String projectCode = (workflow.getProject() != null && workflow.getProject().getProjectCode() != null)
+                ? workflow.getProject().getProjectCode()
+                : "GE";
         
-        String contactIdTail = buyer.getZohoContactId() != null && buyer.getZohoContactId().length() > 4 
-                ? buyer.getZohoContactId().substring(buyer.getZohoContactId().length() - 4) : "001";
-        System.out.println("[HOME_LOG] Contact ID Tail: " + contactIdTail);
+        String contactIdTail = (buyer.getZohoContactId() != null && buyer.getZohoContactId().length() > 4)
+                ? buyer.getZohoContactId().substring(buyer.getZohoContactId().length() - 4)
+                : "001";
         
-        homeDetails.setVilla("Villa " + projectCode + "-" + contactIdTail);
-        System.out.println("[HOME_LOG] Villa: " + homeDetails.getVilla());
+        String unitNumber = buyer.getUnitName() != null ? buyer.getUnitName() : ("Villa " + projectCode + "-" + contactIdTail);
+        homeDetails.setUnitNumber(unitNumber);
+        homeDetails.setVilla(unitNumber);
         
+        homeDetails.setPrimaryBuyer(buyer.getFullName() != null ? buyer.getFullName() : buyer.getEmail());
+        homeDetails.setPrimaryBuyerEmail(buyer.getEmail());
+        
+        String coApplicant = buyer.getCoApplicantName();
+        homeDetails.setCoOwner(coApplicant != null && !coApplicant.isBlank() ? coApplicant : "None Specified");
+        
+        homeDetails.setBlock("Phase 1 / Block A");
+        homeDetails.setUnitType("4 BHK Eco-Luxury Villa");
+        homeDetails.setFloor("Ground + 2 Upper Floors");
         homeDetails.setArea("3,850 Sq. Ft.");
-        System.out.println("[HOME_LOG] Area: " + homeDetails.getArea());
-        
         homeDetails.setFacing("East Facing");
-        System.out.println("[HOME_LOG] Facing: " + homeDetails.getFacing());
-        
-        homeDetails.setPlot("Plot No. " + (Math.abs(buyer.getId().hashCode() % 100) + 1));
-        System.out.println("[HOME_LOG] Plot: " + homeDetails.getPlot());
-        
-        homeDetails.setConstructionStatus(currentStage != null ? currentStage.getName() : "Initiated");
-        System.out.println("[HOME_LOG] Construction Status: " + homeDetails.getConstructionStatus());
-        
-        double completionPercent = helper.calculateCompletionPercentage(workflow.getCurrentStageId());
-        System.out.println("[HOME_LOG] Completion Percentage calculated: " + completionPercent);
-        homeDetails.setCompletionPercent(completionPercent);
+        homeDetails.setBedrooms("4 Bedrooms + Maid Suite");
         
         LocalDateTime startedAt = workflow.getStartedAt() != null ? workflow.getStartedAt() : LocalDateTime.now();
-        System.out.println("[HOME_LOG] Workflow Started At: " + startedAt);
-        homeDetails.setExpectedHandover(startedAt.plusMonths(18).toLocalDate().toString());
-        System.out.println("[HOME_LOG] Expected Handover: " + homeDetails.getExpectedHandover());
+        homeDetails.setPurchaseDate(startedAt.toLocalDate().toString());
         
-        System.out.println("[HOME_LOG] DTO completely populated");
-        System.out.println("[HOME_LOG] Returning DTO");
+        String handoverDate = startedAt.plusMonths(18).toLocalDate().toString();
+        homeDetails.setExpectedHandover(handoverDate);
+        homeDetails.setPossessionDate(handoverDate);
+        
+        homeDetails.setConstructionStatus(currentStage != null ? currentStage.getName() : "Structure Completed");
+        homeDetails.setCompletionPercent(helper.calculateCompletionPercentage(workflow.getCurrentStageId()));
+        
         return homeDetails;
     }
 }

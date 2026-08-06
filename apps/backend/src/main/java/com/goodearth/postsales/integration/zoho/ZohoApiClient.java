@@ -71,6 +71,18 @@ public class ZohoApiClient {
         }
     }
 
+    public byte[] downloadCrmAttachment(String url) {
+        try {
+            return restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(byte[].class);
+        } catch (Exception ex) {
+            handleAndLogException("GET_CRM_ATTACHMENT_DOWNLOAD", url, ex);
+            throw new ZohoIntegrationException("CRM attachment download failed for URL: " + url + " - " + ex.getMessage(), ex);
+        }
+    }
+
     public static String formatFirstBytes(byte[] bytes, int count) {
         if (bytes == null || bytes.length == 0) return "EMPTY";
         int len = Math.min(bytes.length, count);

@@ -37,6 +37,7 @@ export interface ClientDrawingSummary {
   downloadUrl: string;
   uploadedBy: string;
   uploadedAt: string;
+  fileSize?: number;
 }
 
 export interface ClientChangeRequestSummary {
@@ -73,20 +74,30 @@ export interface ClientDashboardData {
 export interface ClientHomeDetails {
   project: string;
   villa: string;
-  area: string;
-  facing: string;
-  plot: string;
-  constructionStatus: string;
-  completionPercent: number;
-  expectedHandover: string;
+  unitNumber?: string;
+  block?: string;
+  unitType?: string;
+  floor?: string;
+  area?: string;
+  facing?: string;
+  plot?: string;
+  bedrooms?: string;
+  purchaseDate?: string;
+  expectedHandover?: string;
+  possessionDate?: string;
+  primaryBuyer?: string;
+  primaryBuyerEmail?: string;
+  coOwner?: string;
+  constructionStatus?: string;
+  completionPercent?: number;
 }
 
 export interface ClientFloorPlans {
-  latestDrawing: ClientDrawingSummary;
-  previewUrl: string;
-  downloadUrl: string;
-  allPreviousVersions: ClientDrawingSummary[];
-  revisionHistory: ClientDrawingSummary[];
+  latestDrawing?: ClientDrawingSummary;
+  previewUrl?: string;
+  downloadUrl?: string;
+  allPreviousVersions?: ClientDrawingSummary[];
+  revisionHistory?: ClientDrawingSummary[];
 }
 
 export interface ClientDocumentSummary {
@@ -152,12 +163,12 @@ export const clientService = {
   },
 
   getHomeDetails(workflowId?: string | null): Promise<ClientHomeDetails> {
-    const url = workflowId ? `/client/home?workflowId=${workflowId}` : '/client/home';
+    const url = workflowId ? `/client/my-home?workflowId=${workflowId}` : '/client/my-home';
     return api.get<ClientHomeDetails>(url);
   },
 
   getFloorPlans(): Promise<ClientFloorPlans> {
-    return api.get<ClientFloorPlans>('/client/floorplans');
+    return api.get<ClientFloorPlans>('/client/floor-plans');
   },
 
   getDocuments(): Promise<ClientDocumentsGrouped> {
@@ -177,15 +188,19 @@ export const clientService = {
   },
 
   getFamilyMembers(): Promise<FamilyMember[]> {
-    return api.get<FamilyMember[]>('/client/family');
+    return api.get<FamilyMember[]>('/client/family-members');
   },
 
   addFamilyMember(member: FamilyMember): Promise<FamilyMember> {
-    return api.post<FamilyMember>('/client/family', member);
+    return api.post<FamilyMember>('/client/family-members', member);
+  },
+
+  updateFamilyMember(id: string, member: FamilyMember): Promise<FamilyMember> {
+    return api.put<FamilyMember>(`/client/family-members/${id}`, member);
   },
 
   removeFamilyMember(id: string): Promise<string> {
-    return api.delete<string>(`/client/family/${id}`);
+    return api.delete<string>(`/client/family-members/${id}`);
   },
 
   getProfile(): Promise<any> {

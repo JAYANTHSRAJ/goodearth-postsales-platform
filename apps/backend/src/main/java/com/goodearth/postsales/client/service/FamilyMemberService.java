@@ -9,5 +9,6 @@ import java.util.UUID;
 public interface FamilyMemberService {
     List<FamilyMemberDto> getFamilyMembers(UserDetails userDetails);
     FamilyMemberDto addFamilyMember(UserDetails userDetails, FamilyMemberDto newMember);
+    FamilyMemberDto updateFamilyMember(UserDetails userDetails, UUID id, FamilyMemberDto memberDto);
     void removeFamilyMember(UserDetails userDetails, UUID id);
 }

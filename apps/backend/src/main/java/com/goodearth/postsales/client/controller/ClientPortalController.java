@@ -128,7 +128,7 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
-    @GetMapping("/home")
+    @GetMapping({"/home", "/my-home"})
     public ResponseEntity<ApiResponse<ClientHomeDetailsDto>> getHomeDetails(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) UUID workflowId) {
@@ -141,6 +141,24 @@ public class ClientPortalController {
             @AuthenticationPrincipal UserDetails userDetails) {
         ClientFloorPlansDto result = floorPlanService.getFloorPlans(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
+    @GetMapping({"/floor-plans/attachment/{dealId}/{attachmentId}", "/floorplans/attachment/{dealId}/{attachmentId}"})
+    public ResponseEntity<byte[]> streamFloorPlanAttachment(
+            @PathVariable String dealId,
+            @PathVariable String attachmentId,
+            @RequestParam(required = false, defaultValue = "false") boolean download) {
+        byte[] data = floorPlanService.downloadAttachment(dealId, attachmentId);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        if (download) {
+            headers.setContentDispositionFormData("attachment", "Floor_Plan_" + attachmentId + ".pdf");
+        } else {
+            headers.setContentDisposition(org.springframework.http.ContentDisposition.inline().filename("Floor_Plan_" + attachmentId + ".pdf").build());
+        }
+
+        return new ResponseEntity<>(data, headers, HttpStatus.OK);
     }
 
     @GetMapping("/documents")
@@ -171,14 +189,14 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
-    @GetMapping("/family")
+    @GetMapping({"/family", "/family-members"})
     public ResponseEntity<ApiResponse<List<FamilyMemberDto>>> getFamilyMembers(
             @AuthenticationPrincipal UserDetails userDetails) {
         List<FamilyMemberDto> result = familyMemberService.getFamilyMembers(userDetails);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
-    @PostMapping("/family")
+    @PostMapping({"/family", "/family-members"})
     public ResponseEntity<ApiResponse<FamilyMemberDto>> addFamilyMember(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody FamilyMemberDto newMember) {
@@ -186,7 +204,16 @@ public class ClientPortalController {
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
 
-    @DeleteMapping("/family/{id}")
+    @PutMapping({"/family/{id}", "/family-members/{id}"})
+    public ResponseEntity<ApiResponse<FamilyMemberDto>> updateFamilyMember(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID id,
+            @RequestBody FamilyMemberDto memberDto) {
+        FamilyMemberDto result = familyMemberService.updateFamilyMember(userDetails, id, memberDto);
+        return ResponseEntity.ok(new ApiResponse<>(result));
+    }
+
+    @DeleteMapping({"/family/{id}", "/family-members/{id}"})
     public ResponseEntity<ApiResponse<String>> removeFamilyMember(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {

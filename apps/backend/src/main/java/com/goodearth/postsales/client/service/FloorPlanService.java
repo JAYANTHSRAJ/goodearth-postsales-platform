@@ -5,4 +5,5 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public interface FloorPlanService {
     ClientFloorPlansDto getFloorPlans(UserDetails userDetails);
+    byte[] downloadAttachment(String dealId, String attachmentId);
 }

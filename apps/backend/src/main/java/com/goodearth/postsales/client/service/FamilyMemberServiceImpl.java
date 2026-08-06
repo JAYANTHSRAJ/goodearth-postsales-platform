@@ -46,21 +46,49 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
 
         long count = familyMemberRepository.countByBuyerId(buyer.getId());
-        if (count >= 4) {
-            throw new CustomException("Maximum of 4 family members are permitted.", HttpStatus.BAD_REQUEST);
+        if (count >= 5) {
+            throw new CustomException("Maximum limit of 5 family members reached for this property.", HttpStatus.BAD_REQUEST);
         }
 
         if (newMember.getName() == null || newMember.getName().trim().isEmpty()) {
-            throw new CustomException("Name is a required field.", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Family member name is required.", HttpStatus.BAD_REQUEST);
         }
 
         if (newMember.getRelation() == null || newMember.getRelation().trim().isEmpty()) {
-            throw new CustomException("Relation is a required field.", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Relationship is required.", HttpStatus.BAD_REQUEST);
         }
 
         FamilyMember member = mapper.toFamilyMember(newMember, buyer);
         FamilyMember saved = familyMemberRepository.save(member);
         return mapper.toFamilyMemberDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public FamilyMemberDto updateFamilyMember(UserDetails userDetails, UUID id, FamilyMemberDto dto) {
+        Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
+        FamilyMember member = familyMemberRepository.findById(id)
+                .orElseThrow(() -> new CustomException("Family member not found.", HttpStatus.NOT_FOUND));
+
+        if (!member.getBuyer().getId().equals(buyer.getId())) {
+            throw new CustomException("Family member not found.", HttpStatus.NOT_FOUND);
+        }
+
+        if (dto.getName() != null && !dto.getName().trim().isEmpty()) {
+            member.setName(dto.getName().trim());
+        }
+        if (dto.getRelation() != null && !dto.getRelation().trim().isEmpty()) {
+            member.setRelation(dto.getRelation().trim());
+        }
+        if (dto.getEmail() != null) {
+            member.setEmail(dto.getEmail().trim());
+        }
+        if (dto.getPhone() != null) {
+            member.setPhone(dto.getPhone().trim());
+        }
+
+        FamilyMember updated = familyMemberRepository.save(member);
+        return mapper.toFamilyMemberDto(updated);
     }
 
     @Override

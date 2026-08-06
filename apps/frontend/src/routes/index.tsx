@@ -32,6 +32,7 @@ const ForgotPasswordPage = withSuspense(() => import('../features/auth/pages/For
 const ResetPasswordPage = withSuspense(() => import('../features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage');
 const ActivationPage = withSuspense(() => import('../features/auth/pages/ActivationPage'), 'ActivationPage');
 const DashboardPage = withSuspense(() => import('../features/dashboard/pages/DashboardPage'), 'DashboardPage');
+const MyHomePage = withSuspense(() => import('../features/dashboard/pages/MyHomePage'), 'MyHomePage');
 const AdminPage = withSuspense(() => import('../features/dashboard/pages/AdminPage'), 'AdminPage');
 const BuyersPage = withSuspense(() => import('../features/buyers/pages/BuyersPage'), 'BuyersPage');
 const BuyerDashboardPage = withSuspense(() => import('../features/buyers/pages/BuyerDashboardPage'), 'BuyerDashboardPage');
@@ -194,7 +195,7 @@ export const router = createBrowserRouter([
               },
               {
                 path: '/my-home',
-                element: <SingleKycPage />,
+                element: <MyHomePage />,
               },
               {
                 path: '/client/kyc',

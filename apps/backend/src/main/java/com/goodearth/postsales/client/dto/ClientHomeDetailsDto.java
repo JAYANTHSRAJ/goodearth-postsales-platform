@@ -12,10 +12,19 @@ import lombok.Setter;
 public class ClientHomeDetailsDto {
     private String project;
     private String villa;
+    private String unitNumber;
+    private String block;
+    private String unitType;
+    private String floor;
     private String area;
     private String facing;
-    private String plot;
+    private String bedrooms;
+    private String purchaseDate;
+    private String expectedHandover;
+    private String possessionDate;
+    private String primaryBuyer;
+    private String primaryBuyerEmail;
+    private String coOwner;
     private String constructionStatus;
     private double completionPercent;
-    private String expectedHandover;
 }
