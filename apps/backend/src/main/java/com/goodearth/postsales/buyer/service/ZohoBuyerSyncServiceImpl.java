@@ -185,19 +185,26 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
 
         // Extract Deal attributes
         String email = crmDeal.getEmail();
-        String buyerName = crmDeal.getContactName() != null ? crmDeal.getContactName().getName() : null;
+        String contactId = crmDeal.getResolvedContactId();
+        String buyerName = crmDeal.getResolvedContactName();
         String phone = crmDeal.getPhone();
         String stageName = crmDeal.getStage();
 
-        // Fetch the related Contact if email/phone details are missing from Deal directly
-        if ((email == null || email.trim().isEmpty() || phone == null || phone.trim().isEmpty())
-                && crmDeal.getContactName() != null && crmDeal.getContactName().getId() != null) {
-            String contactId = crmDeal.getContactName().getId();
+        log.info("[DEAL_SYNC_TRACE] Deal ID: {}, Deal Direct Email: '{}', Contact Lookup ID: '{}', Contact Name in Deal: '{}'",
+                dealId, email, contactId, buyerName);
+
+        // Fetch the related Contact if email or phone details are missing from Deal directly
+        if ((email == null || email.trim().isEmpty() || phone == null || phone.trim().isEmpty() || buyerName == null || buyerName.trim().isEmpty())
+                && contactId != null && !contactId.trim().isEmpty()) {
             String contactUrl = properties.getCrmApiUrl() + "/Contacts/" + contactId;
+            log.info("[DEAL_SYNC_TRACE] Querying Zoho Contact API for Contact ID: {} via URL: {}", contactId, contactUrl);
             try {
                 ZohoContactResponse contactResponse = apiClient.get(contactUrl, ZohoContactResponse.class);
                 if (contactResponse != null && contactResponse.getData() != null && !contactResponse.getData().isEmpty()) {
                     ZohoContactResponse.ZohoContact contact = contactResponse.getData().get(0);
+                    log.info("[DEAL_SYNC_TRACE] Contact API Response for ID {}: FullName='{}', Email='{}', Phone='{}', Status='{}'",
+                            contactId, contact.getResolvedFullName(), contact.getEmail(), contact.getPhone(), contact.getStatus());
+
                     if (email == null || email.trim().isEmpty()) {
                         email = contact.getEmail();
                     }
@@ -207,15 +214,23 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
                     if (phone == null || phone.trim().isEmpty()) {
                         phone = contact.getPhone();
                     }
+                } else {
+                    log.warn("[DEAL_SYNC_TRACE] Contact API returned empty or null data list for Contact ID: {}", contactId);
                 }
             } catch (Exception e) {
-                log.error("Zoho API error fetching related Contact ID: {} for Deal ID: {}", contactId, dealId, e);
+                log.error("[DEAL_SYNC_TRACE] Exception fetching related Contact ID: {} for Deal ID: {}: {}", contactId, dealId, e.getMessage(), e);
             }
+        } else if (contactId == null || contactId.trim().isEmpty()) {
+            log.info("[DEAL_SYNC_TRACE] No linked Contact ID found on Deal ID: {}. Direct Deal Email: '{}'", dealId, email);
         }
+
+        log.info("[DEAL_SYNC_TRACE] Resolution Summary for Deal ID {}: Resolved Email='{}', Resolved Buyer Name='{}', Resolved Phone='{}'",
+                dealId, email, buyerName, phone);
 
         // If a Deal has no Contact/Email information, skip it and log the reason
         if (email == null || email.trim().isEmpty()) {
-            log.info("Skip reason: Deal ID {} has no email or contact name resolved.", dealId);
+            log.info("Skip reason: Deal ID {} has no email or contact name resolved. (Direct Deal Email='{}', Contact Lookup ID='{}')",
+                    dealId, crmDeal.getEmail(), contactId);
             summary.put("buyersSkipped", (int) summary.get("buyersSkipped") + 1);
             return;
         }
@@ -252,7 +267,9 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         }
 
         // 2. Buyer Creation/Lookup (Search by Zoho Contact ID, then by Zoho Deal ID, then by Email as fallback)
-        String contactId = crmDeal.getContactName() != null ? crmDeal.getContactName().getId() : null;
+        if (contactId == null || contactId.trim().isEmpty()) {
+            contactId = crmDeal.getResolvedContactId();
+        }
         Optional<Buyer> buyerOpt = Optional.empty();
         if (contactId != null && !contactId.trim().isEmpty()) {
             buyerOpt = buyerRepository.findByZohoContactId(contactId);
