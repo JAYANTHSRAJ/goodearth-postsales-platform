@@ -61,6 +61,9 @@ public class FamilyMemberInvitationIntegrationTest {
     private AuthService authService;
 
     @Autowired
+    private com.goodearth.postsales.client.controller.ClientPortalController clientPortalController;
+
+    @Autowired
     private ClientPortalServiceHelper helper;
 
     @MockBean
@@ -182,6 +185,17 @@ public class FamilyMemberInvitationIntegrationTest {
         Buyer resolvedBuyer = helper.getAuthenticatedBuyer(fmUserDetails);
         assertNotNull(resolvedBuyer);
         assertEquals(primaryBuyer.getId(), resolvedBuyer.getId());
+
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(fmUserDetails, null, fmUserDetails.getAuthorities())
+        );
+
+        ResponseEntity<com.goodearth.postsales.common.response.ApiResponse<List<com.goodearth.postsales.client.dto.ClientUnitDto>>> unitsRes = clientPortalController.getOwnedUnits(fmUserDetails);
+        assertEquals(HttpStatus.OK, unitsRes.getStatusCode());
+        assertNotNull(unitsRes.getBody());
+        List<com.goodearth.postsales.client.dto.ClientUnitDto> ownedUnits = unitsRes.getBody().getData();
+        assertFalse(ownedUnits.isEmpty(), "Family member should receive active units from associated buyer, not empty list");
+        assertEquals(primaryBuyer.getId(), ownedUnits.get(0).getId());
 
         // 6. Test Re-send invitation
         familyMemberService.sendInvitation(buyerUserDetails, member.getId());

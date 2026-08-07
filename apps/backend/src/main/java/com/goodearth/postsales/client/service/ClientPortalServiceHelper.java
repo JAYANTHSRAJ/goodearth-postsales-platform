@@ -19,6 +19,8 @@ import com.goodearth.postsales.workdrive.service.WorkDriveVersionService;
 import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.workflow.entity.WorkflowStatus;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -34,6 +36,8 @@ import java.util.stream.Collectors;
 
 @Component
 public class ClientPortalServiceHelper {
+
+    private static final Logger log = LoggerFactory.getLogger(ClientPortalServiceHelper.class);
 
     private final BuyerRepository buyerRepository;
     private final FamilyMemberRepository familyMemberRepository;
@@ -67,33 +71,53 @@ public class ClientPortalServiceHelper {
     }
 
     public Buyer getAuthenticatedBuyer(UserDetails userDetails) {
-        System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: userDetails.getUsername() = " + (userDetails != null ? userDetails.getUsername() : "null"));
         if (userDetails == null) {
+            log.warn("[FAMILY_LOGIN] UserDetails is null");
             throw new CustomException("Client is not authenticated", HttpStatus.UNAUTHORIZED);
         }
-        java.util.Optional<Buyer> buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(userDetails.getUsername());
-        System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Buyer found? = " + buyerOpt.isPresent());
+
+        String email = userDetails.getUsername();
+        log.info("[FAMILY_LOGIN] Authenticated email={}", email);
+
+        java.util.Optional<Buyer> buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         if (buyerOpt.isPresent()) {
             Buyer b = buyerOpt.get();
-            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Buyer ID = " + b.getId() + ", Buyer Email = " + b.getEmail());
+            log.info("[FAMILY_LOGIN] Primary buyer found={}", b.getEmail());
+            log.info("[FAMILY_LOGIN] Associated buyer={}", b.getEmail());
+            log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
+            log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
+            log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
             return b;
         }
+        log.info("[FAMILY_LOGIN] Primary buyer found=false");
 
-        java.util.Optional<FamilyMember> familyMemberOpt = familyMemberRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(userDetails.getUsername());
+        java.util.Optional<FamilyMember> familyMemberOpt = familyMemberRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         if (familyMemberOpt.isPresent()) {
-            Buyer b = familyMemberOpt.get().getBuyer();
-            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: FamilyMember found, associated Buyer ID = " + b.getId() + ", Email = " + b.getEmail());
-            return b;
+            FamilyMember fm = familyMemberOpt.get();
+            Buyer b = fm.getBuyer();
+            log.info("[FAMILY_LOGIN] Family member found={}", fm.getEmail());
+            log.info("[FAMILY_LOGIN] Associated buyer={}", b != null ? b.getEmail() : null);
+            if (b != null) {
+                log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
+                log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
+                log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
+                return b;
+            }
         }
+        log.info("[FAMILY_LOGIN] Family member found=false");
 
         List<Buyer> buyers = buyerRepository.findAll();
         if (!buyers.isEmpty()) {
             Buyer b = buyers.get(0);
-            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Fallback buyer for Admin/Staff: ID = " + b.getId() + ", Email = " + b.getEmail());
+            log.info("[FAMILY_LOGIN] Fallback buyer for Admin/Staff: ID={}, Email={}", b.getId(), b.getEmail());
+            log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
+            log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
+            log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
             return b;
         }
 
-        throw new CustomException("Buyer record not found for email: " + userDetails.getUsername(), HttpStatus.NOT_FOUND);
+        log.warn("[FAMILY_LOGIN] No buyer mapping found for email={}", email);
+        throw new CustomException("Buyer record not found for email: " + email, HttpStatus.NOT_FOUND);
     }
 
     public Workflow getBuyerWorkflow(Buyer buyer) {

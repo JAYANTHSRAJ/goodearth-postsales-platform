@@ -45,6 +45,7 @@ public class ClientPortalController {
     private final UserRepository userRepository;
     private final BuyerRepository buyerRepository;
     private final WorkflowRepository workflowRepository;
+    private final ClientPortalServiceHelper helper;
 
     public ClientPortalController(
             DashboardService dashboardService,
@@ -58,7 +59,8 @@ public class ClientPortalController {
             ClientProfileService clientProfileService,
             UserRepository userRepository,
             BuyerRepository buyerRepository,
-            WorkflowRepository workflowRepository) {
+            WorkflowRepository workflowRepository,
+            ClientPortalServiceHelper helper) {
         this.dashboardService = dashboardService;
         this.clientHomeService = clientHomeService;
         this.floorPlanService = floorPlanService;
@@ -71,6 +73,7 @@ public class ClientPortalController {
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
         this.workflowRepository = workflowRepository;
+        this.helper = helper;
     }
 
     @GetMapping("/units")
@@ -78,10 +81,13 @@ public class ClientPortalController {
     public ResponseEntity<ApiResponse<List<ClientUnitDto>>> getOwnedUnits(
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("Endpoint: GET /api/v1/client/units, User: {}", userDetails.getUsername());
-        User user = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+        Buyer primaryBuyer = helper.getAuthenticatedBuyer(userDetails);
 
-        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(user.getEmail());
+        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(primaryBuyer.getEmail());
+        if (buyers.isEmpty()) {
+            buyers = List.of(primaryBuyer);
+        }
+
         List<ClientUnitDto> dtos = buyers.stream().map(b -> {
             ClientUnitDto dto = new ClientUnitDto();
             dto.setId(b.getId());
@@ -103,7 +109,7 @@ public class ClientPortalController {
             });
 
             log.info("[TRACE_IDENTIFIER]\nStage: Client Login -> getOwnedUnits()\nUser Email: {}\nBuyer ID: {}\nWorkflow ID: {}\nUnit Name: {}\nBooking Reference: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
-                    user.getEmail(), b.getId(), dto.getWorkflowId(), b.getUnitName(), dto.getUnitName(), dto.getZohoDealName(), dto.getZohoDealId());
+                    userDetails.getUsername(), b.getId(), dto.getWorkflowId(), b.getUnitName(), dto.getUnitName(), dto.getZohoDealName(), dto.getZohoDealId());
 
             return dto;
         }).collect(Collectors.toList());
