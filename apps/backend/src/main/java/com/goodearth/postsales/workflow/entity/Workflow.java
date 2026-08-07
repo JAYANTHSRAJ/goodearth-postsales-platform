@@ -45,7 +45,4 @@ public class Workflow extends BaseEntity {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
-
-    @Column(name = "unit_name")
-    private String unitName;
 }

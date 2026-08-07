@@ -395,7 +395,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         Workflow targetWorkflow;
         if (workflowOpt.isPresent()) {
             targetWorkflow = workflowOpt.get();
-            targetWorkflow.setUnitName(resolvedUnit);
             if (resolvedStage != null) {
                 targetWorkflow.setCurrentStageId(resolvedStage.getId());
             }
@@ -405,7 +404,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             targetWorkflow = new Workflow();
             targetWorkflow.setBuyer(buyer);
             targetWorkflow.setProject(project);
-            targetWorkflow.setUnitName(resolvedUnit);
             targetWorkflow.setStatus(WorkflowStatus.ACTIVE);
             targetWorkflow.setStartedAt(LocalDateTime.now());
             if (resolvedStage != null) {

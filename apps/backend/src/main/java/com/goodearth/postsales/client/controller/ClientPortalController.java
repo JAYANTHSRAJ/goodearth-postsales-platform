@@ -139,7 +139,7 @@ public class ClientPortalController {
                     String dealRef = (wf.getProject() != null && wf.getProject().getZohoDealId() != null)
                             ? wf.getProject().getZohoDealId()
                             : (b.getZohoDealId() != null ? b.getZohoDealId() : wf.getId().toString());
-                    String unitTitleName = wf.getUnitName() != null ? wf.getUnitName() : (b.getUnitName() != null ? b.getUnitName() : "Unit " + dealRef);
+                    String unitTitleName = (b.getUnitName() != null && !b.getUnitName().isBlank()) ? b.getUnitName() : "Unit " + dealRef;
 
                     dto.setBookingId(dealRef);
                     dto.setUnitId(dealRef);
