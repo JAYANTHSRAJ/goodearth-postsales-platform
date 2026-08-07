@@ -133,7 +133,7 @@ public class ClientPortalController {
             if (!workflows.isEmpty()) {
                 for (Workflow wf : workflows) {
                     ClientUnitDto dto = new ClientUnitDto();
-                    dto.setId(b.getId());
+                    dto.setId(wf.getId());
                     dto.setWorkflowId(wf.getId());
 
                     com.goodearth.postsales.project.entity.Project proj = wf.getProject();

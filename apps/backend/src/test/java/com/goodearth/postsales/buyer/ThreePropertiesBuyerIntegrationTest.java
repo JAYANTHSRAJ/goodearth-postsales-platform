@@ -155,35 +155,22 @@ public class ThreePropertiesBuyerIntegrationTest {
         Buyer buyer = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(buyerEmail).orElseThrow();
 
         // 1. Set Context to Motif
-        ActivePropertyContext.setContext(ActivePropertyContext.PropertyContext.builder()
-                .buyerId(buyer.getId())
-                .workflowId(unitMotif.getWorkflowId())
-                .bookingId("motif16")
-                .dealId("motif16")
-                .build());
+        com.goodearth.postsales.client.context.ActiveUnitContext.setActiveUnitId(unitMotif.getId());
         Workflow wfMotif = helper.getBuyerWorkflow(buyer);
         assertEquals("motif16", wfMotif.getProject().getZohoDealId(), "Opening Motif property must load Motif workflow");
 
         // 2. Set Context to Ochre
-        ActivePropertyContext.setContext(ActivePropertyContext.PropertyContext.builder()
-                .buyerId(buyer.getId())
-                .workflowId(unitOchre.getWorkflowId())
-                .bookingId("ochre2122")
-                .dealId("ochre2122")
-                .build());
+        com.goodearth.postsales.client.context.ActiveUnitContext.setActiveUnitId(unitOchre.getId());
         Workflow wfOchre = helper.getBuyerWorkflow(buyer);
         assertEquals("ochre2122", wfOchre.getProject().getZohoDealId(), "Opening Ochre property must load Ochre workflow");
 
         // 3. Set Context to Umang
-        ActivePropertyContext.setContext(ActivePropertyContext.PropertyContext.builder()
-                .buyerId(buyer.getId())
-                .workflowId(unitUmang.getWorkflowId())
-                .bookingId("uumang2")
-                .dealId("uumang2")
-                .build());
+        com.goodearth.postsales.client.context.ActiveUnitContext.setActiveUnitId(unitUmang.getId());
         Workflow wfUmang = helper.getBuyerWorkflow(buyer);
         assertEquals("uumang2", wfUmang.getProject().getZohoDealId(), "Opening Umang property must load Umang workflow");
 
         ActivePropertyContext.clear();
+        ActivePropertyContext.clear();
+        com.goodearth.postsales.client.context.ActiveUnitContext.clear();
     }
 }

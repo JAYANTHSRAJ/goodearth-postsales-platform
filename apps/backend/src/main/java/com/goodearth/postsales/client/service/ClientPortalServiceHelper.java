@@ -145,51 +145,68 @@ public class ClientPortalServiceHelper {
     }
 
     public Workflow getBuyerWorkflow(Buyer buyer) {
-        log.info("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Buyer ID = {}", buyer != null ? buyer.getId() : "null");
-        if (buyer == null) {
-            throw new CustomException("Buyer object is null", HttpStatus.BAD_REQUEST);
-        }
-
-        // 1. Check if specific workflowId is present in ActivePropertyContext
+        UUID activeUnitId = com.goodearth.postsales.client.context.ActiveUnitContext.getActiveUnitId();
         UUID activeWfId = com.goodearth.postsales.client.context.ActivePropertyContext.getWorkflowId();
-        if (activeWfId != null) {
-            Optional<Workflow> wfOpt = workflowRepository.findById(activeWfId);
-            if (wfOpt.isPresent()) {
-                log.info("[AUTH_LOG] Resolved workflow by ActivePropertyContext.workflowId: {}", wfOpt.get().getId());
-                return wfOpt.get();
-            }
+        if (activeWfId == null) {
+            activeWfId = activeUnitId;
         }
 
-        // 2. Check if active bookingId/dealId is present in ActivePropertyContext
         String activeDealId = com.goodearth.postsales.client.context.ActivePropertyContext.getDealId();
         if (activeDealId == null || activeDealId.isBlank()) {
             activeDealId = com.goodearth.postsales.client.context.ActivePropertyContext.getBookingId();
         }
-        if (activeDealId != null && !activeDealId.isBlank()) {
-            final String targetDealId = activeDealId.trim();
-            Optional<Workflow> wfOpt = workflowRepository.findByBuyerId(buyer.getId()).stream()
-                    .filter(w -> w.getProject() != null && targetDealId.equalsIgnoreCase(w.getProject().getZohoDealId()))
-                    .findFirst();
+
+        log.info("[ACTIVE_PROPERTY_TRACE] Requested ActiveUnitId={}, activeWfId={}, activeDealId={}",
+                activeUnitId, activeWfId, activeDealId);
+
+        // 1. Try resolving Workflow directly by activeWfId / activeUnitId
+        if (activeWfId != null) {
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeWfId);
             if (wfOpt.isPresent()) {
-                log.info("[AUTH_LOG] Resolved workflow by ActivePropertyContext.dealId ({}): {}", targetDealId, wfOpt.get().getId());
-                return wfOpt.get();
+                Workflow wf = wfOpt.get();
+                log.info("[ACTIVE_PROPERTY_TRACE]\nRequested ActiveUnitId={}\nResolved BookingId={}\nResolved DealId={}\nResolved Project={}\nResolved Unit={}",
+                        activeWfId,
+                        wf.getId(),
+                        wf.getProject() != null ? wf.getProject().getZohoDealId() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getProjectName() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getLocation() : "N/A");
+                return wf;
             }
         }
 
-        // 3. Fallback to active workflow or first workflow for buyer
-        java.util.Optional<Workflow> activeWfOpt = workflowRepository.findFirstByBuyerIdAndStatus(buyer.getId(), WorkflowStatus.ACTIVE);
-        if (activeWfOpt.isPresent()) {
-            log.info("[AUTH_LOG] Resolved active workflow: {}", activeWfOpt.get().getId());
-            return activeWfOpt.get();
+        // 2. Try resolving Workflow by activeDealId / activeBookingId
+        if (activeDealId != null && !activeDealId.isBlank()) {
+            final String targetDealId = activeDealId.trim();
+            Optional<Workflow> wfOpt = workflowRepository.findAll().stream()
+                    .filter(w -> w.getProject() != null && targetDealId.equalsIgnoreCase(w.getProject().getZohoDealId()))
+                    .findFirst();
+            if (wfOpt.isPresent()) {
+                Workflow wf = wfOpt.get();
+                log.info("[ACTIVE_PROPERTY_TRACE]\nRequested ActiveUnitId={}\nResolved BookingId={}\nResolved DealId={}\nResolved Project={}\nResolved Unit={}",
+                        activeWfId != null ? activeWfId : activeDealId,
+                        wf.getId(),
+                        wf.getProject() != null ? wf.getProject().getZohoDealId() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getProjectName() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getLocation() : "N/A");
+                return wf;
+            }
         }
 
-        java.util.Optional<Workflow> anyWfOpt = workflowRepository.findFirstByBuyerId(buyer.getId());
-        if (anyWfOpt.isPresent()) {
-            log.info("[AUTH_LOG] Resolved first available workflow: {}", anyWfOpt.get().getId());
-            return anyWfOpt.get();
+        // 3. Fallback to buyer's workflows if context is not present
+        if (buyer != null) {
+            List<Workflow> buyerWorkflows = workflowRepository.findByBuyerId(buyer.getId());
+            if (!buyerWorkflows.isEmpty()) {
+                Workflow wf = buyerWorkflows.get(0);
+                log.info("[ACTIVE_PROPERTY_TRACE]\nRequested ActiveUnitId=FALLBACK_BUYER\nResolved BookingId={}\nResolved DealId={}\nResolved Project={}\nResolved Unit={}",
+                        wf.getId(),
+                        wf.getProject() != null ? wf.getProject().getZohoDealId() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getProjectName() : "N/A",
+                        wf.getProject() != null ? wf.getProject().getLocation() : "N/A");
+                return wf;
+            }
         }
 
-        throw new CustomException("No active workflow associated with buyer: " + buyer.getFullName(), HttpStatus.NOT_FOUND);
+        throw new CustomException("No active workflow associated with selected unit", HttpStatus.NOT_FOUND);
     }
 
     public double calculateCompletionPercentage(UUID currentStageId) {

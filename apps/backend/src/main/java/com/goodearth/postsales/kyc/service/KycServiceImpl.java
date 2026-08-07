@@ -862,12 +862,29 @@ public class KycServiceImpl implements KycService {
             return requestedBookingId.trim();
         }
 
+        UUID activeUnitId = com.goodearth.postsales.client.context.ActiveUnitContext.getActiveUnitId();
+        if (activeUnitId != null) {
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeUnitId);
+            if (wfOpt.isPresent() && wfOpt.get().getProject() != null && wfOpt.get().getProject().getZohoDealId() != null) {
+                return wfOpt.get().getProject().getZohoDealId().trim();
+            }
+        }
+
+        String dealId = com.goodearth.postsales.client.context.ActivePropertyContext.getDealId();
+        if (dealId == null || dealId.isBlank()) {
+            dealId = com.goodearth.postsales.client.context.ActivePropertyContext.getBookingId();
+        }
+        if (dealId != null && !dealId.isBlank()) {
+            return dealId.trim();
+        }
+
         if (userEmail != null && !userEmail.isBlank() && !"anonymousUser".equalsIgnoreCase(userEmail)) {
             List<com.goodearth.postsales.buyer.entity.Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(userEmail.trim());
             if (!buyers.isEmpty()) {
                 com.goodearth.postsales.buyer.entity.Buyer primaryBuyer = buyers.get(0);
-                if (primaryBuyer.getUnitName() != null && !primaryBuyer.getUnitName().isBlank()) {
-                    return primaryBuyer.getUnitName().trim();
+                List<Workflow> wfs = workflowRepository.findByBuyerId(primaryBuyer.getId());
+                if (!wfs.isEmpty() && wfs.get(0).getProject() != null && wfs.get(0).getProject().getZohoDealId() != null) {
+                    return wfs.get(0).getProject().getZohoDealId().trim();
                 }
                 if (primaryBuyer.getZohoDealId() != null && !primaryBuyer.getZohoDealId().isBlank()) {
                     return primaryBuyer.getZohoDealId().trim();
