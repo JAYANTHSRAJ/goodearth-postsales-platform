@@ -47,7 +47,12 @@ public class Smtp2GoApiEmailService implements EmailService {
         payload.put("sender", fromEmail);
         payload.put("to", Collections.singletonList(toEmail));
         payload.put("subject", subject);
-        payload.put("text_body", body);
+        if (body != null && (body.trim().startsWith("<!DOCTYPE html>") || body.trim().startsWith("<html"))) {
+            payload.put("html_body", body);
+            payload.put("text_body", stripHtmlTags(body));
+        } else {
+            payload.put("text_body", body);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -99,7 +104,12 @@ public class Smtp2GoApiEmailService implements EmailService {
         payload.put("sender", fromEmail);
         payload.put("to", Collections.singletonList(toEmail));
         payload.put("subject", subject);
-        payload.put("text_body", body);
+        if (body != null && (body.trim().startsWith("<!DOCTYPE html>") || body.trim().startsWith("<html"))) {
+            payload.put("html_body", body);
+            payload.put("text_body", stripHtmlTags(body));
+        } else {
+            payload.put("text_body", body);
+        }
 
         if (attachmentBytes != null && attachmentBytes.length > 0) {
             String base64Data = java.util.Base64.getEncoder().encodeToString(attachmentBytes);
@@ -122,5 +132,20 @@ public class Smtp2GoApiEmailService implements EmailService {
             log.error("Failed to send SMTP2GO API email with attachment to: {} | Subject: {} | Error: {}", toEmail, subject, ex.getMessage(), ex);
             throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
+    }
+
+    private String stripHtmlTags(String html) {
+        if (html == null) return "";
+        return html.replaceAll("<style[^>]*>.*?</style>", "")
+                   .replaceAll("<script[^>]*>.*?</script>", "")
+                   .replaceAll("<br\\s*/?>", "\n")
+                   .replaceAll("</p>", "\n\n")
+                   .replaceAll("<[^>]+>", "")
+                   .replaceAll("&nbsp;", " ")
+                   .replaceAll("&amp;", "&")
+                   .replaceAll("&lt;", "<")
+                   .replaceAll("&gt;", ">")
+                   .replaceAll("\n{3,}", "\n\n")
+                   .trim();
     }
 }

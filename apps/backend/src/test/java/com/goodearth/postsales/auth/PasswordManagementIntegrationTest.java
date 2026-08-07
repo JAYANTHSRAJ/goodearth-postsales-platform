@@ -174,7 +174,9 @@ public class PasswordManagementIntegrationTest {
         verify(emailService, times(1)).sendEmail(emailCaptor.capture(), subjectCaptor.capture(), bodyCaptor.capture());
         assertEquals(buyerUser.getEmail(), emailCaptor.getValue());
         assertTrue(subjectCaptor.getValue().contains("Reset Your GoodEarth Password"));
-        assertTrue(bodyCaptor.getValue().contains("This link expires in 30 minutes"));
+        assertTrue(bodyCaptor.getValue().contains("Reset My Password"));
+        assertTrue(bodyCaptor.getValue().contains("If the button doesn't work, copy and paste this link into your browser:"));
+        assertTrue(bodyCaptor.getValue().contains("expires in"));
 
         // Retrieve Token from DB
         User userWithToken = userRepository.findByEmailIgnoreCase(buyerUser.getEmail()).orElseThrow();

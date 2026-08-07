@@ -211,17 +211,7 @@ public class AuthServiceImpl implements AuthService {
             String resetUrl = "https://goodearth-postsales-platform.vercel.app/reset-password?token=" + resetToken;
             String userName = user.getFullName() != null ? user.getFullName() : user.getEmail();
             String subject = "Reset Your GoodEarth Password";
-            String body = String.format(
-                    "Hello %s,\n\n" +
-                    "Click below to reset your password:\n\n" +
-                    "%s\n\n" +
-                    "This link expires in 30 minutes.\n\n" +
-                    "If you didn't request this, ignore this email.\n\n" +
-                    "Regards,\n" +
-                    "GoodEarth Team",
-                    userName,
-                    resetUrl
-            );
+            String body = com.goodearth.postsales.auth.template.PasswordResetEmailTemplate.buildHtmlEmail(userName, resetUrl);
 
             try {
                 emailService.sendEmail(email, subject, body);
