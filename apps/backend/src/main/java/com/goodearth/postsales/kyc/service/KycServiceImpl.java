@@ -1844,11 +1844,38 @@ public class KycServiceImpl implements KycService {
         }
 
         String sourceDealId = sourceWf.getProject() != null ? sourceWf.getProject().getZohoDealId() : null;
-        if (sourceDealId == null || sourceDealId.isBlank()) {
-            throw new KycNotFoundException("Source workflow project has no valid deal ID.");
+        String sourceUnitName = (sourceWf.getProject() != null && sourceWf.getProject().getLocation() != null && !sourceWf.getProject().getLocation().isBlank())
+                ? sourceWf.getProject().getLocation()
+                : (sourceWf.getBuyer() != null ? sourceWf.getBuyer().getUnitName() : null);
+
+        log.info("[KYC_COPY_TRACE] STEP 1: Resolving Source KycApplication. Search keys: dealId={}, unitName={}, workflowId={}",
+                sourceDealId, sourceUnitName, sourceWorkflowId);
+
+        Optional<KycApplication> sourceKycOpt = Optional.empty();
+        if (sourceDealId != null && !sourceDealId.isBlank()) {
+            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceDealId);
         }
-        KycApplication sourceKyc = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceDealId)
-                .orElseThrow(() -> new KycNotFoundException("No KYC record found for source property: " + sourceDealId));
+        if (sourceKycOpt.isEmpty() && sourceUnitName != null && !sourceUnitName.isBlank()) {
+            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceUnitName);
+        }
+        if (sourceKycOpt.isEmpty()) {
+            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceWorkflowId.toString());
+        }
+
+        KycApplication sourceKyc = sourceKycOpt.orElseThrow(() -> new KycNotFoundException(
+                "No KYC record found for source property (Checked dealId=" + sourceDealId + ", unit=" + sourceUnitName + ", wf=" + sourceWorkflowId + ")"));
+
+        KycApplicant sourcePrimary = sourceKyc.getApplicants() != null ? sourceKyc.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .findFirst().orElse(null) : null;
+
+        log.info("[KYC_COPY_TRACE] STEP 1 LOG - Loaded Source Entity ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', Aadhaar: '{}', City: '{}', Pincode: '{}'",
+                sourceKyc.getId(), sourceKyc.getBookingId(),
+                sourcePrimary != null ? sourcePrimary.getFullName() : "NULL",
+                sourcePrimary != null ? sourcePrimary.getPanNumber() : "NULL",
+                sourcePrimary != null ? sourcePrimary.getAadhaarNumber() : "NULL",
+                sourcePrimary != null && sourcePrimary.getAddressCity() != null ? sourcePrimary.getAddressCity() : "NULL",
+                sourcePrimary != null && sourcePrimary.getAddressPincode() != null ? sourcePrimary.getAddressPincode() : "NULL");
 
         String targetDealId = targetWf.getProject() != null ? targetWf.getProject().getZohoDealId() : null;
         if (targetDealId == null || targetDealId.isBlank()) {
@@ -1862,7 +1889,7 @@ public class KycServiceImpl implements KycService {
             throw new KycInvalidStateTransitionException(targetKyc.getStatus().name(), "Copy KYC into completed/verified record");
         }
 
-        // Copy Reusable Application Fields (Exclude unique workflow/deal/signatures/audit logs)
+        // Copy Reusable Application Fields
         targetKyc.setConsideringHomeLoan(sourceKyc.getConsideringHomeLoan());
         targetKyc.setHasCoApplicant(sourceKyc.getHasCoApplicant());
         targetKyc.setHasThirdApplicant(sourceKyc.getHasThirdApplicant());
@@ -1971,9 +1998,33 @@ public class KycServiceImpl implements KycService {
         auditService.logEvent(targetKyc, KycAuditEventType.KYC_CREATED, actorId, "CLIENT",
                 "KYC copied from Workflow " + sourceWorkflowId + " (Source Deal: " + sourceDealId + ")", null);
 
-        log.info("[KYC_COPY] Copied KYC from Source Workflow {} to Target Workflow {} for Buyer {}",
-                sourceWorkflowId, targetWorkflowId, buyer.getEmail());
+        // STEP 3: Re-read target application directly from database (fresh query, no in-memory cache)
+        kycApplicationRepository.flush();
+        KycApplication freshTargetEntity = kycApplicationRepository.findById(targetKyc.getId())
+                .orElseThrow(() -> new KycNotFoundException("Target KYC not found after save: " + targetKyc.getId()));
 
-        return getKycApplicationByBooking(targetDealId, buyer.getEmail(), actorId);
+        KycApplicant targetPrimary = freshTargetEntity.getApplicants() != null ? freshTargetEntity.getApplicants().stream()
+                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
+                .findFirst().orElse(null) : null;
+
+        log.info("[KYC_COPY_TRACE] STEP 3 LOG - Saved Target Entity ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', Aadhaar: '{}', City: '{}', Pincode: '{}'",
+                freshTargetEntity.getId(), freshTargetEntity.getBookingId(),
+                targetPrimary != null ? targetPrimary.getFullName() : "NULL",
+                targetPrimary != null ? targetPrimary.getPanNumber() : "NULL",
+                targetPrimary != null ? targetPrimary.getAadhaarNumber() : "NULL",
+                targetPrimary != null && targetPrimary.getAddressCity() != null ? targetPrimary.getAddressCity() : "NULL",
+                targetPrimary != null && targetPrimary.getAddressPincode() != null ? targetPrimary.getAddressPincode() : "NULL");
+
+        // STEP 4: Map to Response DTO using KycApplicationMapper and log final DTO
+        List<Document> freshTargetDocs = documentRepository.findByKycApplicationId(freshTargetEntity.getId());
+        KycApplicationResponseDto responseDto = kycApplicationMapper.toResponseDto(freshTargetEntity, freshTargetDocs);
+
+        log.info("[KYC_COPY_TRACE] STEP 4 LOG - Returned Mapped DTO ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', City: '{}'",
+                responseDto.getKycApplicationId(), responseDto.getBookingId(),
+                responseDto.getPrimaryApplicant() != null ? responseDto.getPrimaryApplicant().getFullName() : "NULL",
+                responseDto.getPrimaryApplicant() != null ? responseDto.getPrimaryApplicant().getPanNumber() : "NULL",
+                responseDto.getPrimaryApplicant() != null && responseDto.getPrimaryApplicant().getAddress() != null ? responseDto.getPrimaryApplicant().getAddress().getCity() : "NULL");
+
+        return responseDto;
     }
 }
