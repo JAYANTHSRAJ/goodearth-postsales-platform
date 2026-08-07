@@ -1928,26 +1928,41 @@ public class KycServiceImpl implements KycService {
             for (Document srcDoc : sourceDocs) {
                 Document targetDoc = new Document();
                 targetDoc.setKycApplication(targetKyc);
+                targetDoc.setWorkflow(targetWf);
                 targetDoc.setCategory(srcDoc.getCategory());
                 targetDoc.setApplicantType(srcDoc.getApplicantType());
                 targetDoc.setIsRequired(srcDoc.getIsRequired());
                 targetDoc.setWorkDriveFileId(srcDoc.getWorkDriveFileId());
+                targetDoc.setFileName(srcDoc.getFileName() != null ? srcDoc.getFileName() : "kyc_document.pdf");
+                targetDoc.setDocumentType(srcDoc.getDocumentType() != null ? srcDoc.getDocumentType() : com.goodearth.postsales.document.entity.DocumentType.PASSPORT);
+                targetDoc.setMimeType(srcDoc.getMimeType());
+                targetDoc.setFileSize(srcDoc.getFileSize());
+                targetDoc.setUploadedBy(actorId);
+                targetDoc.setUploadedAt(srcDoc.getUploadedAt() != null ? srcDoc.getUploadedAt() : LocalDateTime.now());
+                targetDoc.setStatus(srcDoc.getStatus() != null ? srcDoc.getStatus() : com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE);
+                targetDoc.setVersion(srcDoc.getVersion() > 0 ? srcDoc.getVersion() : 1);
+                targetDoc.setCrmAttachmentId(srcDoc.getCrmAttachmentId());
+                targetDoc.setCrmAttachmentName(srcDoc.getCrmAttachmentName());
+                targetDoc.setCrmAttachmentUploadedAt(srcDoc.getCrmAttachmentUploadedAt());
+                targetDoc.setCrmAttachmentSyncStatus(srcDoc.getCrmAttachmentSyncStatus());
+
                 documentRepository.save(targetDoc);
 
                 if (srcDoc.getVersions() != null && !srcDoc.getVersions().isEmpty()) {
-                    DocumentVersion srcVer = srcDoc.getVersions().get(srcDoc.getVersions().size() - 1);
-                    DocumentVersion targetVer = new DocumentVersion();
-                    targetVer.setDocument(targetDoc);
-                    targetVer.setVersionNumber(1);
-                    targetVer.setFileName(srcVer.getFileName());
-                    targetVer.setFileSizeBytes(srcVer.getFileSizeBytes());
-                    targetVer.setMimeType(srcVer.getMimeType());
-                    targetVer.setWorkDriveFileId(srcVer.getWorkDriveFileId());
-                    targetVer.setWorkDrivePermalink(srcVer.getWorkDrivePermalink());
-                    targetVer.setStatus(srcVer.getStatus());
-                    targetVer.setUploadedBy(actorId);
-                    targetVer.setUploadedAt(LocalDateTime.now());
-                    documentVersionRepository.save(targetVer);
+                    for (DocumentVersion srcVer : srcDoc.getVersions()) {
+                        DocumentVersion targetVer = new DocumentVersion();
+                        targetVer.setDocument(targetDoc);
+                        targetVer.setVersionNumber(srcVer.getVersionNumber());
+                        targetVer.setFileName(srcVer.getFileName() != null ? srcVer.getFileName() : targetDoc.getFileName());
+                        targetVer.setFileSizeBytes(srcVer.getFileSizeBytes());
+                        targetVer.setMimeType(srcVer.getMimeType());
+                        targetVer.setWorkDriveFileId(srcVer.getWorkDriveFileId());
+                        targetVer.setWorkDrivePermalink(srcVer.getWorkDrivePermalink());
+                        targetVer.setStatus(srcVer.getStatus() != null ? srcVer.getStatus() : DocumentVersionStatus.SUBMITTED);
+                        targetVer.setUploadedBy(actorId);
+                        targetVer.setUploadedAt(srcVer.getUploadedAt() != null ? srcVer.getUploadedAt() : LocalDateTime.now());
+                        documentVersionRepository.save(targetVer);
+                    }
                 }
             }
         }

@@ -46,6 +46,12 @@ public class CopyKycIntegrationTest {
     private KycApplicationRepository kycApplicationRepository;
 
     @Autowired
+    private com.goodearth.postsales.document.repository.DocumentRepository documentRepository;
+
+    @Autowired
+    private com.goodearth.postsales.document.repository.DocumentVersionRepository documentVersionRepository;
+
+    @Autowired
     private KycService kycService;
 
     private Buyer buyer;
@@ -135,6 +141,27 @@ public class CopyKycIntegrationTest {
         KycApplicationResponseDto motifRes = kycService.submitApplicantInfo(submitDto, buyer.getEmail());
         assertNotNull(motifRes.getKycApplicationId());
 
+        // Create a source Document record to verify document cloning
+        com.goodearth.postsales.kyc.entity.KycApplication motifApp = kycApplicationRepository.findById(motifRes.getKycApplicationId()).get();
+        com.goodearth.postsales.document.entity.Document doc = new com.goodearth.postsales.document.entity.Document();
+        doc.setKycApplication(motifApp);
+        doc.setWorkflow(wfMotif);
+        doc.setFileName("passport_copy.pdf");
+        doc.setDocumentType(com.goodearth.postsales.document.entity.DocumentType.PASSPORT);
+        doc.setStatus(com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE);
+        doc.setCategory(com.goodearth.postsales.document.entity.DocumentCategory.KYC);
+        doc.setApplicantType(com.goodearth.postsales.kyc.entity.ApplicantType.PRIMARY);
+        doc = documentRepository.save(doc);
+
+        com.goodearth.postsales.document.entity.DocumentVersion ver = new com.goodearth.postsales.document.entity.DocumentVersion();
+        ver.setDocument(doc);
+        ver.setVersionNumber(1);
+        ver.setFileName("passport_copy.pdf");
+        ver.setFileSizeBytes(1024L);
+        ver.setMimeType("application/pdf");
+        ver.setStatus(com.goodearth.postsales.document.entity.DocumentVersionStatus.APPROVED);
+        documentVersionRepository.save(ver);
+
         // Step 2: Check available copy sources for Ochre2122
         List<KycCopySourceDto> sourcesForOchre = kycService.getAvailableKycCopySources(wfOchre.getId(), buyer.getEmail());
         assertEquals(1, sourcesForOchre.size(), "Should find 1 completed KYC source (Motif16)");
@@ -156,6 +183,11 @@ public class CopyKycIntegrationTest {
         assertEquals("Rohan Verma", ochreRes.getPrimaryApplicant().getFullName());
         assertEquals("ABCDE1234F", ochreRes.getPrimaryApplicant().getPanNumber());
         assertEquals("Bengaluru", ochreRes.getPrimaryApplicant().getAddress().getCity());
+
+        // Assert copied documents
+        List<com.goodearth.postsales.document.entity.Document> copiedDocs = documentRepository.findByKycApplicationId(ochreRes.getKycApplicationId());
+        assertFalse(copiedDocs.isEmpty(), "Copied documents must be persisted for target KYC");
+        assertTrue(copiedDocs.stream().anyMatch(d -> "passport_copy.pdf".equals(d.getFileName())), "Copied document passport_copy.pdf must be present for target KYC");
 
         // Step 4: Verify modifying Ochre2122 does NOT alter Motif16
         ApplicantInfoSubmitRequestDto editOchre = new ApplicantInfoSubmitRequestDto();
