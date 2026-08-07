@@ -121,9 +121,7 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
         log.info("[FAMILY_INVITE] Entity email={}", member.getEmail());
 
         FamilyMember saved = familyMemberRepository.save(member);
-        log.info("Successfully created family member record ID: {} for Buyer: {}", saved.getId(), buyer.getEmail());
-
-        log.info("[FAMILY_INVITE] Saved entity email={}", saved.getEmail());
+        log.info("[FAMILY_INVITE] Saved member. ID={}, Email={}", saved.getId(), saved.getEmail());
 
         if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
             processAndSendInvitation(saved, buyer);
@@ -197,27 +195,36 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
     }
 
     private void processAndSendInvitation(FamilyMember member, Buyer buyer) {
-        log.info("[FAMILY_INVITE] Enter processAndSendInvitation()");
+        log.info("[FAMILY_INVITE] Enter processAndSendInvitation");
         String email = member.getEmail().trim().toLowerCase();
         try {
-            log.info("[FAMILY_INVITE] Generating activation token...");
-            User user = userRepository.findByEmailIgnoreCase(email).orElseGet(() -> {
-                User newUser = new User();
-                newUser.setEmail(email);
-                newUser.setFullName(member.getName() != null ? member.getName() : email);
-                newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-                newUser.setRole(UserRole.CLIENT);
-                newUser.setEnabled(true);
-                newUser.setEmailVerified(true);
-                newUser.setPortalActivated(false);
-                newUser.setAccountActivated(false);
-                newUser.setOnboardingStage(OnboardingStage.COMPLETED);
-                return userRepository.save(newUser);
-            });
+            Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+            User user;
+            String activationToken;
+            if (userOpt.isPresent()) {
+                user = userOpt.get();
+                if (user.getActivationToken() == null || user.getActivationToken().isBlank() ||
+                    (user.getActivationTokenExpiry() != null && user.getActivationTokenExpiry().isBefore(LocalDateTime.now()))) {
+                    activationToken = activationTokenService.generateToken(user);
+                } else {
+                    activationToken = user.getActivationToken();
+                }
+            } else {
+                user = new User();
+                user.setEmail(email);
+                user.setFullName(member.getName() != null ? member.getName() : email);
+                user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                user.setRole(UserRole.CLIENT);
+                user.setEnabled(true);
+                user.setEmailVerified(true);
+                user.setPortalActivated(false);
+                user.setAccountActivated(false);
+                user.setOnboardingStage(OnboardingStage.COMPLETED);
+                user = userRepository.save(user);
+                activationToken = activationTokenService.generateToken(user);
+            }
 
             log.info("[FAMILY_INVITE] User created/found={}", user.getEmail());
-
-            String activationToken = activationTokenService.generateToken(user);
             log.info("[FAMILY_INVITE] Activation token generated={}", activationToken);
 
             String activationUrl = "https://goodearth-postsales-platform.vercel.app/activate?token=" + activationToken;
@@ -238,9 +245,9 @@ public class FamilyMemberServiceImpl implements FamilyMemberService {
                     activationUrl
             );
 
-            log.info("[FAMILY_INVITE] Calling EmailService.sendEmail()");
+            log.info("[FAMILY_INVITE] Calling EmailService.sendEmail");
             emailService.sendEmail(email, subject, body);
-            log.info("[FAMILY_INVITE] EmailService completed successfully");
+            log.info("[FAMILY_INVITE] Email sent successfully");
         } catch (Exception ex) {
             log.error("[FAMILY_INVITE] Exception stacktrace if any:", ex);
             throw ex;
