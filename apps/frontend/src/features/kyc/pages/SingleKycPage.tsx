@@ -133,15 +133,26 @@ export const SingleKycPage: React.FC = () => {
   };
 
   const handlePerformCopy = async (selectedSourceId: string) => {
-    const targetWfId = activeUnit?.workflowId || activeUnit?.id || bookingId;
+    const targetWfId = activeUnit?.workflowId || activeUnit?.id || searchParams.get('workflowId') || searchParams.get('bookingId') || bookingId;
+    console.log('[KYC_COPY] Executing copy. Target Workflow:', targetWfId, 'Source Workflow:', selectedSourceId);
     try {
-      await kycService.copyKycFromSource(targetWfId, {
+      const copyResponseDto = await kycService.copyKycFromSource(targetWfId, {
         sourceWorkflowId: selectedSourceId,
         overwrite: true,
       });
+      console.log('[KYC_COPY] copyKycFromSource successful response:', copyResponseDto);
       setShowCopyModal(false);
-      await loadInitialData();
+
+      // Re-fetch latest DTO and force-reset form state
+      const freshData = await kycService.getKycByBooking(bookingId);
+      console.log('[KYC_COPY] Fresh DTO re-fetched after copy:', freshData);
+      setInitialData(freshData);
+      resetForm(freshData);
+      if (freshData?.documentSlots) {
+        setDocumentSlots(freshData.documentSlots);
+      }
     } catch (err: any) {
+      console.error('[KYC_COPY] Failed to copy KYC data:', err);
       alert(err?.response?.data?.message || 'Failed to copy KYC data from selected property.');
     }
   };
@@ -184,6 +195,7 @@ export const SingleKycPage: React.FC = () => {
     errors,
     validateForm,
     saveNow,
+    resetForm,
   } = useKycAutosave(bookingId, initialData);
 
   const handleCoApplicantToggle = (value: string) => {

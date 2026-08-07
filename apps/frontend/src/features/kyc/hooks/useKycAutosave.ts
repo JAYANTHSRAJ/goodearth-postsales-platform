@@ -98,28 +98,45 @@ export const useKycAutosave = (
   // Sync initialData when loaded from backend for the first time or when bookingId/applicationId changes
   const loadedAppIdRef = useRef<string | null>(null);
 
+  const resetForm = useCallback((data?: KycApplicationResponseDto | null) => {
+    const target = data || initialData;
+    if (target) {
+      if (target.status) {
+        statusRef.current = target.status;
+      }
+      loadedAppIdRef.current = target.kycApplicationId || null;
+      setApplicationDate(target.applicationDate || new Date().toISOString().split('T')[0]);
+      setConsideringHomeLoan(target.consideringHomeLoan || 'No');
+
+      const coVal = target.hasCoApplicant || (target.jointApplicants && target.jointApplicants.length > 0 ? 'Yes' : 'No');
+      const thirdVal = target.hasThirdApplicant || (target.jointApplicants && target.jointApplicants.length > 1 ? 'Yes' : 'No');
+      setHasCoApplicant(coVal);
+      setHasThirdApplicant(thirdVal);
+
+      setPrimaryApplicant(ensureDefaultApplicantFields(target.primaryApplicant, 'PRIMARY'));
+      setJointApplicants(prepareJointApplicants(target.jointApplicants || [], coVal, thirdVal));
+      setLastSavedAt(target.lastSavedAt || null);
+      setErrors({});
+      setIsDirty(false);
+      console.log('[KYC_COPY] resetForm executed. Form fields populated:', {
+        kycApplicationId: target.kycApplicationId,
+        fullName: target.primaryApplicant?.fullName,
+        pan: target.primaryApplicant?.panNumber,
+        city: target.primaryApplicant?.address?.city,
+      });
+    }
+  }, [initialData]);
+
   useEffect(() => {
     if (initialData) {
       if (initialData.status) {
         statusRef.current = initialData.status;
       }
-      
-      // Only set form field values on initial load or when application ID changes, to preserve active user input
-      if (loadedAppIdRef.current !== initialData.kycApplicationId) {
-        loadedAppIdRef.current = initialData.kycApplicationId || null;
-        setApplicationDate(initialData.applicationDate || new Date().toISOString().split('T')[0]);
-        setConsideringHomeLoan(initialData.consideringHomeLoan || 'No');
-        
-        const coVal = initialData.hasCoApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 0 ? 'Yes' : 'No');
-        const thirdVal = initialData.hasThirdApplicant || (initialData.jointApplicants && initialData.jointApplicants.length > 1 ? 'Yes' : 'No');
-        setHasCoApplicant(coVal);
-        setHasThirdApplicant(thirdVal);
 
-        setPrimaryApplicant(ensureDefaultApplicantFields(initialData.primaryApplicant, 'PRIMARY'));
-        setJointApplicants(prepareJointApplicants(initialData.jointApplicants || [], coVal, thirdVal));
-        setLastSavedAt(initialData.lastSavedAt || null);
-        setErrors({});
-        setIsDirty(false);
+      // Sync form field values on initial load or when data is updated/copied from backend
+      const nameChanged = initialData.primaryApplicant?.fullName && primaryApplicant.fullName !== initialData.primaryApplicant.fullName;
+      if (loadedAppIdRef.current !== initialData.kycApplicationId || nameChanged) {
+        resetForm(initialData);
       }
     } else if (!loadedAppIdRef.current) {
       statusRef.current = 'DRAFT';
@@ -133,7 +150,7 @@ export const useKycAutosave = (
       setErrors({});
       setIsDirty(false);
     }
-  }, [initialData?.kycApplicationId, initialData?.status]);
+  }, [initialData?.kycApplicationId, initialData?.status, initialData?.primaryApplicant?.fullName, resetForm]);
 
   // Dirty State Protection (Warn user before closing tab if unsaved changes exist)
   useEffect(() => {
@@ -397,6 +414,7 @@ export const useKycAutosave = (
     isDirty,
     validateForm,
     saveNow,
+    resetForm,
   };
 };
 
