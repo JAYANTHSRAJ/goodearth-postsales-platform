@@ -69,7 +69,9 @@ public class ClientHomeServiceImpl implements ClientHomeService {
         }
 
         ClientHomeDetailsDto homeDetails = new ClientHomeDetailsDto();
-        String zohoDealId = buyer.getZohoDealId();
+        String zohoDealId = (workflow != null && workflow.getProject() != null && workflow.getProject().getZohoDealId() != null)
+                ? workflow.getProject().getZohoDealId()
+                : buyer.getZohoDealId();
 
         // 1. DYNAMIC ZOHO CRM SINGLE SOURCE OF TRUTH FETCH
         if (zohoDealId != null && !zohoDealId.isBlank()) {
@@ -166,7 +168,11 @@ public class ClientHomeServiceImpl implements ClientHomeService {
         }
 
         if (homeDetails.getUnitNumber() == null || homeDetails.getUnitNumber().isBlank()) {
-            String dbUnit = buyer.getUnitName() != null ? buyer.getUnitName() : "Villa GE-001";
+            String dbUnit = (workflow != null && workflow.getProject() != null && workflow.getProject().getLocation() != null && !workflow.getProject().getLocation().isBlank())
+                    ? workflow.getProject().getLocation()
+                    : ((workflow != null && workflow.getProject() != null && workflow.getProject().getZohoDealId() != null)
+                            ? workflow.getProject().getZohoDealId()
+                            : (buyer.getUnitName() != null ? buyer.getUnitName() : "Villa GE-001"));
             homeDetails.setUnitNumber(dbUnit);
             homeDetails.setVilla(dbUnit);
         }

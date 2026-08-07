@@ -34,8 +34,9 @@ export const OfferLetterDocumentPage: React.FC = () => {
   // Determine booking identifier dynamically in priority order
   const targetBooking =
     paramBookingId ||
+    activeUnit?.bookingId ||
+    activeUnit?.zohoDealId ||
     activeUnit?.unitName ||
-    activeUnit?.zohoDealName ||
     activeUnit?.workflowId ||
     activeUnit?.id ||
     '';

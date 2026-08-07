@@ -1,6 +1,7 @@
 package com.goodearth.postsales.client.service;
 
 import com.goodearth.postsales.buyer.entity.Buyer;
+import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.client.dto.ClientAttachmentDto;
 import com.goodearth.postsales.common.exception.CustomException;
 import com.goodearth.postsales.integration.zoho.ZohoApiClient;
@@ -37,10 +38,12 @@ public class ClientAttachmentServiceImpl implements ClientAttachmentService {
     }
 
     @Override
-    @Cacheable(value = "clientAttachmentMetadata", key = "#userDetails.username", unless = "#result == null || #result.isEmpty()")
     public List<ClientAttachmentDto> getAttachments(UserDetails userDetails, String category, String search, String sort) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
-        String zohoDealId = buyer.getZohoDealId();
+        Workflow workflow = helper.getBuyerWorkflow(buyer);
+        String zohoDealId = (workflow != null && workflow.getProject() != null && workflow.getProject().getZohoDealId() != null)
+                ? workflow.getProject().getZohoDealId()
+                : buyer.getZohoDealId();
 
         if (zohoDealId == null || zohoDealId.isBlank()) {
             log.warn("No Zoho Deal ID linked for buyer: {}", buyer.getEmail());

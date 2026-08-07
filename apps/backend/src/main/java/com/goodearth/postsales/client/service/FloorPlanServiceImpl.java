@@ -65,7 +65,10 @@ public class FloorPlanServiceImpl implements FloorPlanService {
     @Override
     public ClientFloorPlansDto getFloorPlans(UserDetails userDetails) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
-        String zohoDealId = buyer.getZohoDealId();
+        Workflow workflow = helper.getBuyerWorkflow(buyer);
+        String zohoDealId = (workflow != null && workflow.getProject() != null && workflow.getProject().getZohoDealId() != null)
+                ? workflow.getProject().getZohoDealId()
+                : buyer.getZohoDealId();
 
         ClientFloorPlansDto floorPlansDto = new ClientFloorPlansDto();
 
@@ -92,30 +95,31 @@ public class FloorPlanServiceImpl implements FloorPlanService {
 
         // 2. FALLBACK SOURCE: Query local database files (for backward compatibility and integration test assertions)
         try {
-            Workflow workflow = helper.getBuyerWorkflow(buyer);
-            Optional<WorkDriveFolder> folderOpt = workDriveFolderRepository.findByWorkflowId(workflow.getId());
-            if (folderOpt.isPresent()) {
-                List<WorkDriveFile> files = workDriveFileRepository.findByFolderId(folderOpt.get().getId()).stream()
-                        .filter(f -> f.getDocument() != null && f.getDocument().getDocumentType() == DocumentType.DESIGN_PLAN)
-                        .collect(Collectors.toList());
-
-                if (!files.isEmpty()) {
-                    WorkDriveFile file = files.get(0);
-                    List<WorkDriveFileVersionDto> versions = workDriveVersionService.getVersionHistory(file.getId()).stream()
-                            .sorted(Comparator.comparing(WorkDriveFileVersionDto::getVersion).reversed())
+            if (workflow != null) {
+                Optional<WorkDriveFolder> folderOpt = workDriveFolderRepository.findByWorkflowId(workflow.getId());
+                if (folderOpt.isPresent()) {
+                    List<WorkDriveFile> files = workDriveFileRepository.findByFolderId(folderOpt.get().getId()).stream()
+                            .filter(f -> f.getDocument() != null && f.getDocument().getDocumentType() == DocumentType.DESIGN_PLAN)
                             .collect(Collectors.toList());
 
-                    if (!versions.isEmpty()) {
-                        WorkDriveFileVersionDto latest = versions.get(0);
-                        floorPlansDto.setLatestDrawing(mapper.toDrawingSummary(latest));
-                        floorPlansDto.setPreviewUrl(latest.getPreviewUrl());
-                        floorPlansDto.setDownloadUrl(latest.getDownloadUrl());
+                    if (!files.isEmpty()) {
+                        WorkDriveFile file = files.get(0);
+                        List<WorkDriveFileVersionDto> versions = workDriveVersionService.getVersionHistory(file.getId()).stream()
+                                .sorted(Comparator.comparing(WorkDriveFileVersionDto::getVersion).reversed())
+                                .collect(Collectors.toList());
 
-                        List<ClientDrawingSummaryDto> previous = versions.stream().skip(1).map(mapper::toDrawingSummary).collect(Collectors.toList());
-                        floorPlansDto.setAllPreviousVersions(previous);
-                        floorPlansDto.setRevisionHistory(versions.stream().map(mapper::toDrawingSummary).collect(Collectors.toList()));
+                        if (!versions.isEmpty()) {
+                            WorkDriveFileVersionDto latest = versions.get(0);
+                            floorPlansDto.setLatestDrawing(mapper.toDrawingSummary(latest));
+                            floorPlansDto.setPreviewUrl(latest.getPreviewUrl());
+                            floorPlansDto.setDownloadUrl(latest.getDownloadUrl());
 
-                        return floorPlansDto;
+                            List<ClientDrawingSummaryDto> previous = versions.stream().skip(1).map(mapper::toDrawingSummary).collect(Collectors.toList());
+                            floorPlansDto.setAllPreviousVersions(previous);
+                            floorPlansDto.setRevisionHistory(versions.stream().map(mapper::toDrawingSummary).collect(Collectors.toList()));
+
+                            return floorPlansDto;
+                        }
                     }
                 }
             }
@@ -132,7 +136,10 @@ public class FloorPlanServiceImpl implements FloorPlanService {
     @Override
     public ClientDrawingSummaryDto getFloorPlanById(UserDetails userDetails, String attachmentId) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
-        String zohoDealId = buyer.getZohoDealId();
+        Workflow workflow = helper.getBuyerWorkflow(buyer);
+        String zohoDealId = (workflow != null && workflow.getProject() != null && workflow.getProject().getZohoDealId() != null)
+                ? workflow.getProject().getZohoDealId()
+                : buyer.getZohoDealId();
 
         if (zohoDealId != null && !zohoDealId.isBlank()) {
             List<ClientDrawingSummaryDto> attachments = fetchAttachmentsFromZoho(zohoDealId);

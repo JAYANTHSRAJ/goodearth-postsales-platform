@@ -67,7 +67,6 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(value = "clientDashboard", key = "#userDetails.username + (#workflowId != null ? #workflowId.toString() : '')")
     public ClientDashboardDto getDashboard(UserDetails userDetails, UUID workflowId) {
         Buyer buyer = helper.getAuthenticatedBuyer(userDetails);
         
