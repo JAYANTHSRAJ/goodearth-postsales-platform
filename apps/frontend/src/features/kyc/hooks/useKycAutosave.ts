@@ -238,7 +238,7 @@ export const useKycAutosave = (
 
       let submitResponse: KycApplicationResponseDto | null = null;
 
-      // 2. Submit applicant info to sync with Zoho CRM Deal & persist primary & co-applicant address
+      // 2. Submit applicant info to sync & persist primary & co-applicant address
       if (primaryApplicant) {
         const coApp = jointApplicants.find((a) => a.applicantType === 'JOINT_1') || jointApplicants[0];
 

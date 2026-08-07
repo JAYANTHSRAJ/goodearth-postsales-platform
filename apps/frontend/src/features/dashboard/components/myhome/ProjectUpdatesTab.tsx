@@ -20,14 +20,14 @@ export const ProjectUpdatesTab: React.FC = () => {
               Project Construction Timeline & Updates
             </h3>
             <p className="text-sm text-brand-500 dark:text-brand-400 max-w-md mx-auto leading-relaxed">
-              This interactive timeline page will soon consume real-time construction site updates, photo progress reports, and milestone achievements from Zoho CRM.
+              This interactive timeline page will soon consume real-time construction site updates, photo progress reports, and milestone achievements from GoodEarth site operations.
             </p>
           </div>
 
           <div className="pt-2 flex justify-center">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-brand-100/70 text-brand-700 dark:bg-brand-800 dark:text-brand-300">
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              CRM Construction Stream Integration Planned
+              Construction Stream Updates Planned
             </span>
           </div>
         </div>

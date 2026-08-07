@@ -128,7 +128,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     {
       title: 'Registration Status',
       value: details?.registrationStatus || 'Registered / Agreement Executed',
-      subtitle: 'Zoho CRM Deed Status',
+      subtitle: 'Deed Status',
       icon: FileCheck,
       badge: 'Legal Verified',
       isGreenBadge: true,
@@ -154,7 +154,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     {
       id: 'floor-plans',
       title: 'Floor Plans',
-      desc: 'View & download CRM architectural drawings',
+      desc: 'View & download architectural drawings',
       icon: FileSpreadsheet,
       color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
     },
@@ -168,7 +168,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     {
       id: 'project-updates',
       title: 'Construction Progress',
-      desc: 'Live site photo timeline & CRM milestones',
+      desc: 'Live site photo timeline & milestones',
       icon: Hammer,
       color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
     },
@@ -189,7 +189,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     {
       id: 'support',
       title: 'Homeowner Support',
-      desc: 'Helpdesk ticket desk & CRM helpline',
+      desc: 'Helpdesk ticket desk & support',
       icon: HelpCircle,
       color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
     },
@@ -198,16 +198,16 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
   // Recent Activities
   const recentActivities = [
     {
-      title: 'CRM Deal Attachments Updated',
+      title: 'Unit Documents Updated',
       time: 'Today at 10:30 AM',
-      desc: 'Latest structural revision drawing PDF synchronized from Zoho CRM Deals.',
+      desc: 'Latest structural revision drawing PDF updated.',
       icon: CheckCircle2,
       iconColor: 'text-emerald-500',
     },
     {
       title: 'Stage Milestone Achieved',
       time: 'Yesterday at 04:15 PM',
-      desc: 'Superstructure slab casting completed. Certified by CRM Site Engineer.',
+      desc: 'Superstructure slab casting completed. Certified by Site Engineer.',
       icon: Hammer,
       iconColor: 'text-amber-500',
     },
@@ -229,7 +229,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
             <Building2 className="h-5 w-5 text-amber-500" />
             Property Specifications & Details
           </h3>
-          <span className="text-xs font-semibold text-brand-400">Zoho CRM Synchronized</span>
+          <span className="text-xs font-semibold text-brand-400">GoodEarth Verified</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -537,10 +537,10 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
             <div>
               <h3 className="font-serif text-xl font-bold text-brand-900 dark:text-white flex items-center gap-2">
                 <Clock className="h-5 w-5 text-amber-500" />
-                Recent CRM Activity & Updates
+                Recent Activity & Updates
               </h3>
               <p className="text-xs text-brand-500 dark:text-brand-400 mt-0.5">
-                Real-time activity log for your residence from Zoho CRM.
+                Real-time activity log for your residence.
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">

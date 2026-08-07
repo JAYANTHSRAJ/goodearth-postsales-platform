@@ -51,7 +51,7 @@ export const MyHomePage: React.FC = () => {
             <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
             <h3 className="text-lg font-bold text-brand-900 dark:text-white">Unable to Load My Home Dashboard</h3>
             <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
-              {(error as Error)?.message || 'A network error occurred while querying your property details from Zoho CRM.'}
+              {(error as Error)?.message || 'A network error occurred while querying your property details.'}
             </p>
             <button
               onClick={() => refetch()}
@@ -93,7 +93,7 @@ export const MyHomePage: React.FC = () => {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   isActive ? 'bg-amber-400 text-brand-950 dark:bg-brand-950 dark:text-amber-300' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                 }`}>
-                  Zoho CRM
+                  Verified
                 </span>
               )}
             </button>

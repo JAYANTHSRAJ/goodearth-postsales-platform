@@ -55,7 +55,7 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({ details, isLoading
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-semibold text-brand-200">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Zoho CRM Verified Record</span>
+            <span>Verified Record</span>
           </div>
         </div>
 

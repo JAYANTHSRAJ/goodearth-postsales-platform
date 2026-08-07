@@ -120,9 +120,9 @@ export const ApplicantInfoPage: React.FC = () => {
 
     try {
       await kycService.submitApplicantInfo(submitPayload);
-      setSuccessMsg(`Successfully updated Zoho CRM Deal for booking reference '${form.bookingId}'!`);
+      setSuccessMsg(`Successfully updated applicant info for booking reference '${form.bookingId}'!`);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to update applicant information in Zoho CRM');
+      setErrorMsg(err?.message || 'Failed to update applicant information');
     } finally {
       setSaving(false);
     }
@@ -179,7 +179,7 @@ export const ApplicantInfoPage: React.FC = () => {
         </div>
         <h1 className="text-3xl font-bold font-serif tracking-tight text-white">Primary Applicant Registration</h1>
         <p className="text-sm text-slate-300 max-w-2xl">
-          Please provide your applicant details below. All fields will be synchronized directly to your official property booking in Zoho CRM.
+          Please provide your applicant details below. All fields will be saved to your official property booking.
         </p>
       </div>
 
@@ -639,7 +639,7 @@ export const ApplicantInfoPage: React.FC = () => {
             className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl font-bold text-sm shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all disabled:opacity-50 focus:ring-2 focus:ring-brand-500 focus:outline-none"
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Saving to Zoho CRM...' : 'Save Applicant Information'}
+            {saving ? 'Saving...' : 'Save Applicant Information'}
           </button>
         </div>
       </form>

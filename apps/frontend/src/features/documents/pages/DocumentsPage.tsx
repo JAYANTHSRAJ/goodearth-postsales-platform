@@ -98,7 +98,7 @@ export const DocumentsPage: React.FC = () => {
 
   // Local state to simulate version uploads and overrides
   const [localAuditLogs, setLocalAuditLogs] = useState<string[]>([
-    'Document uploaded to Zoho WorkDrive vault.',
+    'Document uploaded to secure vault.',
     'System generated SHA-256 digital signature hash.',
     'Sharing lock disabled; client portal access granted.',
   ]);
@@ -513,7 +513,7 @@ export const DocumentsPage: React.FC = () => {
                 Documents Management Center
               </h1>
               <p className="text-sm font-medium text-brand-500 dark:text-brand-400 mt-1">
-                Zoho WorkDrive vault integrations, digital signature verification, and homeowner agreements.
+                Secure document vault integrations, digital signature verification, and homeowner agreements.
               </p>
             </div>
             {!isClient && (
@@ -577,12 +577,12 @@ export const DocumentsPage: React.FC = () => {
               title="Storage Utilization"
               value="14 MB"
               icon={History}
-              badge={<StatusBadge label="Zoho Drive" type="info" />}
+              badge={<StatusBadge label="Document Vault" type="info" />}
             />
           </div>
 
           {/* 2 & 3. Search and Advanced Filters */}
-          <Card title="Filter & Search Documents Vault" subtitle="Advanced filter parameters to query Zoho archives">
+          <Card title="Filter & Search Documents Vault" subtitle="Advanced filter parameters to query document archives">
             <div className="space-y-4 mt-2">
               {/* Global search */}
               <div className="relative">
@@ -695,7 +695,7 @@ export const DocumentsPage: React.FC = () => {
           <Card title="Documents Vault Directory" subtitle="Master list of registered Post-Sales documents">
             {isLoading ? (
               <div className="py-20 text-center text-xs text-brand-550 font-bold uppercase tracking-wider font-mono">
-                Querying Zoho vault...
+                Querying document vault...
               </div>
             ) : filteredCRMDocuments.length > 0 ? (
               <div className="overflow-x-auto mt-2">
@@ -842,7 +842,7 @@ export const DocumentsPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-brand-700 dark:text-brand-300 mb-1">Zoho WorkDrive File ID</label>
+                <label className="block text-xs font-bold text-brand-700 dark:text-brand-300 mb-1">WorkDrive File ID</label>
                 <input
                   type="text"
                   value={workDriveFileId}

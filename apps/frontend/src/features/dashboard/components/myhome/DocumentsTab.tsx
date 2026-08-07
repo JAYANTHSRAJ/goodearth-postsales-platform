@@ -126,7 +126,7 @@ export const DocumentsTab: React.FC = () => {
           </h3>
           <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
             {(error as Error)?.message ||
-              'A network error occurred while querying Zoho CRM Deal attachments.'}
+              'A network error occurred while querying attachments.'}
           </p>
           <button
             onClick={() => refetch()}
@@ -213,7 +213,7 @@ export const DocumentsTab: React.FC = () => {
                 No Documents Available
               </h4>
               <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
-                No attachments found matching the selected category or search filter in your Zoho CRM Deal record.
+                No attachments found matching the selected category or search filter for your unit.
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export const DocumentsTab: React.FC = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <User className="h-3 w-3 text-brand-400" />
-                    {doc.uploadedBy || 'GoodEarth CRM'}
+                    {doc.uploadedBy || 'GoodEarth Team'}
                   </span>
                 </div>
               </div>

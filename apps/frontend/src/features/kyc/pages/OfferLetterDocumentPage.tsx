@@ -113,11 +113,11 @@ export const OfferLetterDocumentPage: React.FC = () => {
 
       if (liveSign?.requestStatus === 'DRAFT' || liveSign?.apiLicenseRequired) {
         setNotification({
-          message: 'Request created as DRAFT in Zoho Sign. API submission requires a Zoho Sign plan upgrade or manual send from Zoho Sign portal.',
+          message: 'Request created as DRAFT. API submission requires a digital signature service plan upgrade or manual send from signature portal.',
           type: 'warning',
         });
       } else {
-        setNotification({ message: 'Offer Letter sent for e-Sign via Zoho Sign!', type: 'success' });
+        setNotification({ message: 'Offer Letter sent for e-Sign!', type: 'success' });
       }
     } catch (err: any) {
       console.error('[OFFER_LETTER_PAGE] Error sending for e-Sign:', err);
@@ -311,7 +311,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
             {/* Request ID / Status */}
             <div className="flex flex-col gap-1">
               <span className="text-slate-500 uppercase tracking-wider font-bold text-[10px]">
-                {signRequest ? 'Zoho Sign Request ID' : 'Status'}
+                {signRequest ? 'Signature Request ID' : 'Status'}
               </span>
               <span className="font-mono font-semibold text-slate-200 truncate">
                 {signRequest ? signRequest.requestId : statusInfo?.sent ? 'Shared with Buyer' : 'Draft / Pending Send'}
@@ -492,19 +492,19 @@ export const OfferLetterDocumentPage: React.FC = () => {
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <div className="flex flex-col gap-1">
             <span className="font-bold text-amber-300 text-sm">
-              Zoho Sign License Action Required (Error 12000)
+              Digital Signature License Action Required (Error 12000)
             </span>
             <p className="text-amber-200/90 leading-relaxed">
-              The signature request (ID: <code className="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-amber-300">{signRequest?.requestId}</code>) was successfully created as a <strong>DRAFT</strong> in Zoho Sign, but automated API dispatch requires a Zoho Sign plan upgrade.
+              The signature request (ID: <code className="font-mono bg-slate-900 px-1.5 py-0.5 rounded text-amber-300">{signRequest?.requestId}</code>) was successfully created as a <strong>DRAFT</strong>, but automated API dispatch requires a digital signature service plan upgrade.
             </p>
             <div className="mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-amber-300 font-semibold">
               <span>To complete dispatch, an administrator must either:</span>
               <span className="bg-amber-900/60 px-2 py-0.5 rounded border border-amber-600/50">
-                1. Upgrade Zoho Sign Plan
+                1. Upgrade Digital Signature Service Plan
               </span>
               <span>or</span>
               <span className="bg-amber-900/60 px-2 py-0.5 rounded border border-amber-600/50">
-                2. Send Draft manually from Zoho Sign Portal
+                2. Send Draft manually from Signature Portal
               </span>
             </div>
           </div>
@@ -534,7 +534,7 @@ export const OfferLetterDocumentPage: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center flex-1 py-24 bg-slate-900/60 border border-slate-800 rounded-2xl gap-4">
             <RefreshCw className="w-10 h-10 text-emerald-400 animate-spin" />
-            <p className="text-sm font-medium text-slate-300">Loading Official Offer Letter & Zoho Sign Status...</p>
+            <p className="text-sm font-medium text-slate-300">Loading Official Offer Letter & Signature Status...</p>
           </div>
         ) : pdfData ? (
           <NativePdfCanvasViewer

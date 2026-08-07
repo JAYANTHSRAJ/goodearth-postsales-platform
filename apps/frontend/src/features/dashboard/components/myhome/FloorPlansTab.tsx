@@ -110,7 +110,7 @@ export const FloorPlansTab: React.FC = () => {
         <div className="h-96 rounded-3xl bg-brand-100/40 dark:bg-brand-900/30 animate-pulse border border-brand-200/50 dark:border-brand-850 flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-brand-400">
             <RefreshCw className="h-8 w-8 animate-spin text-amber-500" />
-            <span className="text-xs font-semibold">Fetching Floor Plans from Zoho CRM Deals...</span>
+            <span className="text-xs font-semibold">Fetching Floor Plans...</span>
           </div>
         </div>
       </div>
@@ -124,7 +124,7 @@ export const FloorPlansTab: React.FC = () => {
           <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
           <h3 className="text-lg font-bold text-brand-900 dark:text-white">Unable to Load Floor Plans</h3>
           <p className="text-xs text-brand-500 dark:text-brand-400 max-w-md mx-auto">
-            {(error as Error)?.message || 'A network error occurred while querying Zoho CRM Deal attachments.'}
+            {(error as Error)?.message || 'A network error occurred while querying floor plans.'}
           </p>
           <button
             onClick={() => refetch()}
@@ -138,7 +138,7 @@ export const FloorPlansTab: React.FC = () => {
     );
   }
 
-  // Premium Empty State if no floor plan exists in Zoho CRM
+  // Premium Empty State if no floor plan exists
   if (!activeDrawing && !previewUrl) {
     return (
       <Card>
@@ -152,14 +152,14 @@ export const FloorPlansTab: React.FC = () => {
               No Floor Plans Available
             </h3>
             <p className="text-sm text-brand-500 dark:text-brand-400 max-w-md mx-auto leading-relaxed">
-              Your GoodEarth Relationship Manager will upload approved floor plans here once they are available in your Zoho CRM Deal record.
+              Your GoodEarth Relationship Manager will upload approved floor plans here once they are available.
             </p>
           </div>
 
           <div className="pt-2">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-brand-100/70 text-brand-700 dark:bg-brand-800 dark:text-brand-300">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              Zoho CRM Single Source Sync Active
+              GoodEarth Verified Vault Active
             </span>
           </div>
         </div>
@@ -197,7 +197,7 @@ export const FloorPlansTab: React.FC = () => {
             </span>
             <span className="flex items-center gap-1">
               <User className="h-3.5 w-3.5 text-brand-400" />
-              By: {activeDrawing?.uploadedBy || 'GoodEarth CRM Team'}
+              By: {activeDrawing?.uploadedBy || 'GoodEarth Team'}
             </span>
             <span className="flex items-center gap-1">
               <HardDrive className="h-3.5 w-3.5 text-brand-400" />
@@ -275,7 +275,7 @@ export const FloorPlansTab: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-850 text-[11px] text-brand-400 text-center font-medium">
-            Zoho CRM Deal Attachment Stream
+            GoodEarth Document Stream
           </div>
         </div>
 

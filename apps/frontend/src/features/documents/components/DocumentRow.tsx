@@ -82,7 +82,7 @@ export const DocumentRow: React.FC<DocumentRowProps> = ({ document, onVerify }) 
           <button
             onClick={handleDownload}
             className="rounded-lg p-1.5 text-brand-500 hover:bg-brand-100 hover:text-brand-900 dark:text-brand-400 dark:hover:bg-brand-800 dark:hover:text-white transition-colors"
-            title="Download / View in Zoho WorkDrive"
+            title="Download / View Document"
           >
             <Download className="h-4 w-4" />
           </button>

@@ -245,8 +245,8 @@ export const ProjectsPage: React.FC = () => {
   };
 
   const triggerQuickAction = (action: string) => {
-    alert(`CRM Trigger: Quick Action [${action}] executed successfully.`);
-    const newLog = `Quick Action: ${action} initiated by CRM coordinator.`;
+    alert(`Quick Action [${action}] executed successfully.`);
+    const newLog = `Quick Action: ${action} initiated.`;
     setProjectLogs([newLog, ...projectLogs]);
   };
 
@@ -580,7 +580,7 @@ export const ProjectsPage: React.FC = () => {
                 Projects Management
               </h1>
               <p className="text-sm font-medium text-brand-500 dark:text-brand-400 mt-1">
-                CRM-mastered project structures and villa unit configurations.
+                Master project structures and villa unit configurations.
               </p>
             </div>
             <div>

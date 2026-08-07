@@ -329,7 +329,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                   <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.verifiedAt)}</td>
                 </tr>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/40">
-                  <td className="p-2.5 font-bold text-slate-500">Zoho CRM Sync Status:</td>
+                  <td className="p-2.5 font-bold text-slate-500">Sync Status:</td>
                   <td className="p-2.5">
                     <span
                       className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
@@ -343,7 +343,7 @@ export const AdminKycReviewConsole: React.FC<AdminKycReviewConsoleProps> = ({ ky
                       {kycData.zohoSyncStatus || 'SUCCESS'}
                     </span>
                   </td>
-                  <td className="p-2.5 font-bold text-slate-500">Zoho Last Synced:</td>
+                  <td className="p-2.5 font-bold text-slate-500">Last Synced:</td>
                   <td className="p-2.5 font-mono text-slate-900 dark:text-white">{formatDateTime(kycData.zohoLastSyncedAt || kycData.lastSavedAt)}</td>
                 </tr>
               </tbody>

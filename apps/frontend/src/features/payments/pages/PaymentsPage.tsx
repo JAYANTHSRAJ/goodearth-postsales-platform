@@ -346,7 +346,7 @@ export const PaymentsPage: React.FC = () => {
 
               {/* TAB 2: Invoices */}
               {workspaceTab === 'invoices' && (
-                <Card title="Milestone Invoices" subtitle="Zoho-mastered milestone invoices">
+                <Card title="Milestone Invoices" subtitle="Official milestone invoices">
                   <div className="space-y-3.5 pt-2">
                     {activeRecord.invoices.map((inv, idx) => (
                       <div key={idx} className="p-3.5 rounded-2xl bg-white border border-brand-100 flex items-center justify-between text-xs font-semibold shadow-sm">
@@ -481,7 +481,7 @@ export const PaymentsPage: React.FC = () => {
                 Finance Operations Center
               </h1>
               <p className="text-sm font-medium text-brand-500 dark:text-brand-400 mt-1">
-                Razorpay gateway integrations reconciliation, Zoho invoice automation, and collections tracking.
+                Razorpay gateway integrations reconciliation, invoice automation, and collections tracking.
               </p>
             </div>
           </div>
@@ -516,7 +516,7 @@ export const PaymentsPage: React.FC = () => {
               title="Invoices Generated"
               value="4"
               icon={FileText}
-              badge={<StatusBadge label="Active Zoho" type="info" />}
+              badge={<StatusBadge label="Active Invoices" type="info" />}
             />
             <StatCard
               title="Receipts Issued"

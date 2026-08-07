@@ -288,8 +288,8 @@ export const ClientProfilePage: React.FC = () => {
                     <span className="font-medium text-white">Q4 2026</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] uppercase text-brand-400">CRM Ref</span>
-                    <span className="font-mono text-white">deal_zoho_201</span>
+                    <span className="block text-[10px] uppercase text-brand-400">Booking Ref</span>
+                    <span className="font-mono text-white">booking_201</span>
                   </div>
                 </div>
               </div>
