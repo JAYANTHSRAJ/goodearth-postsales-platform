@@ -77,42 +77,46 @@ public class ClientPortalServiceHelper {
         }
 
         String email = userDetails.getUsername();
-        log.info("[FAMILY_LOGIN] Authenticated email={}", email);
+        UUID activeUnitId = com.goodearth.postsales.client.context.ActiveUnitContext.getActiveUnitId();
+        log.info("[FAMILY_LOGIN] Authenticated email={}, activeUnitId={}", email, activeUnitId);
+
+        if (activeUnitId != null) {
+            Optional<Buyer> activeBuyerOpt = buyerRepository.findById(activeUnitId);
+            if (activeBuyerOpt.isPresent()) {
+                Buyer b = activeBuyerOpt.get();
+                log.info("[FAMILY_LOGIN] Active unit matched buyer ID: ID={}, Email={}, Unit={}", b.getId(), b.getEmail(), b.getUnitName());
+                return b;
+            }
+
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeUnitId);
+            if (wfOpt.isPresent() && wfOpt.get().getBuyer() != null) {
+                Buyer b = wfOpt.get().getBuyer();
+                log.info("[FAMILY_LOGIN] Active unit matched workflow buyer: ID={}, Email={}, Unit={}", b.getId(), b.getEmail(), b.getUnitName());
+                return b;
+            }
+        }
 
         java.util.Optional<Buyer> buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         if (buyerOpt.isPresent()) {
             Buyer b = buyerOpt.get();
             log.info("[FAMILY_LOGIN] Primary buyer found={}", b.getEmail());
-            log.info("[FAMILY_LOGIN] Associated buyer={}", b.getEmail());
-            log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
-            log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
-            log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
             return b;
         }
-        log.info("[FAMILY_LOGIN] Primary buyer found=false");
 
         java.util.Optional<FamilyMember> familyMemberOpt = familyMemberRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         if (familyMemberOpt.isPresent()) {
             FamilyMember fm = familyMemberOpt.get();
             Buyer b = fm.getBuyer();
-            log.info("[FAMILY_LOGIN] Family member found={}", fm.getEmail());
-            log.info("[FAMILY_LOGIN] Associated buyer={}", b != null ? b.getEmail() : null);
             if (b != null) {
-                log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
-                log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
-                log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
+                log.info("[FAMILY_LOGIN] Family member buyer found={}", b.getEmail());
                 return b;
             }
         }
-        log.info("[FAMILY_LOGIN] Family member found=false");
 
         List<Buyer> buyers = buyerRepository.findAll();
         if (!buyers.isEmpty()) {
             Buyer b = buyers.get(0);
             log.info("[FAMILY_LOGIN] Fallback buyer for Admin/Staff: ID={}, Email={}", b.getId(), b.getEmail());
-            log.info("[FAMILY_LOGIN] Unit={}", b.getUnitName());
-            log.info("[FAMILY_LOGIN] Booking={}", b.getZohoDealId());
-            log.info("[FAMILY_LOGIN] Returning buyer={}", b.getEmail());
             return b;
         }
 

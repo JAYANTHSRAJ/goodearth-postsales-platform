@@ -14,6 +14,8 @@ import java.util.UUID;
 public class ClientUnitDto {
     private UUID id; // Buyer ID
     private UUID workflowId;
+    private String bookingId;
+    private String unitId;
     private String unitName;
     private String projectName;
     private String projectCode;
@@ -21,4 +23,7 @@ public class ClientUnitDto {
     private String zohoDealId;
     private String location;
     private String status;
+    private String constructionStage;
+    private String possessionDate;
+    private String thumbnail;
 }

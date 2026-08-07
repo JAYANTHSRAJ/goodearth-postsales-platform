@@ -1,10 +1,14 @@
 package com.goodearth.postsales.client.controller;
 
 import com.goodearth.postsales.buyer.entity.Buyer;
+import com.goodearth.postsales.buyer.entity.FamilyMember;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
+import com.goodearth.postsales.buyer.repository.FamilyMemberRepository;
 import com.goodearth.postsales.client.dto.*;
 import com.goodearth.postsales.client.service.*;
 import com.goodearth.postsales.common.response.ApiResponse;
+import com.goodearth.postsales.stage.entity.Stage;
+import com.goodearth.postsales.stage.repository.StageRepository;
 import com.goodearth.postsales.workflow.entity.Workflow;
 import com.goodearth.postsales.workflow.repository.WorkflowRepository;
 import org.slf4j.Logger;
@@ -18,8 +22,10 @@ import com.goodearth.postsales.common.exception.CustomException;
 import org.springframework.http.HttpStatus;
 import com.goodearth.postsales.auth.repository.UserRepository;
 import com.goodearth.postsales.auth.entity.User;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,7 +50,9 @@ public class ClientPortalController {
     private final ClientProfileService clientProfileService;
     private final UserRepository userRepository;
     private final BuyerRepository buyerRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final WorkflowRepository workflowRepository;
+    private final StageRepository stageRepository;
     private final ClientPortalServiceHelper helper;
 
     public ClientPortalController(
@@ -59,7 +67,9 @@ public class ClientPortalController {
             ClientProfileService clientProfileService,
             UserRepository userRepository,
             BuyerRepository buyerRepository,
+            FamilyMemberRepository familyMemberRepository,
             WorkflowRepository workflowRepository,
+            StageRepository stageRepository,
             ClientPortalServiceHelper helper) {
         this.dashboardService = dashboardService;
         this.clientHomeService = clientHomeService;
@@ -72,7 +82,9 @@ public class ClientPortalController {
         this.clientProfileService = clientProfileService;
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
+        this.familyMemberRepository = familyMemberRepository;
         this.workflowRepository = workflowRepository;
+        this.stageRepository = stageRepository;
         this.helper = helper;
     }
 
@@ -81,16 +93,34 @@ public class ClientPortalController {
     public ResponseEntity<ApiResponse<List<ClientUnitDto>>> getOwnedUnits(
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("Endpoint: GET /api/v1/client/units, User: {}", userDetails.getUsername());
-        Buyer primaryBuyer = helper.getAuthenticatedBuyer(userDetails);
+        String email = userDetails.getUsername();
 
-        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(primaryBuyer.getEmail());
+        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(email);
         if (buyers.isEmpty()) {
-            buyers = List.of(primaryBuyer);
+            List<FamilyMember> familyMembers = familyMemberRepository.findAllByEmailIgnoreCase(email);
+            buyers = familyMembers.stream()
+                    .map(FamilyMember::getBuyer)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+
+        if (buyers.isEmpty()) {
+            try {
+                Buyer primaryBuyer = helper.getAuthenticatedBuyer(userDetails);
+                if (primaryBuyer != null) {
+                    buyers = List.of(primaryBuyer);
+                }
+            } catch (Exception ex) {
+                buyers = Collections.emptyList();
+            }
         }
 
         List<ClientUnitDto> dtos = buyers.stream().map(b -> {
             ClientUnitDto dto = new ClientUnitDto();
             dto.setId(b.getId());
+            dto.setBookingId(b.getZohoDealId() != null ? b.getZohoDealId() : b.getId().toString());
+            dto.setUnitId(b.getUnitName() != null ? b.getUnitName() : b.getId().toString());
             dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + b.getZohoDealId());
             dto.setZohoDealId(b.getZohoDealId());
             dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
@@ -104,9 +134,21 @@ public class ClientPortalController {
                     dto.setZohoDealName(workflow.getProject().getProjectName());
                     if (dto.getZohoDealId() == null) {
                         dto.setZohoDealId(workflow.getProject().getZohoDealId());
+                        dto.setBookingId(workflow.getProject().getZohoDealId());
                     }
                 }
+                if (workflow.getCurrentStageId() != null) {
+                    stageRepository.findById(workflow.getCurrentStageId()).ifPresent(stage -> {
+                        dto.setConstructionStage(stage.getName());
+                    });
+                }
             });
+
+            if (dto.getConstructionStage() == null) {
+                dto.setConstructionStage("Structure Completed");
+            }
+            dto.setPossessionDate("Dec 2026");
+            dto.setThumbnail("/assets/unit-placeholder.jpg");
 
             log.info("[TRACE_IDENTIFIER]\nStage: Client Login -> getOwnedUnits()\nUser Email: {}\nBuyer ID: {}\nWorkflow ID: {}\nUnit Name: {}\nBooking Reference: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
                     userDetails.getUsername(), b.getId(), dto.getWorkflowId(), b.getUnitName(), dto.getUnitName(), dto.getZohoDealName(), dto.getZohoDealId());

@@ -13,5 +13,6 @@ public interface FamilyMemberRepository extends JpaRepository<FamilyMember, UUID
     List<FamilyMember> findByBuyerId(UUID buyerId);
     long countByBuyerId(UUID buyerId);
     Optional<FamilyMember> findByEmailIgnoreCase(String email);
+    List<FamilyMember> findAllByEmailIgnoreCase(String email);
     Optional<FamilyMember> findFirstByEmailIgnoreCaseOrderByIdDesc(String email);
 }

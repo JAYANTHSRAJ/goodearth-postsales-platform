@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Menu, Sun, Moon, Bell, User, LogOut, ChevronDown, Home } from 'lucide-react';
+import { Menu, Sun, Moon, Bell, User, LogOut, ChevronDown, Home, Grid, Check } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
 
 export const Header: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { theme, toggleTheme, toggleSidebar, toggleMobileSidebar } = useUIStore();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { units, activeUnit, setActiveUnit } = useUnitStore();
@@ -55,7 +57,7 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={() => setUnitSelectOpen(!unitSelectOpen)}
-            className="flex items-center gap-2 rounded-xl bg-brand-50/80 px-3.5 py-1.5 border border-brand-200 text-xs font-semibold text-brand-900 dark:bg-brand-950/40 dark:border-brand-800 dark:text-white hover:border-brand-400 transition-all shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-brand-50/80 px-3.5 py-1.5 border border-brand-200 text-xs font-semibold text-brand-900 dark:bg-brand-950/40 dark:border-brand-800 dark:text-white hover:border-brand-400 transition-all shadow-sm cursor-pointer"
           >
             <Home className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             <span>Active Unit:</span>
@@ -68,11 +70,12 @@ export const Header: React.FC = () => {
           {unitSelectOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setUnitSelectOpen(false)} />
-              <div className="absolute left-0 mt-2 w-64 origin-top-left rounded-xl border border-brand-200 bg-white py-2 shadow-xl ring-1 ring-black/5 dark:border-brand-800 dark:bg-brand-900 z-20">
-                <div className="px-3 py-1.5 border-b border-brand-100 dark:border-brand-800 text-[10px] font-bold uppercase tracking-wider text-brand-400">
-                  Switch Active Property Unit
+              <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-brand-200 bg-white py-2 shadow-2xl ring-1 ring-black/5 dark:border-brand-800 dark:bg-brand-900 z-20">
+                <div className="px-3.5 py-1.5 border-b border-brand-100 dark:border-brand-800 text-[10px] font-bold uppercase tracking-wider text-brand-400 flex items-center justify-between">
+                  <span>Switch Active Property</span>
+                  <span className="font-mono text-brand-500">{units.length} Total</span>
                 </div>
-                <div className="max-h-60 overflow-y-auto py-1">
+                <div className="max-h-64 overflow-y-auto py-1">
                   {units.map((unit) => {
                     const isSelected = activeUnit?.id === unit.id;
                     return (
@@ -80,23 +83,39 @@ export const Header: React.FC = () => {
                         key={unit.id}
                         type="button"
                         onClick={() => handleSelectUnit(unit)}
-                        className={`w-full text-left px-4 py-2.5 text-xs font-semibold flex items-center justify-between transition-colors ${
+                        className={`w-full text-left px-4 py-2.5 text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-brand-100 text-brand-900 dark:bg-brand-800 dark:text-white font-bold'
+                            ? 'bg-brand-100/70 text-brand-900 dark:bg-brand-800/80 dark:text-white font-bold'
                             : 'text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-800/50'
                         }`}
                       >
-                        <div>
-                          <div className="font-bold">{unit.unitName}</div>
-                          {unit.projectName && (
-                            <div className="text-[10px] text-brand-400 font-normal">{unit.projectName}</div>
-                          )}
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-brand-900 dark:text-white">{unit.unitName}</div>
+                          <div className="text-[10px] text-brand-500 font-medium flex items-center gap-1">
+                            <span>{unit.projectName || 'GoodEarth Motif'}</span>
+                            {unit.constructionStage && <span>&bull; {unit.constructionStage}</span>}
+                          </div>
                         </div>
-                        {isSelected && <span className="text-green-600 font-bold text-xs">✓ Active</span>}
+                        {isSelected && <Check className="h-4 w-4 text-emerald-600 font-bold shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
+                {units.length > 1 && (
+                  <div className="p-2 border-t border-brand-100 dark:border-brand-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnitSelectOpen(false);
+                        navigate('/select-home');
+                      }}
+                      className="w-full text-center px-3 py-1.5 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-800 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Grid className="h-3.5 w-3.5 text-brand-500" />
+                      <span>View All Properties Page</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}

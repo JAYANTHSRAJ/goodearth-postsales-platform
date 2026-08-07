@@ -49,6 +49,7 @@ const AnnotationsPage = withSuspense(() => import('../features/annotations/pages
 const DesignStudioPage = withSuspense(() => import('../features/annotations/pages/DesignStudioPage'), 'DesignStudioPage');
 const ClientSupportPage = withSuspense(() => import('../features/dashboard/pages/ClientSupportPage'), 'ClientSupportPage');
 const ClientProfilePage = withSuspense(() => import('../features/dashboard/pages/ClientProfilePage'), 'ClientProfilePage');
+const SelectHomePage = withSuspense(() => import('../features/dashboard/pages/SelectHomePage'), 'SelectHomePage');
 
 // KYC Module Lazy Routes
 const SingleKycPage = withSuspense(() => import('../features/kyc/pages/SingleKycPage'), 'SingleKycPage');
@@ -192,6 +193,10 @@ export const router = createBrowserRouter([
               {
                 path: '/client/offer-letter',
                 element: <OfferLetterDocumentPage />,
+              },
+              {
+                path: '/select-home',
+                element: <SelectHomePage />,
               },
               {
                 path: '/my-home',
