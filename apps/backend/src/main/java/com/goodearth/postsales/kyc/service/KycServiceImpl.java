@@ -15,6 +15,8 @@ import com.goodearth.postsales.kyc.dto.KycApproveRequestDto;
 import com.goodearth.postsales.kyc.dto.KycApplicationResponseDto;
 import com.goodearth.postsales.kyc.dto.KycAutosaveRequestDto;
 import com.goodearth.postsales.kyc.dto.KycAutosaveResponseDto;
+import com.goodearth.postsales.kyc.dto.KycCopyRequestDto;
+import com.goodearth.postsales.kyc.dto.KycCopySourceDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardItemDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardMetricsDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardSummaryResponseDto;
@@ -228,7 +230,11 @@ public class KycServiceImpl implements KycService {
 
         String rawBookingId = dto.getBookingId() != null ? dto.getBookingId().trim() : "";
         String targetDealName = dto.getZohoDealName() != null ? dto.getZohoDealName().trim() : rawBookingId;
-        String targetDealId = dto.getZohoDealId() != null ? dto.getZohoDealId().trim() : null;
+        String targetDealId = (dto.getZohoDealId() != null && !dto.getZohoDealId().isBlank())
+                ? dto.getZohoDealId().trim()
+                : (!rawBookingId.isBlank() && !"DEFAULT_BOOKING".equalsIgnoreCase(rawBookingId) && !"current".equalsIgnoreCase(rawBookingId)
+                        ? rawBookingId
+                        : null);
 
         Buyer resolvedBuyer = null;
         Workflow resolvedWorkflow = null;
@@ -237,18 +243,18 @@ public class KycServiceImpl implements KycService {
             List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(actorId.trim());
             if (!buyers.isEmpty()) {
                 resolvedBuyer = buyers.get(0);
-                if (targetDealId == null || targetDealId.isEmpty()) {
-                    targetDealId = resolvedBuyer.getZohoDealId();
-                }
-                Optional<Workflow> wfOpt = workflowRepository.findFirstByBuyerId(resolvedBuyer.getId());
-                if (wfOpt.isPresent()) {
-                    resolvedWorkflow = wfOpt.get();
-                    if (resolvedWorkflow.getProject() != null) {
-                        targetDealName = resolvedWorkflow.getProject().getProjectName();
-                        if (targetDealId == null || targetDealId.isEmpty()) {
-                            targetDealId = resolvedWorkflow.getProject().getZohoDealId();
-                        }
-                    }
+            }
+        }
+
+        if (targetDealId != null && !targetDealId.isBlank()) {
+            final String tid = targetDealId;
+            Optional<Workflow> wfOpt = workflowRepository.findAll().stream()
+                    .filter(w -> w.getProject() != null && tid.equalsIgnoreCase(w.getProject().getZohoDealId()))
+                    .findFirst();
+            if (wfOpt.isPresent()) {
+                resolvedWorkflow = wfOpt.get();
+                if (resolvedWorkflow.getProject() != null && resolvedWorkflow.getProject().getProjectName() != null) {
+                    targetDealName = resolvedWorkflow.getProject().getProjectName();
                 }
             }
         }
@@ -1700,5 +1706,208 @@ public class KycServiceImpl implements KycService {
                     .orElse("Unknown Applicant");
         }
         return "Unknown Applicant";
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<KycCopySourceDto> getAvailableKycCopySources(UUID targetWorkflowId, String userEmail) {
+        if (userEmail == null || userEmail.isBlank() || "anonymousUser".equalsIgnoreCase(userEmail)) {
+            return List.of();
+        }
+
+        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(userEmail.trim());
+        if (buyers.isEmpty()) {
+            return List.of();
+        }
+        Buyer buyer = buyers.get(0);
+
+        List<Workflow> buyerWorkflows = workflowRepository.findByBuyerId(buyer.getId());
+        List<KycCopySourceDto> sources = new java.util.ArrayList<>();
+
+        for (Workflow wf : buyerWorkflows) {
+            if (targetWorkflowId != null && targetWorkflowId.equals(wf.getId())) {
+                continue;
+            }
+
+            String dealId = (wf.getProject() != null && wf.getProject().getZohoDealId() != null)
+                    ? wf.getProject().getZohoDealId()
+                    : null;
+
+            Optional<KycApplication> kycOpt = Optional.empty();
+            if (dealId != null && !dealId.isBlank()) {
+                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dealId);
+            }
+
+            if (kycOpt.isPresent()) {
+                KycApplication kyc = kycOpt.get();
+                boolean hasPrimary = kyc.getApplicants() != null && kyc.getApplicants().stream()
+                        .anyMatch(a -> a.getApplicantType() == ApplicantType.PRIMARY && a.getFullName() != null && !a.getFullName().isBlank());
+
+                if (hasPrimary || kyc.getStatus() == KycApplicationStatus.SUBMITTED
+                        || kyc.getStatus() == KycApplicationStatus.APPROVED
+                        || kyc.getStatus() == KycApplicationStatus.UNDER_REVIEW) {
+
+                    String uName = (wf.getProject() != null && wf.getProject().getLocation() != null && !wf.getProject().getLocation().isBlank())
+                            ? wf.getProject().getLocation()
+                            : (dealId != null ? dealId : "Unit");
+
+                    String pName = (wf.getProject() != null && wf.getProject().getProjectName() != null)
+                            ? wf.getProject().getProjectName()
+                            : "GoodEarth Community";
+
+                    sources.add(KycCopySourceDto.builder()
+                            .workflowId(wf.getId())
+                            .bookingId(dealId != null ? dealId : wf.getId().toString())
+                            .unitName(uName)
+                            .projectName(pName)
+                            .status(kyc.getStatus() != null ? kyc.getStatus().name() : "APPROVED")
+                            .submittedAt(kyc.getSubmittedAt() != null ? kyc.getSubmittedAt() : kyc.getCreatedAt())
+                            .applicationDate(kyc.getApplicationDate())
+                            .build());
+                }
+            }
+        }
+
+        return sources;
+    }
+
+    @Override
+    @Transactional
+    public KycApplicationResponseDto copyKycFromSource(UUID targetWorkflowId, KycCopyRequestDto request, String actorId) {
+        if (request == null || request.getSourceWorkflowId() == null) {
+            throw new KycValidationException("Source workflow ID is required to copy KYC.");
+        }
+        UUID sourceWorkflowId = request.getSourceWorkflowId();
+
+        Workflow targetWf = workflowRepository.findById(targetWorkflowId)
+                .orElseThrow(() -> new KycNotFoundException("Target workflow not found: " + targetWorkflowId));
+        Buyer buyer = targetWf.getBuyer();
+        if (buyer == null) {
+            throw new KycValidationException("Target workflow is not associated with a valid buyer.");
+        }
+
+        Workflow sourceWf = workflowRepository.findById(sourceWorkflowId)
+                .orElseThrow(() -> new KycNotFoundException("Source workflow not found: " + sourceWorkflowId));
+        if (sourceWf.getBuyer() == null || !sourceWf.getBuyer().getId().equals(buyer.getId())) {
+            throw new KycValidationException("Security Error: You can only copy KYC from properties owned by the same buyer.");
+        }
+
+        String sourceDealId = sourceWf.getProject() != null ? sourceWf.getProject().getZohoDealId() : null;
+        if (sourceDealId == null || sourceDealId.isBlank()) {
+            throw new KycNotFoundException("Source workflow project has no valid deal ID.");
+        }
+        KycApplication sourceKyc = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceDealId)
+                .orElseThrow(() -> new KycNotFoundException("No KYC record found for source property: " + sourceDealId));
+
+        String targetDealId = targetWf.getProject() != null ? targetWf.getProject().getZohoDealId() : null;
+        if (targetDealId == null || targetDealId.isBlank()) {
+            targetDealId = targetWorkflowId.toString();
+        }
+        KycApplication targetKyc = getOrCreateKycApplication(targetDealId, buyer.getEmail(), actorId);
+
+        boolean isOverwrite = Boolean.TRUE.equals(request.getOverwrite());
+        if (!isOverwrite && (targetKyc.getStatus() == KycApplicationStatus.SUBMITTED
+                || targetKyc.getStatus() == KycApplicationStatus.APPROVED)) {
+            throw new KycInvalidStateTransitionException(targetKyc.getStatus().name(), "Copy KYC into completed/verified record");
+        }
+
+        // Copy Reusable Application Fields (Exclude unique workflow/deal/signatures/audit logs)
+        targetKyc.setConsideringHomeLoan(sourceKyc.getConsideringHomeLoan());
+        targetKyc.setHasCoApplicant(sourceKyc.getHasCoApplicant());
+        targetKyc.setHasThirdApplicant(sourceKyc.getHasThirdApplicant());
+        targetKyc.setClientNotes(sourceKyc.getClientNotes());
+        targetKyc.setApplicationDate(sourceKyc.getApplicationDate());
+        targetKyc.setStatus(KycApplicationStatus.DRAFT);
+        targetKyc.setCompletionPercentage(sourceKyc.getCompletionPercentage());
+
+        kycApplicationRepository.save(targetKyc);
+
+        // Delete existing applicants for target application and clone source applicants
+        kycApplicantRepository.deleteAllByKycApplicationId(targetKyc.getId());
+        kycApplicantRepository.flush();
+
+        if (targetKyc.getApplicants() != null) {
+            targetKyc.getApplicants().clear();
+        } else {
+            targetKyc.setApplicants(new java.util.ArrayList<>());
+        }
+
+        List<KycApplicant> sourceApplicants = sourceKyc.getApplicants();
+        if (sourceApplicants != null && !sourceApplicants.isEmpty()) {
+            for (KycApplicant srcApp : sourceApplicants) {
+                KycApplicant targetApp = new KycApplicant();
+                targetApp.setKycApplication(targetKyc);
+                targetApp.setApplicantType(srcApp.getApplicantType());
+                targetApp.setSalutation(srcApp.getSalutation());
+                targetApp.setFirstName(srcApp.getFirstName());
+                targetApp.setLastName(srcApp.getLastName());
+                targetApp.setFullName(srcApp.getFullName());
+                targetApp.setGuardianRelation(srcApp.getGuardianRelation());
+                targetApp.setGuardianSalutation(srcApp.getGuardianSalutation());
+                targetApp.setGuardianFirstName(srcApp.getGuardianFirstName());
+                targetApp.setGuardianLastName(srcApp.getGuardianLastName());
+                targetApp.setGuardianName(srcApp.getGuardianName());
+                targetApp.setDateOfBirth(srcApp.getDateOfBirth());
+                targetApp.setGender(srcApp.getGender());
+                targetApp.setAge(srcApp.getAge());
+                targetApp.setOccupation(srcApp.getOccupation());
+                targetApp.setEmail(srcApp.getEmail());
+                targetApp.setPhone(srcApp.getPhone());
+                targetApp.setRelation(srcApp.getRelation());
+                targetApp.setPanNumber(srcApp.getPanNumber());
+                targetApp.setAadhaarNumber(srcApp.getAadhaarNumber());
+                targetApp.setAddressStreet(srcApp.getAddressStreet());
+                targetApp.setAddressLine2(srcApp.getAddressLine2());
+                targetApp.setAddressCity(srcApp.getAddressCity());
+                targetApp.setAddressState(srcApp.getAddressState());
+                targetApp.setAddressPincode(srcApp.getAddressPincode());
+                targetApp.setAddressCountry(srcApp.getAddressCountry());
+                targetApp.setAddressSameAsPrimary(srcApp.getAddressSameAsPrimary());
+                targetApp.setAddressSameAsSecondary(srcApp.getAddressSameAsSecondary());
+
+                kycApplicantRepository.save(targetApp);
+                targetKyc.getApplicants().add(targetApp);
+            }
+        }
+        kycApplicationRepository.saveAndFlush(targetKyc);
+
+        // Clone Uploaded Documents
+        List<Document> sourceDocs = documentRepository.findByKycApplicationId(sourceKyc.getId());
+        if (sourceDocs != null && !sourceDocs.isEmpty()) {
+            for (Document srcDoc : sourceDocs) {
+                Document targetDoc = new Document();
+                targetDoc.setKycApplication(targetKyc);
+                targetDoc.setCategory(srcDoc.getCategory());
+                targetDoc.setApplicantType(srcDoc.getApplicantType());
+                targetDoc.setIsRequired(srcDoc.getIsRequired());
+                targetDoc.setWorkDriveFileId(srcDoc.getWorkDriveFileId());
+                documentRepository.save(targetDoc);
+
+                if (srcDoc.getVersions() != null && !srcDoc.getVersions().isEmpty()) {
+                    DocumentVersion srcVer = srcDoc.getVersions().get(srcDoc.getVersions().size() - 1);
+                    DocumentVersion targetVer = new DocumentVersion();
+                    targetVer.setDocument(targetDoc);
+                    targetVer.setVersionNumber(1);
+                    targetVer.setFileName(srcVer.getFileName());
+                    targetVer.setFileSizeBytes(srcVer.getFileSizeBytes());
+                    targetVer.setMimeType(srcVer.getMimeType());
+                    targetVer.setWorkDriveFileId(srcVer.getWorkDriveFileId());
+                    targetVer.setWorkDrivePermalink(srcVer.getWorkDrivePermalink());
+                    targetVer.setStatus(srcVer.getStatus());
+                    targetVer.setUploadedBy(actorId);
+                    targetVer.setUploadedAt(LocalDateTime.now());
+                    documentVersionRepository.save(targetVer);
+                }
+            }
+        }
+
+        // Audit Logging
+        auditService.logEvent(targetKyc, KycAuditEventType.KYC_CREATED, actorId, "CLIENT",
+                "KYC copied from Workflow " + sourceWorkflowId + " (Source Deal: " + sourceDealId + ")", null);
+
+        log.info("[KYC_COPY] Copied KYC from Source Workflow {} to Target Workflow {} for Buyer {}",
+                sourceWorkflowId, targetWorkflowId, buyer.getEmail());
+
+        return getKycApplicationByBooking(targetDealId, buyer.getEmail(), actorId);
     }
 }

@@ -26,7 +26,8 @@ import KycLoadingSkeleton from '../components/KycLoadingSkeleton';
 import { KycWorkflowTimeline } from '../components/KycWorkflowTimeline';
 import useKycAutosave from '../hooks/useKycAutosave';
 import kycService from '../services/kyc.service';
-import { KycApplicationResponseDto, KycValidationSummaryResponseDto, KycApplicationStatus } from '../types/kyc';
+import { CopyKycModal } from '../components/CopyKycModal';
+import { KycApplicationResponseDto, KycValidationSummaryResponseDto, KycApplicationStatus, KycCopySourceDto } from '../types/kyc';
 import { useUnitStore } from '../../../store/unitStore';
 
 export const SingleKycPage: React.FC = () => {
@@ -37,6 +38,10 @@ export const SingleKycPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [initialData, setInitialData] = useState<KycApplicationResponseDto | null>(null);
   const [validationSummary, setValidationSummary] = useState<KycValidationSummaryResponseDto | null>(null);
+
+  // Copy KYC Modal states
+  const [copySources, setCopySources] = useState<KycCopySourceDto[]>([]);
+  const [showCopyModal, setShowCopyModal] = useState<boolean>(false);
 
   // Read-only toggle view state for submitted applications
   const [showReadOnlyForm, setShowReadOnlyForm] = useState<boolean>(false);
@@ -84,6 +89,20 @@ export const SingleKycPage: React.FC = () => {
       const targetId = data.bookingId || bookingId;
       const summary = await kycService.validateKyc(targetId).catch(() => null);
       if (summary) setValidationSummary(summary);
+
+      // Check if target KYC is empty and offer copy from existing properties if available
+      if (!data?.primaryApplicant?.fullName && (data?.status === 'DRAFT' || !data?.submittedAt)) {
+        const targetWfId = activeUnit?.workflowId || activeUnit?.id;
+        try {
+          const sources = await kycService.getAvailableSources(targetWfId);
+          if (sources && sources.length > 0) {
+            setCopySources(sources);
+            setShowCopyModal(true);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch KYC copy sources:', err);
+        }
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'No active booking found for this user.';
       if (msg.includes('No active booking found') || err?.response?.status === 404) {
@@ -93,6 +112,20 @@ export const SingleKycPage: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePerformCopy = async (selectedSourceId: string) => {
+    const targetWfId = activeUnit?.workflowId || activeUnit?.id || bookingId;
+    try {
+      await kycService.copyKycFromSource(targetWfId, {
+        sourceWorkflowId: selectedSourceId,
+        overwrite: true,
+      });
+      setShowCopyModal(false);
+      await loadInitialData();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to copy KYC data from selected property.');
     }
   };
 
@@ -880,6 +913,15 @@ export const SingleKycPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showCopyModal && copySources.length > 0 && (
+        <CopyKycModal
+          sources={copySources}
+          targetUnitName={activeUnit?.unitName || activeUnit?.zohoDealName || 'this property'}
+          onCopy={handlePerformCopy}
+          onClose={() => setShowCopyModal(false)}
+        />
       )}
     </div>
   );

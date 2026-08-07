@@ -145,8 +145,23 @@ export interface KycTimelineEventDto {
 
 export interface KycTimelineResponseDto {
   bookingId: string;
-  kycApplicationId: string;
+  currentStatus: KycApplicationStatus;
   events: KycTimelineEventDto[];
+}
+
+export interface KycCopySourceDto {
+  workflowId: string;
+  bookingId: string;
+  unitName: string;
+  projectName: string;
+  status: string;
+  submittedAt?: string;
+  applicationDate?: string;
+}
+
+export interface KycCopyRequestDto {
+  sourceWorkflowId: string;
+  overwrite?: boolean;
 }
 
 export interface KycDraftSaveRequestDto {
