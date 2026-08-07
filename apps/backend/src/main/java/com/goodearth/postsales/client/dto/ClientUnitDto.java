@@ -15,7 +15,9 @@ public class ClientUnitDto {
     private UUID id; // Buyer ID
     private UUID workflowId;
     private String bookingId;
+    private String dealId;
     private String unitId;
+    private String projectId;
     private String unitName;
     private String projectName;
     private String projectCode;

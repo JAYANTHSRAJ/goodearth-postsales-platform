@@ -137,21 +137,26 @@ public class ClientPortalController {
                     dto.setWorkflowId(wf.getId());
 
                     com.goodearth.postsales.project.entity.Project proj = wf.getProject();
-                    String dealRef = (proj != null && proj.getZohoDealId() != null)
-                            ? proj.getZohoDealId()
-                            : (b.getZohoDealId() != null ? b.getZohoDealId() : wf.getId().toString());
+
+                    String dealRef = (proj != null && proj.getZohoDealId() != null && !proj.getZohoDealId().isBlank())
+                            ? proj.getZohoDealId().trim()
+                            : wf.getId().toString();
 
                     String unitTitleName = (proj != null && proj.getLocation() != null && !proj.getLocation().isBlank())
-                            ? proj.getLocation()
-                            : (b.getUnitName() != null && !b.getUnitName().isBlank() ? b.getUnitName() : (proj != null && proj.getZohoDealId() != null ? proj.getZohoDealId() : "Unit " + dealRef));
+                            ? proj.getLocation().trim()
+                            : (wf.getBuyer() != null && wf.getBuyer().getUnitName() != null && !wf.getBuyer().getUnitName().isBlank()
+                                    ? wf.getBuyer().getUnitName().trim()
+                                    : dealRef);
 
                     dto.setBookingId(dealRef);
+                    dto.setDealId(dealRef);
                     dto.setUnitId(dealRef);
                     dto.setUnitName(unitTitleName);
                     dto.setZohoDealId(dealRef);
                     dto.setStatus(wf.getStatus() != null ? wf.getStatus().name() : (b.getStatus() != null ? b.getStatus() : "ACTIVE"));
 
                     if (proj != null) {
+                        dto.setProjectId(proj.getId() != null ? proj.getId().toString() : null);
                         dto.setProjectName(proj.getProjectName());
                         dto.setProjectCode(proj.getProjectCode());
                         dto.setZohoDealName(proj.getProjectName());
@@ -170,6 +175,9 @@ public class ClientPortalController {
                     dto.setThumbnail("/assets/unit-placeholder.jpg");
 
                     dtos.add(dto);
+
+                    log.info("[MULTI_UNIT]\nBookingId={}\nDealId={}\nProject={}\nUnitName={}\nUnitReference={}",
+                            dto.getBookingId(), dto.getDealId(), dto.getProjectName(), dto.getUnitName(), dto.getBookingId());
                     log.info("[UNITS_TRACE]   Mapped Unit DTO from Workflow: ID={}, UnitName={}, WorkflowID={}, Project={}, DealID={}",
                             dto.getId(), dto.getUnitName(), dto.getWorkflowId(), dto.getProjectName(), dto.getBookingId());
                 }
@@ -186,6 +194,8 @@ public class ClientPortalController {
                 dto.setThumbnail("/assets/unit-placeholder.jpg");
 
                 dtos.add(dto);
+                log.info("[MULTI_UNIT]\nBookingId={}\nDealId={}\nProject={}\nUnitName={}\nUnitReference={}",
+                        dto.getBookingId(), dto.getZohoDealId(), dto.getProjectName(), dto.getUnitName(), dto.getBookingId());
                 log.info("[UNITS_TRACE]   Mapped Buyer Fallback DTO: ID={}, UnitName={}", dto.getId(), dto.getUnitName());
             }
         }
