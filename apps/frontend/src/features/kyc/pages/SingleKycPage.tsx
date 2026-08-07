@@ -91,16 +91,33 @@ export const SingleKycPage: React.FC = () => {
       if (summary) setValidationSummary(summary);
 
       // Check if target KYC is empty and offer copy from existing properties if available
-      if (!data?.primaryApplicant?.fullName && (data?.status === 'DRAFT' || !data?.submittedAt)) {
-        const targetWfId = activeUnit?.workflowId || activeUnit?.id;
+      const isTargetEmpty = !data?.primaryApplicant?.fullName || data?.primaryApplicant?.fullName.trim() === '';
+      const isDraftOrUnsubmitted = data?.status === 'DRAFT' || !data?.submittedAt;
+
+      console.log('[KYC_COPY] Evaluation for Copy Modal trigger:', {
+        kycApplicationId: data?.kycApplicationId,
+        bookingId: data?.bookingId,
+        status: data?.status,
+        isTargetEmpty,
+        isDraftOrUnsubmitted,
+        primaryApplicantName: data?.primaryApplicant?.fullName
+      });
+
+      if (isTargetEmpty && isDraftOrUnsubmitted) {
+        const targetWfId = activeUnit?.workflowId || activeUnit?.id || searchParams.get('workflowId') || searchParams.get('bookingId') || undefined;
+        console.log('[KYC_COPY] Requesting available sources for targetWfId:', targetWfId);
         try {
           const sources = await kycService.getAvailableSources(targetWfId);
+          console.log('[KYC_COPY] Available Sources Received from API:', sources);
           if (sources && sources.length > 0) {
+            console.log('[KYC_COPY] Opening CopyKycModal with sources count:', sources.length);
             setCopySources(sources);
             setShowCopyModal(true);
+          } else {
+            console.log('[KYC_COPY] No available copy sources found for this buyer.');
           }
         } catch (err) {
-          console.warn('Failed to fetch KYC copy sources:', err);
+          console.warn('[KYC_COPY] Failed to fetch KYC copy sources:', err);
         }
       }
     } catch (err: any) {

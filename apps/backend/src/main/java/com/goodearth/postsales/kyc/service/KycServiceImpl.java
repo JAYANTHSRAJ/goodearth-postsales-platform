@@ -54,10 +54,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1711,31 +1714,77 @@ public class KycServiceImpl implements KycService {
     @Override
     @Transactional(readOnly = true)
     public List<KycCopySourceDto> getAvailableKycCopySources(UUID targetWorkflowId, String userEmail) {
+        log.info("[KYC_COPY] GET /api/v1/client/kyc/available-sources hit. Target Workflow ID: {}, User Email: {}", targetWorkflowId, userEmail);
+
         if (userEmail == null || userEmail.isBlank() || "anonymousUser".equalsIgnoreCase(userEmail)) {
+            log.warn("[KYC_COPY] User email is empty or anonymous. Returning empty list.");
             return List.of();
         }
 
         List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(userEmail.trim());
         if (buyers.isEmpty()) {
+            log.warn("[KYC_COPY] No buyer found for email: {}. Returning empty list.", userEmail);
             return List.of();
         }
-        Buyer buyer = buyers.get(0);
 
-        List<Workflow> buyerWorkflows = workflowRepository.findByBuyerId(buyer.getId());
+        List<UUID> buyerIds = buyers.stream().map(Buyer::getId).collect(Collectors.toList());
+        List<Workflow> buyerWorkflows = new java.util.ArrayList<>();
+        for (UUID bId : buyerIds) {
+            buyerWorkflows.addAll(workflowRepository.findByBuyerId(bId));
+        }
+
+        log.info("[KYC_COPY] Diagnostic Info:\nBuyer Count: {}\nBuyer IDs: {}\nTotal Buyer Workflows: {}",
+                buyers.size(), buyerIds, buyerWorkflows.size());
+
+        List<KycApplication> userKycs = kycApplicationRepository.findAllByUserEmailOrderByCreatedAtDesc(userEmail.trim());
+        long completedKycCount = userKycs.stream().filter(k -> k.getStatus() == KycApplicationStatus.SUBMITTED
+                || k.getStatus() == KycApplicationStatus.APPROVED
+                || k.getStatus() == KycApplicationStatus.UNDER_REVIEW
+                || (k.getApplicants() != null && k.getApplicants().stream().anyMatch(a -> a.getApplicantType() == ApplicantType.PRIMARY && a.getFullName() != null && !a.getFullName().isBlank()))).count();
+
+        log.info("[KYC_COPY] Diagnostic Info:\nUser Total KYCs in DB: {}\nCompleted/Submitted KYCs Count: {}", userKycs.size(), completedKycCount);
+
         List<KycCopySourceDto> sources = new java.util.ArrayList<>();
+        Set<UUID> processedWorkflows = new java.util.HashSet<>();
 
         for (Workflow wf : buyerWorkflows) {
+            log.info("[KYC_COPY] Inspecting Workflow ID: {}, Deal ID: {}, Project Name: {}, Unit Location: {}",
+                    wf.getId(),
+                    wf.getProject() != null ? wf.getProject().getZohoDealId() : "N/A",
+                    wf.getProject() != null ? wf.getProject().getProjectName() : "N/A",
+                    wf.getProject() != null ? wf.getProject().getLocation() : "N/A");
+
             if (targetWorkflowId != null && targetWorkflowId.equals(wf.getId())) {
+                log.info("[KYC_COPY] Skipping target workflow ID: {}", targetWorkflowId);
                 continue;
             }
 
+            if (processedWorkflows.contains(wf.getId())) {
+                continue;
+            }
+            processedWorkflows.add(wf.getId());
+
             String dealId = (wf.getProject() != null && wf.getProject().getZohoDealId() != null)
                     ? wf.getProject().getZohoDealId()
-                    : null;
+                    : (wf.getBuyer() != null ? wf.getBuyer().getZohoDealId() : null);
+
+            String unitName = (wf.getProject() != null && wf.getProject().getLocation() != null && !wf.getProject().getLocation().isBlank())
+                    ? wf.getProject().getLocation()
+                    : (wf.getBuyer() != null && wf.getBuyer().getUnitName() != null ? wf.getBuyer().getUnitName() : "Unit");
+
+            String projectName = (wf.getProject() != null && wf.getProject().getProjectName() != null)
+                    ? wf.getProject().getProjectName()
+                    : "GoodEarth Community";
 
             Optional<KycApplication> kycOpt = Optional.empty();
             if (dealId != null && !dealId.isBlank()) {
                 kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dealId);
+            }
+            if (kycOpt.isEmpty() && unitName != null && !unitName.isBlank()) {
+                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(unitName);
+            }
+            if (kycOpt.isEmpty()) {
+                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(wf.getId().toString());
             }
 
             if (kycOpt.isPresent()) {
@@ -1743,31 +1792,33 @@ public class KycServiceImpl implements KycService {
                 boolean hasPrimary = kyc.getApplicants() != null && kyc.getApplicants().stream()
                         .anyMatch(a -> a.getApplicantType() == ApplicantType.PRIMARY && a.getFullName() != null && !a.getFullName().isBlank());
 
+                log.info("[KYC_COPY] Evaluated Workflow {}: KYC Application ID={}, Booking ID={}, Status={}, Has Primary={}",
+                        wf.getId(), kyc.getId(), kyc.getBookingId(), kyc.getStatus(), hasPrimary);
+
                 if (hasPrimary || kyc.getStatus() == KycApplicationStatus.SUBMITTED
                         || kyc.getStatus() == KycApplicationStatus.APPROVED
                         || kyc.getStatus() == KycApplicationStatus.UNDER_REVIEW) {
 
-                    String uName = (wf.getProject() != null && wf.getProject().getLocation() != null && !wf.getProject().getLocation().isBlank())
-                            ? wf.getProject().getLocation()
-                            : (dealId != null ? dealId : "Unit");
-
-                    String pName = (wf.getProject() != null && wf.getProject().getProjectName() != null)
-                            ? wf.getProject().getProjectName()
-                            : "GoodEarth Community";
-
-                    sources.add(KycCopySourceDto.builder()
+                    KycCopySourceDto sourceDto = KycCopySourceDto.builder()
                             .workflowId(wf.getId())
-                            .bookingId(dealId != null ? dealId : wf.getId().toString())
-                            .unitName(uName)
-                            .projectName(pName)
+                            .bookingId(kyc.getBookingId() != null ? kyc.getBookingId() : (dealId != null ? dealId : wf.getId().toString()))
+                            .unitName(unitName)
+                            .projectName(projectName)
                             .status(kyc.getStatus() != null ? kyc.getStatus().name() : "APPROVED")
                             .submittedAt(kyc.getSubmittedAt() != null ? kyc.getSubmittedAt() : kyc.getCreatedAt())
                             .applicationDate(kyc.getApplicationDate())
-                            .build());
+                            .build();
+
+                    sources.add(sourceDto);
+                    log.info("[KYC_COPY] Added valid copy source: WorkflowId={}, UnitName={}, Status={}", wf.getId(), unitName, sourceDto.getStatus());
                 }
+            } else {
+                log.info("[KYC_COPY] No KYC application found for workflow ID: {} (Checked keys: dealId={}, unitName={})", wf.getId(), dealId, unitName);
             }
         }
 
+        log.info("[KYC_COPY] FINAL SUMMARY for Buyer {}: Target Workflow={}, Total Sources Found={}",
+                userEmail, targetWorkflowId, sources.size());
         return sources;
     }
 
