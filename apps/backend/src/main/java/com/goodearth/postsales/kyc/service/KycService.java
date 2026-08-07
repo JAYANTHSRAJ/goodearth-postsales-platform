@@ -53,8 +53,4 @@ public interface KycService {
     KycDashboardSummaryResponseDto getDashboardSummary(String projectId, KycApplicationStatus status, int page, int limit);
 
     KycTimelineResponseDto getTimeline(String bookingId);
-
-    java.util.List<com.goodearth.postsales.kyc.dto.KycCopySourceDto> getAvailableKycCopySources(java.util.UUID targetWorkflowId, String userEmail);
-
-    KycApplicationResponseDto copyKycFromSource(java.util.UUID targetWorkflowId, com.goodearth.postsales.kyc.dto.KycCopyRequestDto request, String actorId);
 }

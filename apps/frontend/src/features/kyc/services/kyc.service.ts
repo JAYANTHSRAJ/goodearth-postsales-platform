@@ -13,8 +13,6 @@ import {
   OfferLetterStatusDto,
   OfferLetterDto,
   ZohoSignDto,
-  KycCopySourceDto,
-  KycCopyRequestDto,
 } from '../types/kyc';
 
 export const kycService = {
@@ -137,17 +135,6 @@ export const kycService = {
     const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
     return `${baseUrl}${path}`;
-  },
-
-  getAvailableSources: async (workflowId?: string): Promise<KycCopySourceDto[]> => {
-    const query = workflowId ? `?workflowId=${workflowId}` : '';
-    const res = await api.get<KycCopySourceDto[] | { data: KycCopySourceDto[] }>(`/client/kyc/available-sources${query}`);
-    return (res as any)?.data?.data || (res as any)?.data || (res as any) || [];
-  },
-
-  copyKycFromSource: async (targetWorkflowId: string, payload: KycCopyRequestDto): Promise<KycApplicationResponseDto> => {
-    const res = await api.post<KycApplicationResponseDto | { data: KycApplicationResponseDto }>(`/client/kyc/${targetWorkflowId}/copy`, payload);
-    return (res as any)?.data?.data || (res as any)?.data || res;
   },
 };
 

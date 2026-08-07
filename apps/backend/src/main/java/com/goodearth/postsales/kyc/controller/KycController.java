@@ -34,13 +34,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.goodearth.postsales.kyc.dto.KycCopyRequestDto;
-import com.goodearth.postsales.kyc.dto.KycCopySourceDto;
-import java.util.List;
-import java.util.UUID;
-
 @RestController
-@RequestMapping({"/api/v1/kyc", "/kyc", "/api/v1/client/kyc", "/client/kyc"})
+@RequestMapping({"/api/v1/kyc", "/kyc"})
 @Tag(name = "KYC Lifecycle Management", description = "APIs for KYC form drafts, submissions, verification state machine, and dashboard monitoring")
 public class KycController {
 
@@ -50,32 +45,6 @@ public class KycController {
 
     public KycController(KycService kycService) {
         this.kycService = kycService;
-    }
-
-    @GetMapping({"/available-sources", "/sources"})
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
-    @Operation(summary = "Get available completed KYC sources for copying", description = "Lists other verified/completed KYCs owned by the same buyer")
-    public ResponseEntity<ApiResponse<List<KycCopySourceDto>>> getAvailableSources(
-            @RequestParam(required = false) UUID workflowId,
-            Authentication authentication) {
-        String userEmail = authentication != null ? authentication.getName() : null;
-        log.info("[KYC_COPY] Controller GET /api/v1/client/kyc/available-sources hit. User: {}, Target Workflow: {}", userEmail, workflowId);
-        List<KycCopySourceDto> sources = kycService.getAvailableKycCopySources(workflowId, userEmail);
-        log.info("[KYC_COPY] Returning {} available sources to frontend", sources != null ? sources.size() : 0);
-        return ResponseEntity.ok(new ApiResponse<>(sources));
-    }
-
-    @PostMapping({"/{targetWorkflowId}/copy"})
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
-    @Operation(summary = "Copy KYC details from a source workflow to target workflow", description = "Clones applicant and document information from a completed KYC to target property")
-    public ResponseEntity<ApiResponse<KycApplicationResponseDto>> copyKyc(
-            @PathVariable UUID targetWorkflowId,
-            @RequestBody KycCopyRequestDto request,
-            Authentication authentication) {
-        String actorId = authentication != null ? authentication.getName() : "CLIENT";
-        log.info("[KYC_COPY] Controller POST /api/v1/client/kyc/{}/copy hit. Actor: {}, Request: {}", targetWorkflowId, actorId, request);
-        KycApplicationResponseDto response = kycService.copyKycFromSource(targetWorkflowId, request, actorId);
-        return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
     @PostMapping("/draft")

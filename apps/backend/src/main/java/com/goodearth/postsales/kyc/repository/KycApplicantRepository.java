@@ -15,5 +15,4 @@ public interface KycApplicantRepository extends JpaRepository<KycApplicant, UUID
     Optional<KycApplicant> findFirstByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
     List<KycApplicant> findAllByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
     Optional<KycApplicant> findByKycApplicationIdAndApplicantType(UUID kycApplicationId, ApplicantType applicantType);
-    void deleteAllByKycApplicationId(UUID kycApplicationId);
 }

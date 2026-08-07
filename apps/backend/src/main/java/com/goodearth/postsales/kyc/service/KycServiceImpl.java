@@ -15,8 +15,6 @@ import com.goodearth.postsales.kyc.dto.KycApproveRequestDto;
 import com.goodearth.postsales.kyc.dto.KycApplicationResponseDto;
 import com.goodearth.postsales.kyc.dto.KycAutosaveRequestDto;
 import com.goodearth.postsales.kyc.dto.KycAutosaveResponseDto;
-import com.goodearth.postsales.kyc.dto.KycCopyRequestDto;
-import com.goodearth.postsales.kyc.dto.KycCopySourceDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardItemDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardMetricsDto;
 import com.goodearth.postsales.kyc.dto.KycDashboardSummaryResponseDto;
@@ -54,13 +52,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -233,11 +228,7 @@ public class KycServiceImpl implements KycService {
 
         String rawBookingId = dto.getBookingId() != null ? dto.getBookingId().trim() : "";
         String targetDealName = dto.getZohoDealName() != null ? dto.getZohoDealName().trim() : rawBookingId;
-        String targetDealId = (dto.getZohoDealId() != null && !dto.getZohoDealId().isBlank())
-                ? dto.getZohoDealId().trim()
-                : (!rawBookingId.isBlank() && !"DEFAULT_BOOKING".equalsIgnoreCase(rawBookingId) && !"current".equalsIgnoreCase(rawBookingId)
-                        ? rawBookingId
-                        : null);
+        String targetDealId = dto.getZohoDealId() != null ? dto.getZohoDealId().trim() : null;
 
         Buyer resolvedBuyer = null;
         Workflow resolvedWorkflow = null;
@@ -246,18 +237,18 @@ public class KycServiceImpl implements KycService {
             List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(actorId.trim());
             if (!buyers.isEmpty()) {
                 resolvedBuyer = buyers.get(0);
-            }
-        }
-
-        if (targetDealId != null && !targetDealId.isBlank()) {
-            final String tid = targetDealId;
-            Optional<Workflow> wfOpt = workflowRepository.findAll().stream()
-                    .filter(w -> w.getProject() != null && tid.equalsIgnoreCase(w.getProject().getZohoDealId()))
-                    .findFirst();
-            if (wfOpt.isPresent()) {
-                resolvedWorkflow = wfOpt.get();
-                if (resolvedWorkflow.getProject() != null && resolvedWorkflow.getProject().getProjectName() != null) {
-                    targetDealName = resolvedWorkflow.getProject().getProjectName();
+                if (targetDealId == null || targetDealId.isEmpty()) {
+                    targetDealId = resolvedBuyer.getZohoDealId();
+                }
+                Optional<Workflow> wfOpt = workflowRepository.findFirstByBuyerId(resolvedBuyer.getId());
+                if (wfOpt.isPresent()) {
+                    resolvedWorkflow = wfOpt.get();
+                    if (resolvedWorkflow.getProject() != null) {
+                        targetDealName = resolvedWorkflow.getProject().getProjectName();
+                        if (targetDealId == null || targetDealId.isEmpty()) {
+                            targetDealId = resolvedWorkflow.getProject().getZohoDealId();
+                        }
+                    }
                 }
             }
         }
@@ -1709,322 +1700,5 @@ public class KycServiceImpl implements KycService {
                     .orElse("Unknown Applicant");
         }
         return "Unknown Applicant";
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<KycCopySourceDto> getAvailableKycCopySources(UUID targetWorkflowId, String userEmail) {
-        log.info("[KYC_COPY] GET /api/v1/client/kyc/available-sources hit. Target Workflow ID: {}, User Email: {}", targetWorkflowId, userEmail);
-
-        if (userEmail == null || userEmail.isBlank() || "anonymousUser".equalsIgnoreCase(userEmail)) {
-            log.warn("[KYC_COPY] User email is empty or anonymous. Returning empty list.");
-            return List.of();
-        }
-
-        List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(userEmail.trim());
-        if (buyers.isEmpty()) {
-            log.warn("[KYC_COPY] No buyer found for email: {}. Returning empty list.", userEmail);
-            return List.of();
-        }
-
-        List<UUID> buyerIds = buyers.stream().map(Buyer::getId).collect(Collectors.toList());
-        List<Workflow> buyerWorkflows = new java.util.ArrayList<>();
-        for (UUID bId : buyerIds) {
-            buyerWorkflows.addAll(workflowRepository.findByBuyerId(bId));
-        }
-
-        log.info("[KYC_COPY] Diagnostic Info:\nBuyer Count: {}\nBuyer IDs: {}\nTotal Buyer Workflows: {}",
-                buyers.size(), buyerIds, buyerWorkflows.size());
-
-        List<KycApplication> userKycs = kycApplicationRepository.findAllByUserEmailOrderByCreatedAtDesc(userEmail.trim());
-        long completedKycCount = userKycs.stream().filter(k -> k.getStatus() == KycApplicationStatus.SUBMITTED
-                || k.getStatus() == KycApplicationStatus.APPROVED
-                || k.getStatus() == KycApplicationStatus.UNDER_REVIEW
-                || (k.getApplicants() != null && k.getApplicants().stream().anyMatch(a -> a.getApplicantType() == ApplicantType.PRIMARY && a.getFullName() != null && !a.getFullName().isBlank()))).count();
-
-        log.info("[KYC_COPY] Diagnostic Info:\nUser Total KYCs in DB: {}\nCompleted/Submitted KYCs Count: {}", userKycs.size(), completedKycCount);
-
-        List<KycCopySourceDto> sources = new java.util.ArrayList<>();
-        Set<UUID> processedWorkflows = new java.util.HashSet<>();
-
-        for (Workflow wf : buyerWorkflows) {
-            log.info("[KYC_COPY] Inspecting Workflow ID: {}, Deal ID: {}, Project Name: {}, Unit Location: {}",
-                    wf.getId(),
-                    wf.getProject() != null ? wf.getProject().getZohoDealId() : "N/A",
-                    wf.getProject() != null ? wf.getProject().getProjectName() : "N/A",
-                    wf.getProject() != null ? wf.getProject().getLocation() : "N/A");
-
-            if (targetWorkflowId != null && targetWorkflowId.equals(wf.getId())) {
-                log.info("[KYC_COPY] Skipping target workflow ID: {}", targetWorkflowId);
-                continue;
-            }
-
-            if (processedWorkflows.contains(wf.getId())) {
-                continue;
-            }
-            processedWorkflows.add(wf.getId());
-
-            String dealId = (wf.getProject() != null && wf.getProject().getZohoDealId() != null)
-                    ? wf.getProject().getZohoDealId()
-                    : (wf.getBuyer() != null ? wf.getBuyer().getZohoDealId() : null);
-
-            String unitName = (wf.getProject() != null && wf.getProject().getLocation() != null && !wf.getProject().getLocation().isBlank())
-                    ? wf.getProject().getLocation()
-                    : (wf.getBuyer() != null && wf.getBuyer().getUnitName() != null ? wf.getBuyer().getUnitName() : "Unit");
-
-            String projectName = (wf.getProject() != null && wf.getProject().getProjectName() != null)
-                    ? wf.getProject().getProjectName()
-                    : "GoodEarth Community";
-
-            Optional<KycApplication> kycOpt = Optional.empty();
-            if (dealId != null && !dealId.isBlank()) {
-                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(dealId);
-            }
-            if (kycOpt.isEmpty() && unitName != null && !unitName.isBlank()) {
-                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(unitName);
-            }
-            if (kycOpt.isEmpty()) {
-                kycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(wf.getId().toString());
-            }
-
-            if (kycOpt.isPresent()) {
-                KycApplication kyc = kycOpt.get();
-                boolean hasPrimary = kyc.getApplicants() != null && kyc.getApplicants().stream()
-                        .anyMatch(a -> a.getApplicantType() == ApplicantType.PRIMARY && a.getFullName() != null && !a.getFullName().isBlank());
-
-                log.info("[KYC_COPY] Evaluated Workflow {}: KYC Application ID={}, Booking ID={}, Status={}, Has Primary={}",
-                        wf.getId(), kyc.getId(), kyc.getBookingId(), kyc.getStatus(), hasPrimary);
-
-                if (hasPrimary || kyc.getStatus() == KycApplicationStatus.SUBMITTED
-                        || kyc.getStatus() == KycApplicationStatus.APPROVED
-                        || kyc.getStatus() == KycApplicationStatus.UNDER_REVIEW) {
-
-                    KycCopySourceDto sourceDto = KycCopySourceDto.builder()
-                            .workflowId(wf.getId())
-                            .bookingId(kyc.getBookingId() != null ? kyc.getBookingId() : (dealId != null ? dealId : wf.getId().toString()))
-                            .unitName(unitName)
-                            .projectName(projectName)
-                            .status(kyc.getStatus() != null ? kyc.getStatus().name() : "APPROVED")
-                            .submittedAt(kyc.getSubmittedAt() != null ? kyc.getSubmittedAt() : kyc.getCreatedAt())
-                            .applicationDate(kyc.getApplicationDate())
-                            .build();
-
-                    sources.add(sourceDto);
-                    log.info("[KYC_COPY] Added valid copy source: WorkflowId={}, UnitName={}, Status={}", wf.getId(), unitName, sourceDto.getStatus());
-                }
-            } else {
-                log.info("[KYC_COPY] No KYC application found for workflow ID: {} (Checked keys: dealId={}, unitName={})", wf.getId(), dealId, unitName);
-            }
-        }
-
-        log.info("[KYC_COPY] FINAL SUMMARY for Buyer {}: Target Workflow={}, Total Sources Found={}",
-                userEmail, targetWorkflowId, sources.size());
-        return sources;
-    }
-
-    @Override
-    @Transactional
-    public KycApplicationResponseDto copyKycFromSource(UUID targetWorkflowId, KycCopyRequestDto request, String actorId) {
-        if (request == null || request.getSourceWorkflowId() == null) {
-            throw new KycValidationException("Source workflow ID is required to copy KYC.");
-        }
-        UUID sourceWorkflowId = request.getSourceWorkflowId();
-
-        Workflow targetWf = workflowRepository.findById(targetWorkflowId)
-                .orElseThrow(() -> new KycNotFoundException("Target workflow not found: " + targetWorkflowId));
-        Buyer buyer = targetWf.getBuyer();
-        if (buyer == null) {
-            throw new KycValidationException("Target workflow is not associated with a valid buyer.");
-        }
-
-        Workflow sourceWf = workflowRepository.findById(sourceWorkflowId)
-                .orElseThrow(() -> new KycNotFoundException("Source workflow not found: " + sourceWorkflowId));
-        if (sourceWf.getBuyer() == null || !sourceWf.getBuyer().getId().equals(buyer.getId())) {
-            throw new KycValidationException("Security Error: You can only copy KYC from properties owned by the same buyer.");
-        }
-
-        String sourceDealId = sourceWf.getProject() != null ? sourceWf.getProject().getZohoDealId() : null;
-        String sourceUnitName = (sourceWf.getProject() != null && sourceWf.getProject().getLocation() != null && !sourceWf.getProject().getLocation().isBlank())
-                ? sourceWf.getProject().getLocation()
-                : (sourceWf.getBuyer() != null ? sourceWf.getBuyer().getUnitName() : null);
-
-        log.info("[KYC_COPY_TRACE] STEP 1: Resolving Source KycApplication. Search keys: dealId={}, unitName={}, workflowId={}",
-                sourceDealId, sourceUnitName, sourceWorkflowId);
-
-        Optional<KycApplication> sourceKycOpt = Optional.empty();
-        if (sourceDealId != null && !sourceDealId.isBlank()) {
-            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceDealId);
-        }
-        if (sourceKycOpt.isEmpty() && sourceUnitName != null && !sourceUnitName.isBlank()) {
-            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceUnitName);
-        }
-        if (sourceKycOpt.isEmpty()) {
-            sourceKycOpt = kycApplicationRepository.findFirstByBookingIdOrderByCreatedAtDesc(sourceWorkflowId.toString());
-        }
-
-        KycApplication sourceKyc = sourceKycOpt.orElseThrow(() -> new KycNotFoundException(
-                "No KYC record found for source property (Checked dealId=" + sourceDealId + ", unit=" + sourceUnitName + ", wf=" + sourceWorkflowId + ")"));
-
-        KycApplicant sourcePrimary = sourceKyc.getApplicants() != null ? sourceKyc.getApplicants().stream()
-                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
-                .findFirst().orElse(null) : null;
-
-        log.info("[KYC_COPY_TRACE] STEP 1 LOG - Loaded Source Entity ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', Aadhaar: '{}', City: '{}', Pincode: '{}'",
-                sourceKyc.getId(), sourceKyc.getBookingId(),
-                sourcePrimary != null ? sourcePrimary.getFullName() : "NULL",
-                sourcePrimary != null ? sourcePrimary.getPanNumber() : "NULL",
-                sourcePrimary != null ? sourcePrimary.getAadhaarNumber() : "NULL",
-                sourcePrimary != null && sourcePrimary.getAddressCity() != null ? sourcePrimary.getAddressCity() : "NULL",
-                sourcePrimary != null && sourcePrimary.getAddressPincode() != null ? sourcePrimary.getAddressPincode() : "NULL");
-
-        String targetDealId = targetWf.getProject() != null ? targetWf.getProject().getZohoDealId() : null;
-        if (targetDealId == null || targetDealId.isBlank()) {
-            targetDealId = targetWorkflowId.toString();
-        }
-        KycApplication targetKyc = getOrCreateKycApplication(targetDealId, buyer.getEmail(), actorId);
-
-        boolean isOverwrite = Boolean.TRUE.equals(request.getOverwrite());
-        if (!isOverwrite && (targetKyc.getStatus() == KycApplicationStatus.SUBMITTED
-                || targetKyc.getStatus() == KycApplicationStatus.APPROVED)) {
-            throw new KycInvalidStateTransitionException(targetKyc.getStatus().name(), "Copy KYC into completed/verified record");
-        }
-
-        // Copy Reusable Application Fields
-        targetKyc.setConsideringHomeLoan(sourceKyc.getConsideringHomeLoan());
-        targetKyc.setHasCoApplicant(sourceKyc.getHasCoApplicant());
-        targetKyc.setHasThirdApplicant(sourceKyc.getHasThirdApplicant());
-        targetKyc.setClientNotes(sourceKyc.getClientNotes());
-        targetKyc.setApplicationDate(sourceKyc.getApplicationDate());
-        targetKyc.setStatus(KycApplicationStatus.DRAFT);
-        targetKyc.setCompletionPercentage(sourceKyc.getCompletionPercentage());
-
-        kycApplicationRepository.save(targetKyc);
-
-        // Delete existing applicants for target application and clone source applicants
-        kycApplicantRepository.deleteAllByKycApplicationId(targetKyc.getId());
-        kycApplicantRepository.flush();
-
-        if (targetKyc.getApplicants() != null) {
-            targetKyc.getApplicants().clear();
-        } else {
-            targetKyc.setApplicants(new java.util.ArrayList<>());
-        }
-
-        List<KycApplicant> sourceApplicants = sourceKyc.getApplicants();
-        if (sourceApplicants != null && !sourceApplicants.isEmpty()) {
-            for (KycApplicant srcApp : sourceApplicants) {
-                KycApplicant targetApp = new KycApplicant();
-                targetApp.setKycApplication(targetKyc);
-                targetApp.setApplicantType(srcApp.getApplicantType());
-                targetApp.setSalutation(srcApp.getSalutation());
-                targetApp.setFirstName(srcApp.getFirstName());
-                targetApp.setLastName(srcApp.getLastName());
-                targetApp.setFullName(srcApp.getFullName());
-                targetApp.setGuardianRelation(srcApp.getGuardianRelation());
-                targetApp.setGuardianSalutation(srcApp.getGuardianSalutation());
-                targetApp.setGuardianFirstName(srcApp.getGuardianFirstName());
-                targetApp.setGuardianLastName(srcApp.getGuardianLastName());
-                targetApp.setGuardianName(srcApp.getGuardianName());
-                targetApp.setDateOfBirth(srcApp.getDateOfBirth());
-                targetApp.setGender(srcApp.getGender());
-                targetApp.setAge(srcApp.getAge());
-                targetApp.setOccupation(srcApp.getOccupation());
-                targetApp.setEmail(srcApp.getEmail());
-                targetApp.setPhone(srcApp.getPhone());
-                targetApp.setRelation(srcApp.getRelation());
-                targetApp.setPanNumber(srcApp.getPanNumber());
-                targetApp.setAadhaarNumber(srcApp.getAadhaarNumber());
-                targetApp.setAddressStreet(srcApp.getAddressStreet());
-                targetApp.setAddressLine2(srcApp.getAddressLine2());
-                targetApp.setAddressCity(srcApp.getAddressCity());
-                targetApp.setAddressState(srcApp.getAddressState());
-                targetApp.setAddressPincode(srcApp.getAddressPincode());
-                targetApp.setAddressCountry(srcApp.getAddressCountry());
-                targetApp.setAddressSameAsPrimary(srcApp.getAddressSameAsPrimary());
-                targetApp.setAddressSameAsSecondary(srcApp.getAddressSameAsSecondary());
-
-                kycApplicantRepository.save(targetApp);
-                targetKyc.getApplicants().add(targetApp);
-            }
-        }
-        kycApplicationRepository.saveAndFlush(targetKyc);
-
-        // Clone Uploaded Documents
-        List<Document> sourceDocs = documentRepository.findByKycApplicationId(sourceKyc.getId());
-        if (sourceDocs != null && !sourceDocs.isEmpty()) {
-            for (Document srcDoc : sourceDocs) {
-                Document targetDoc = new Document();
-                targetDoc.setKycApplication(targetKyc);
-                targetDoc.setWorkflow(targetWf);
-                targetDoc.setCategory(srcDoc.getCategory());
-                targetDoc.setApplicantType(srcDoc.getApplicantType());
-                targetDoc.setIsRequired(srcDoc.getIsRequired());
-                targetDoc.setWorkDriveFileId(srcDoc.getWorkDriveFileId());
-                targetDoc.setFileName(srcDoc.getFileName() != null ? srcDoc.getFileName() : "kyc_document.pdf");
-                targetDoc.setDocumentType(srcDoc.getDocumentType() != null ? srcDoc.getDocumentType() : com.goodearth.postsales.document.entity.DocumentType.PASSPORT);
-                targetDoc.setMimeType(srcDoc.getMimeType());
-                targetDoc.setFileSize(srcDoc.getFileSize());
-                targetDoc.setUploadedBy(actorId);
-                targetDoc.setUploadedAt(srcDoc.getUploadedAt() != null ? srcDoc.getUploadedAt() : LocalDateTime.now());
-                targetDoc.setStatus(srcDoc.getStatus() != null ? srcDoc.getStatus() : com.goodearth.postsales.document.entity.DocumentStatus.ACTIVE);
-                targetDoc.setVersion(srcDoc.getVersion() > 0 ? srcDoc.getVersion() : 1);
-                targetDoc.setCrmAttachmentId(srcDoc.getCrmAttachmentId());
-                targetDoc.setCrmAttachmentName(srcDoc.getCrmAttachmentName());
-                targetDoc.setCrmAttachmentUploadedAt(srcDoc.getCrmAttachmentUploadedAt());
-                targetDoc.setCrmAttachmentSyncStatus(srcDoc.getCrmAttachmentSyncStatus());
-
-                documentRepository.save(targetDoc);
-
-                if (srcDoc.getVersions() != null && !srcDoc.getVersions().isEmpty()) {
-                    for (DocumentVersion srcVer : srcDoc.getVersions()) {
-                        DocumentVersion targetVer = new DocumentVersion();
-                        targetVer.setDocument(targetDoc);
-                        targetVer.setVersionNumber(srcVer.getVersionNumber());
-                        targetVer.setFileName(srcVer.getFileName() != null ? srcVer.getFileName() : targetDoc.getFileName());
-                        targetVer.setFileSizeBytes(srcVer.getFileSizeBytes());
-                        targetVer.setMimeType(srcVer.getMimeType());
-                        targetVer.setWorkDriveFileId(srcVer.getWorkDriveFileId());
-                        targetVer.setWorkDrivePermalink(srcVer.getWorkDrivePermalink());
-                        targetVer.setStatus(srcVer.getStatus() != null ? srcVer.getStatus() : DocumentVersionStatus.SUBMITTED);
-                        targetVer.setUploadedBy(actorId);
-                        targetVer.setUploadedAt(srcVer.getUploadedAt() != null ? srcVer.getUploadedAt() : LocalDateTime.now());
-                        documentVersionRepository.save(targetVer);
-                    }
-                }
-            }
-        }
-
-        // Audit Logging
-        auditService.logEvent(targetKyc, KycAuditEventType.KYC_CREATED, actorId, "CLIENT",
-                "KYC copied from Workflow " + sourceWorkflowId + " (Source Deal: " + sourceDealId + ")", null);
-
-        // STEP 3: Re-read target application directly from database (fresh query, no in-memory cache)
-        kycApplicationRepository.flush();
-        KycApplication freshTargetEntity = kycApplicationRepository.findById(targetKyc.getId())
-                .orElseThrow(() -> new KycNotFoundException("Target KYC not found after save: " + targetKyc.getId()));
-
-        KycApplicant targetPrimary = freshTargetEntity.getApplicants() != null ? freshTargetEntity.getApplicants().stream()
-                .filter(a -> a.getApplicantType() == ApplicantType.PRIMARY)
-                .findFirst().orElse(null) : null;
-
-        log.info("[KYC_COPY_TRACE] STEP 3 LOG - Saved Target Entity ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', Aadhaar: '{}', City: '{}', Pincode: '{}'",
-                freshTargetEntity.getId(), freshTargetEntity.getBookingId(),
-                targetPrimary != null ? targetPrimary.getFullName() : "NULL",
-                targetPrimary != null ? targetPrimary.getPanNumber() : "NULL",
-                targetPrimary != null ? targetPrimary.getAadhaarNumber() : "NULL",
-                targetPrimary != null && targetPrimary.getAddressCity() != null ? targetPrimary.getAddressCity() : "NULL",
-                targetPrimary != null && targetPrimary.getAddressPincode() != null ? targetPrimary.getAddressPincode() : "NULL");
-
-        // STEP 4: Map to Response DTO using KycApplicationMapper and log final DTO
-        List<Document> freshTargetDocs = documentRepository.findByKycApplicationId(freshTargetEntity.getId());
-        KycApplicationResponseDto responseDto = kycApplicationMapper.toResponseDto(freshTargetEntity, freshTargetDocs);
-
-        log.info("[KYC_COPY_TRACE] STEP 4 LOG - Returned Mapped DTO ID: {}, BookingId: {}, Primary FullName: '{}', PAN: '{}', City: '{}'",
-                responseDto.getKycApplicationId(), responseDto.getBookingId(),
-                responseDto.getPrimaryApplicant() != null ? responseDto.getPrimaryApplicant().getFullName() : "NULL",
-                responseDto.getPrimaryApplicant() != null ? responseDto.getPrimaryApplicant().getPanNumber() : "NULL",
-                responseDto.getPrimaryApplicant() != null && responseDto.getPrimaryApplicant().getAddress() != null ? responseDto.getPrimaryApplicant().getAddress().getCity() : "NULL");
-
-        return responseDto;
     }
 }
