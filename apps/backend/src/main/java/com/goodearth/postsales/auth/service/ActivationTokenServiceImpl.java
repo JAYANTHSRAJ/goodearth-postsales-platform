@@ -78,6 +78,7 @@ public class ActivationTokenServiceImpl implements ActivationTokenService {
     @Transactional
     public void markActivated(User user) {
         user.setAccountActivated(true);
+        user.setPortalActivated(true);
         user.setActivatedAt(LocalDateTime.now());
         clearToken(user);
     }

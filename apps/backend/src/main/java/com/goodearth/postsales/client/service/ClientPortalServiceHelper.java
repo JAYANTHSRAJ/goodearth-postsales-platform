@@ -23,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.goodearth.postsales.buyer.entity.FamilyMember;
+import com.goodearth.postsales.buyer.repository.FamilyMemberRepository;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +36,7 @@ import java.util.stream.Collectors;
 public class ClientPortalServiceHelper {
 
     private final BuyerRepository buyerRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final WorkflowRepository workflowRepository;
     private final StageRepository stageRepository;
     private final DocumentService documentService;
@@ -43,6 +47,7 @@ public class ClientPortalServiceHelper {
 
     public ClientPortalServiceHelper(
             BuyerRepository buyerRepository,
+            FamilyMemberRepository familyMemberRepository,
             WorkflowRepository workflowRepository,
             StageRepository stageRepository,
             DocumentService documentService,
@@ -51,6 +56,7 @@ public class ClientPortalServiceHelper {
             WorkDriveVersionService workDriveVersionService,
             ClientPortalMapper mapper) {
         this.buyerRepository = buyerRepository;
+        this.familyMemberRepository = familyMemberRepository;
         this.workflowRepository = workflowRepository;
         this.stageRepository = stageRepository;
         this.documentService = documentService;
@@ -70,6 +76,13 @@ public class ClientPortalServiceHelper {
         if (buyerOpt.isPresent()) {
             Buyer b = buyerOpt.get();
             System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: Buyer ID = " + b.getId() + ", Buyer Email = " + b.getEmail());
+            return b;
+        }
+
+        java.util.Optional<FamilyMember> familyMemberOpt = familyMemberRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(userDetails.getUsername());
+        if (familyMemberOpt.isPresent()) {
+            Buyer b = familyMemberOpt.get().getBuyer();
+            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getAuthenticatedBuyer: FamilyMember found, associated Buyer ID = " + b.getId() + ", Email = " + b.getEmail());
             return b;
         }
 

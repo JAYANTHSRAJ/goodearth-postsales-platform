@@ -12,6 +12,8 @@ import com.goodearth.postsales.auth.service.AuthService;
 import com.goodearth.postsales.auth.service.ActivationTokenService;
 import com.goodearth.postsales.auth.repository.UserRepository;
 import com.goodearth.postsales.buyer.repository.BuyerRepository;
+import com.goodearth.postsales.buyer.repository.FamilyMemberRepository;
+import com.goodearth.postsales.buyer.entity.FamilyMember;
 import com.goodearth.postsales.notification.service.EmailService;
 import com.goodearth.postsales.common.response.ApiResponse;
 import com.goodearth.postsales.common.exception.CustomException;
@@ -36,6 +38,7 @@ public class AuthController {
     private final ActivationTokenService activationTokenService;
     private final UserRepository userRepository;
     private final BuyerRepository buyerRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
@@ -44,12 +47,14 @@ public class AuthController {
             ActivationTokenService activationTokenService,
             UserRepository userRepository,
             BuyerRepository buyerRepository,
+            FamilyMemberRepository familyMemberRepository,
             EmailService emailService,
             PasswordEncoder passwordEncoder) {
         this.authService = authService;
         this.activationTokenService = activationTokenService;
         this.userRepository = userRepository;
         this.buyerRepository = buyerRepository;
+        this.familyMemberRepository = familyMemberRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -98,6 +103,11 @@ public class AuthController {
             log.info("Found buyer matching email. Updated fullName={}", fullName);
         } else {
             log.info("No buyer found matching email={}", user.getEmail());
+            Optional<FamilyMember> fmOpt = familyMemberRepository.findByEmailIgnoreCase(user.getEmail());
+            if (fmOpt.isPresent()) {
+                fullName = fmOpt.get().getName();
+                log.info("Found family member matching email. Updated fullName={}", fullName);
+            }
         }
         
         log.info("Before returning validateActivationToken success");
@@ -131,6 +141,12 @@ public class AuthController {
         log.info("Before markActivated");
         activationTokenService.markActivated(user);
         log.info("After markActivated");
+        
+        familyMemberRepository.findByEmailIgnoreCase(user.getEmail()).ifPresent(fm -> {
+            fm.setInvitationStatus("ACTIVATED");
+            familyMemberRepository.save(fm);
+            log.info("Updated FamilyMember invitationStatus to ACTIVATED for email={}", user.getEmail());
+        });
         
         log.info("Before returning activateAccount success");
         return ResponseEntity.ok(new ApiResponse<>("Account activated successfully"));

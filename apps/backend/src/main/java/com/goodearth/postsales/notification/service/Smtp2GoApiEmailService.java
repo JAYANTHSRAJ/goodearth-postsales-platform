@@ -27,15 +27,16 @@ public class Smtp2GoApiEmailService implements EmailService {
 
     @Override
     public void sendEmail(String toEmail, String subject, String body) {
-        log.info("Preparing to send SMTP2GO API email to: {} | Subject: {}", toEmail, subject);
+        log.info("[EMAIL] Sending email to={}", toEmail);
+        log.info("[EMAIL] Subject={}", subject);
 
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            log.error("SMTP2GO_API_KEY is missing or empty");
+            log.error("[EMAIL] SMTP2GO_API_KEY is missing or empty");
             throw new CustomException("Email delivery failed: SMTP2GO_API_KEY is missing", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         if (fromEmail == null || fromEmail.trim().isEmpty()) {
-            log.error("Sender email (SMTP_FROM) is missing or empty");
+            log.error("[EMAIL] Sender email (SMTP_FROM) is missing or empty");
             throw new CustomException("Email delivery failed: Sender email is missing", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -54,8 +55,12 @@ public class Smtp2GoApiEmailService implements EmailService {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
         try {
+            log.info("[EMAIL] Calling SMTP2GO API...");
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
             Map<String, Object> responseBody = response.getBody();
+
+            log.info("[EMAIL] SMTP2GO HTTP Status={}", response.getStatusCode());
+            log.info("[EMAIL] SMTP2GO Response Body={}", responseBody);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 if (responseBody != null && responseBody.containsKey("data")) {
@@ -63,18 +68,17 @@ public class Smtp2GoApiEmailService implements EmailService {
                     if (data != null && data.containsKey("failed")) {
                         int failed = ((Number) data.get("failed")).intValue();
                         if (failed > 0) {
-                            log.error("SMTP2GO API failed sending to one or more recipients. Complete HTTP response: {}", responseBody);
+                            log.error("[EMAIL] SMTP2GO API failed sending to one or more recipients. Complete HTTP response: {}", responseBody);
                             throw new CustomException("Email delivery failed via SMTP2GO API: failed=" + failed, HttpStatus.INTERNAL_SERVER_ERROR);
                         }
                     }
                 }
-                log.info("SMTP2GO API email delivered successfully to {}. Response: {}", toEmail, responseBody);
             } else {
-                log.error("SMTP2GO API send failed. HTTP Status: {}. Complete HTTP response: {}", response.getStatusCode(), responseBody);
+                log.error("[EMAIL] SMTP2GO API send failed. HTTP Status: {}. Complete HTTP response: {}", response.getStatusCode(), responseBody);
                 throw new CustomException("Email delivery failed via SMTP2GO API: HTTP " + response.getStatusCode(), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } catch (Exception ex) {
-            log.error("Failed to send SMTP2GO API email to: {} | Subject: {} | Complete error details: {}", toEmail, subject, ex.getMessage(), ex);
+            log.error("[EMAIL] Exception={}", ex.getMessage(), ex);
             throw new CustomException("Email delivery failed: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }

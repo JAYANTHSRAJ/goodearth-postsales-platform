@@ -208,6 +208,7 @@ public class ClientPortalController {
     public ResponseEntity<ApiResponse<FamilyMemberDto>> addFamilyMember(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody FamilyMemberDto newMember) {
+        log.info("[FAMILY_INVITE] Controller received email={}", newMember != null ? newMember.getEmail() : null);
         FamilyMemberDto result = familyMemberService.addFamilyMember(userDetails, newMember);
         return ResponseEntity.ok(new ApiResponse<>(result));
     }
