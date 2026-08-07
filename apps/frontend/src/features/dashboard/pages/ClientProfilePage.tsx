@@ -18,14 +18,17 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../../components/ui/Card';
 import { clientService, FamilyMember } from '../../../services/client.service';
 import { useAuthStore } from '../../../store/authStore';
 import { useUnitStore } from '../../../store/unitStore';
+import { api } from '../../../services/api';
 
 export const ClientProfilePage: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { activeUnit } = useUnitStore();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'address' | 'preferences' | 'security' | 'family'>('overview');
@@ -113,7 +116,7 @@ export const ClientProfilePage: React.FC = () => {
     setTimeout(() => setPrefSaveSuccess(false), 3000);
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess(false);
@@ -122,16 +125,44 @@ export const ClientProfilePage: React.FC = () => {
       setPasswordError('Password must be at least 8 characters long');
       return;
     }
+    if (!/[A-Z]/.test(newPassword)) {
+      setPasswordError('Password must contain at least one uppercase letter (A-Z)');
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setPasswordError('Password must contain at least one lowercase letter (a-z)');
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setPasswordError('Password must contain at least one number (0-9)');
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':",./<>?]/.test(newPassword)) {
+      setPasswordError('Password must contain at least one special character (!@#$%^&*)');
+      return;
+    }
     if (newPassword !== confirmPassword) {
-      setPasswordError('New password and confirmation do not match');
+      setPasswordError('New password and confirm password do not match');
       return;
     }
 
-    setPasswordSuccess(true);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setPasswordSuccess(false), 4000);
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 2000);
+    } catch (err: any) {
+      setPasswordError(err?.response?.data?.message || err?.message || 'Failed to change password. Please check your current password.');
+    }
   };
 
   return (

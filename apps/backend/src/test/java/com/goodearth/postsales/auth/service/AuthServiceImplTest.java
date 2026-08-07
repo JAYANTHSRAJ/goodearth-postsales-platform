@@ -36,6 +36,9 @@ public class AuthServiceImplTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private com.goodearth.postsales.notification.service.EmailService emailService;
+
     private AuthServiceImpl authService;
 
     private void initAuthService(boolean testMode, String testMasterPassword) {
@@ -44,6 +47,7 @@ public class AuthServiceImplTest {
                 passwordEncoder,
                 jwtTokenProvider,
                 refreshTokenService,
+                emailService,
                 86400000L,
                 5,
                 testMode,

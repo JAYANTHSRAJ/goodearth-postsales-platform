@@ -77,4 +77,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             refreshTokenRepository.save(t);
         });
     }
+
+    @Override
+    @Transactional
+    public void revokeAllUserTokens(User user) {
+        java.util.List<RefreshToken> activeTokens = refreshTokenRepository.findByUserAndRevokedFalse(user);
+        for (RefreshToken token : activeTokens) {
+            token.setRevoked(true);
+        }
+        refreshTokenRepository.saveAll(activeTokens);
+    }
 }

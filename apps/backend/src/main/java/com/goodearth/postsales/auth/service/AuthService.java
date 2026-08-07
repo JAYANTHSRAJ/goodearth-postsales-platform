@@ -6,6 +6,11 @@ import com.goodearth.postsales.auth.dto.RefreshTokenRequest;
 import com.goodearth.postsales.auth.dto.RefreshTokenResponse;
 import com.goodearth.postsales.auth.entity.User;
 
+import com.goodearth.postsales.auth.dto.ChangePasswordRequestDto;
+import com.goodearth.postsales.auth.dto.ForgotPasswordRequestDto;
+import com.goodearth.postsales.auth.dto.ResetPasswordRequestDto;
+import com.goodearth.postsales.auth.dto.ResetPasswordValidateResponseDto;
+
 /**
  * Service interface responsible for orchestrating user authentication, token generation,
  * session audits, and security validation policies (failed logins, locking preparations).
@@ -44,4 +49,24 @@ public interface AuthService {
      * @return the LoginResponse payload
      */
     LoginResponse generateLoginResponse(User user, String deviceName, String ipAddress, String userAgent);
+
+    /**
+     * Changes password for an authenticated user after validating their current password.
+     */
+    void changePassword(org.springframework.security.core.userdetails.UserDetails userDetails, ChangePasswordRequestDto request);
+
+    /**
+     * Initiates a forgot password flow, generating a reset token and sending an email.
+     */
+    String forgotPassword(ForgotPasswordRequestDto request);
+
+    /**
+     * Validates a password reset token.
+     */
+    ResetPasswordValidateResponseDto validateResetPasswordToken(String token);
+
+    /**
+     * Resets a user's password using a valid reset token.
+     */
+    void resetPassword(ResetPasswordRequestDto request);
 }

@@ -46,4 +46,11 @@ public interface RefreshTokenService {
      * @param token the raw refresh token string
      */
     void revokeRefreshToken(String token);
+
+    /**
+     * Revokes all active refresh tokens for the given user (e.g. after password change/reset).
+     *
+     * @param user the user entity
+     */
+    void revokeAllUserTokens(User user);
 }

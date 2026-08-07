@@ -23,6 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -191,6 +194,36 @@ public class AuthController {
         log.info("Activation email resent successfully to: {}", user.getEmail());
         
         return ResponseEntity.ok(new ApiResponse<>("Activation email resent successfully"));
+    }
+
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @jakarta.validation.Valid @RequestBody com.goodearth.postsales.auth.dto.ChangePasswordRequestDto request) {
+        authService.changePassword(userDetails, request);
+        return ResponseEntity.ok(new ApiResponse<>("Password changed successfully. Please log in with your new password."));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @jakarta.validation.Valid @RequestBody com.goodearth.postsales.auth.dto.ForgotPasswordRequestDto request) {
+        String message = authService.forgotPassword(request);
+        return ResponseEntity.ok(new ApiResponse<>(message));
+    }
+
+    @GetMapping("/reset-password/validate")
+    public ResponseEntity<ApiResponse<com.goodearth.postsales.auth.dto.ResetPasswordValidateResponseDto>> validateResetPasswordToken(
+            @RequestParam String token) {
+        com.goodearth.postsales.auth.dto.ResetPasswordValidateResponseDto response = authService.validateResetPasswordToken(token);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(
+            @jakarta.validation.Valid @RequestBody com.goodearth.postsales.auth.dto.ResetPasswordRequestDto request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(new ApiResponse<>("Password reset successfully. You can now log in with your new password."));
     }
 
     private void validatePasswordStrength(String password) {

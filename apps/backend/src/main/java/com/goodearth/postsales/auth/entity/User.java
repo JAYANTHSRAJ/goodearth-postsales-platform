@@ -81,6 +81,12 @@ public class User extends BaseEntity {
     @Column(name = "onboarding_stage", nullable = false, length = 50)
     private OnboardingStage onboardingStage = OnboardingStage.COMPLETED;
 
+    @Column(name = "reset_password_token")
+    private String resetPasswordToken;
+
+    @Column(name = "reset_password_token_expiry")
+    private LocalDateTime resetPasswordTokenExpiry;
+
     @Column(name = "last_selected_unit_id")
     private java.util.UUID lastSelectedUnitId;
 }
