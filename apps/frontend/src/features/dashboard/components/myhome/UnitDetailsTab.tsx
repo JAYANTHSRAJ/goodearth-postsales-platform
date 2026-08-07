@@ -17,7 +17,6 @@ import {
   CreditCard,
   HelpCircle,
   Clock,
-  CheckCircle2,
   ArrowRight,
   ShieldCheck,
   IndianRupee,
@@ -67,86 +66,86 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     );
   }
 
-  // Specifications Cards from Home Details
+  // Specifications Cards from Home Details (Data-driven, no demo placeholders)
   const specCards = [
     {
       title: 'Unit Type',
-      value: details?.unitType || '4 BHK Eco-Luxury Villa',
-      subtitle: 'Luxury Architecture',
+      value: details?.unitType || 'Not Available',
+      subtitle: 'Property Type',
       icon: Building2,
-      badge: 'Eco Residence',
+      badge: details?.unitType ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Bedrooms',
-      value: details?.bedrooms || '4 Bedrooms + Maid Suite',
-      subtitle: 'Spacious Accommodation',
+      value: details?.bedrooms || 'Not Available',
+      subtitle: 'Bedroom Count',
       icon: Bed,
-      badge: 'Spacious Suite',
+      badge: details?.bedrooms ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Bathrooms',
-      value: details?.bathrooms || '4 Ensuite + Powder Room',
-      subtitle: 'Premium Sanitaryware',
+      value: details?.bathrooms || 'Not Available',
+      subtitle: 'Bathroom Count',
       icon: Bath,
-      badge: 'Ensuite',
+      badge: details?.bathrooms ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Floor Elevation',
-      value: details?.floor || 'Ground + 2 Upper Floors',
-      subtitle: 'Multi-level Layout',
+      value: details?.floor || 'Not Available',
+      subtitle: 'Floor Level',
       icon: Layers,
-      badge: 'Triplex Layout',
+      badge: details?.floor ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Property Orientation',
-      value: details?.facing || 'East Facing (Vastu Compliant)',
-      subtitle: 'Optimal Light & Ventilation',
+      value: details?.facing || 'Not Available',
+      subtitle: 'Facing Direction',
       icon: Compass,
-      badge: 'Vastu Compliant',
+      badge: details?.facing ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Super Built-up Area',
-      value: details?.area || '3,850 Sq. Ft.',
-      subtitle: 'Total Constructed Area',
+      value: details?.area || (offerLetter?.superBuiltUpAreaSqm ? `${offerLetter.superBuiltUpAreaSqm} Sq.m` : 'Not Available'),
+      subtitle: 'Constructed Area',
       icon: Maximize2,
-      badge: 'Built-up',
+      badge: (details?.area || offerLetter?.superBuiltUpAreaSqm) ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Carpet Area',
-      value: details?.carpetArea || '3,120 Sq. Ft.',
-      subtitle: 'Usable Internal Space',
+      value: details?.carpetArea || (offerLetter?.carpetAreaSqm ? `${offerLetter.carpetAreaSqm} Sq.m` : 'Not Available'),
+      subtitle: 'Net Carpet Space',
       icon: Grid3x3,
-      badge: 'Net Area',
+      badge: (details?.carpetArea || offerLetter?.carpetAreaSqm) ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Parking Allocation',
-      value: details?.parking || '2 Covered EV-Ready Bays',
-      subtitle: 'Dedicated Parking',
+      value: details?.parking || (offerLetter?.coveredCarParks ? `${offerLetter.coveredCarParks} Car Park(s)` : 'Not Available'),
+      subtitle: 'Parking Space',
       icon: Car,
-      badge: 'EV Ready',
+      badge: (details?.parking || offerLetter?.coveredCarParks) ? 'Registered Spec' : 'Not Available',
     },
     {
       title: 'Registration Status',
-      value: details?.registrationStatus || 'Registered / Agreement Executed',
-      subtitle: 'Deed Status',
+      value: details?.registrationStatus || 'Not Available',
+      subtitle: 'Agreement Status',
       icon: FileCheck,
-      badge: 'Legal Verified',
+      badge: details?.registrationStatus ? 'Registered Spec' : 'Not Available',
       isGreenBadge: true,
     },
   ];
 
   // Offer Letter Table 1: Unit Details & Schedule of Area
   const offerLetterTable1Fields = [
-    { label: 'Unit Name', value: offerLetter?.unitName || details?.villa || details?.unitNumber || 'N/A', icon: Building2 },
-    { label: 'Carpet Area', value: offerLetter?.carpetAreaSqm ? `${offerLetter.carpetAreaSqm} Sq.m` : 'N/A', icon: Grid3x3 },
-    { label: 'Super Built-up Area', value: offerLetter?.superBuiltUpAreaSqm ? `${offerLetter.superBuiltUpAreaSqm} Sq.m` : 'N/A', icon: Maximize2 },
-    { label: 'Exclusive Common Area', value: offerLetter?.exclusiveCommonAreaSqm ? `${offerLetter.exclusiveCommonAreaSqm} Sq.m` : 'N/A', icon: Layers },
-    { label: 'Common Area allotted to Association', value: offerLetter?.associationCommonAreaSqm ? `${offerLetter.associationCommonAreaSqm} Sq.m` : 'N/A', icon: Users },
-    { label: 'UDS to Allottee', value: offerLetter?.udsAllotteeSqm ? `${offerLetter.udsAllotteeSqm} Sq.m` : 'N/A', icon: FileCheck },
-    { label: 'Total UDS', value: offerLetter?.totalUdsSqm ? `${offerLetter.totalUdsSqm} Sq.m` : 'N/A', icon: ShieldCheck },
-    { label: 'Exclusive Balcony / Verandah Area', value: offerLetter?.exclusiveBalconySqm ? `${offerLetter.exclusiveBalconySqm} Sq.m` : 'N/A', icon: Compass },
-    { label: 'Open Terrace Area', value: offerLetter?.openTerraceSqm ? `${offerLetter.openTerraceSqm} Sq.m` : 'N/A', icon: Maximize2 },
-    { label: 'Covered Car Parks', value: offerLetter?.coveredCarParks || details?.parking || 'N/A', icon: Car },
+    { label: 'Unit Name', value: offerLetter?.unitName || details?.villa || details?.unitNumber || 'Not Available', icon: Building2 },
+    { label: 'Carpet Area', value: offerLetter?.carpetAreaSqm ? `${offerLetter.carpetAreaSqm} Sq.m` : 'Not Available', icon: Grid3x3 },
+    { label: 'Super Built-up Area', value: offerLetter?.superBuiltUpAreaSqm ? `${offerLetter.superBuiltUpAreaSqm} Sq.m` : 'Not Available', icon: Maximize2 },
+    { label: 'Exclusive Common Area', value: offerLetter?.exclusiveCommonAreaSqm ? `${offerLetter.exclusiveCommonAreaSqm} Sq.m` : 'Not Available', icon: Layers },
+    { label: 'Common Area allotted to Association', value: offerLetter?.associationCommonAreaSqm ? `${offerLetter.associationCommonAreaSqm} Sq.m` : 'Not Available', icon: Users },
+    { label: 'UDS to Allottee', value: offerLetter?.udsAllotteeSqm ? `${offerLetter.udsAllotteeSqm} Sq.m` : 'Not Available', icon: FileCheck },
+    { label: 'Total UDS', value: offerLetter?.totalUdsSqm ? `${offerLetter.totalUdsSqm} Sq.m` : 'Not Available', icon: ShieldCheck },
+    { label: 'Exclusive Balcony / Verandah Area', value: offerLetter?.exclusiveBalconySqm ? `${offerLetter.exclusiveBalconySqm} Sq.m` : 'Not Available', icon: Compass },
+    { label: 'Open Terrace Area', value: offerLetter?.openTerraceSqm ? `${offerLetter.openTerraceSqm} Sq.m` : 'Not Available', icon: Maximize2 },
+    { label: 'Covered Car Parks', value: offerLetter?.coveredCarParks || details?.parking || 'Not Available', icon: Car },
   ];
 
   // Quick Action Hub Cards
@@ -195,41 +194,34 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     },
   ];
 
-  // Recent Activities
+  // Data-driven Status Summary (No hardcoded demo items)
   const recentActivities = [
     {
-      title: 'Unit Documents Updated',
-      time: 'Today at 10:30 AM',
-      desc: 'Latest structural revision drawing PDF updated.',
-      icon: CheckCircle2,
-      iconColor: 'text-emerald-500',
-    },
-    {
-      title: 'Stage Milestone Achieved',
-      time: 'Yesterday at 04:15 PM',
-      desc: 'Superstructure slab casting completed. Certified by Site Engineer.',
+      title: 'Construction Milestone Status',
+      time: details?.constructionStatus || 'In Progress',
+      desc: details?.completionPercent !== undefined ? `Overall completion progress: ${details.completionPercent}%` : 'Development progressing according to project schedule.',
       icon: Hammer,
       iconColor: 'text-amber-500',
     },
     {
-      title: 'Family Access Permission Granted',
-      time: 'Aug 04, 2026',
-      desc: 'Co-applicant household permission validated by Primary Homeowner.',
+      title: 'Primary Registered Homeowner',
+      time: details?.primaryBuyer || 'Registered Allottee',
+      desc: details?.primaryBuyerEmail ? `Contact email: ${details.primaryBuyerEmail}` : 'Primary applicant details recorded.',
       icon: ShieldCheck,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-emerald-500',
     },
   ];
 
   return (
     <div className="space-y-10 text-left">
-      {/* 1. PROPERTY SPECIFICATIONS CARDS (Existing) */}
+      {/* 1. PROPERTY SPECIFICATIONS CARDS */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-serif text-xl font-bold text-brand-900 dark:text-white flex items-center gap-2">
             <Building2 className="h-5 w-5 text-amber-500" />
             Property Specifications & Details
           </h3>
-          <span className="text-xs font-semibold text-brand-400">GoodEarth Verified</span>
+          <span className="text-xs font-semibold text-brand-400">Official Unit Data</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
