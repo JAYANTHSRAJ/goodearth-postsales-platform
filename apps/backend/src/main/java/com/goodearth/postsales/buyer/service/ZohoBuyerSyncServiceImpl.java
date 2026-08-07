@@ -358,7 +358,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             }
         }
 
-        String location = crmDeal.getLocation();
+        String location = (resolvedUnit != null && !resolvedUnit.isBlank()) ? resolvedUnit : crmDeal.getLocation();
 
         Project project;
         Optional<Project> projOpt = projectRepository.findFirstByZohoDealId(dealId);

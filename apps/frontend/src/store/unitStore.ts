@@ -5,7 +5,9 @@ export interface ClientUnit {
   id: string; // Buyer ID / Unit Identifier
   workflowId?: string;
   bookingId?: string;
+  dealId?: string;
   unitId?: string;
+  projectId?: string;
   unitName: string;
   projectName?: string;
   projectCode?: string;

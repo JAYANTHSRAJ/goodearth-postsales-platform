@@ -18,8 +18,17 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${accessToken}`);
     }
 
-    if (activeUnit?.id) {
-      headers.set('X-Active-Unit-ID', activeUnit.id);
+    if (activeUnit) {
+      if (activeUnit.id) headers.set('X-Active-Property-Buyer-ID', activeUnit.id);
+      if (activeUnit.bookingId) headers.set('X-Active-Property-Booking-ID', activeUnit.bookingId);
+      if (activeUnit.zohoDealId || activeUnit.dealId || activeUnit.bookingId) {
+        headers.set('X-Active-Property-Deal-ID', activeUnit.zohoDealId || activeUnit.dealId || activeUnit.bookingId || '');
+      }
+      if (activeUnit.unitId || activeUnit.unitName) {
+        headers.set('X-Active-Property-Unit-ID', activeUnit.unitId || activeUnit.unitName || '');
+      }
+      if (activeUnit.workflowId) headers.set('X-Active-Workflow-ID', activeUnit.workflowId);
+      if (activeUnit.id) headers.set('X-Active-Unit-ID', activeUnit.id);
     }
 
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;

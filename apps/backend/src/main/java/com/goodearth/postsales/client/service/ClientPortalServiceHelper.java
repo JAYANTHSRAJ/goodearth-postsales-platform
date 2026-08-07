@@ -77,22 +77,42 @@ public class ClientPortalServiceHelper {
         }
 
         String email = userDetails.getUsername();
-        UUID activeUnitId = com.goodearth.postsales.client.context.ActiveUnitContext.getActiveUnitId();
-        log.info("[FAMILY_LOGIN] Authenticated email={}, activeUnitId={}", email, activeUnitId);
+        
+        UUID activeWfId = com.goodearth.postsales.client.context.ActivePropertyContext.getWorkflowId();
+        if (activeWfId != null) {
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeWfId);
+            if (wfOpt.isPresent() && wfOpt.get().getBuyer() != null) {
+                Buyer b = wfOpt.get().getBuyer();
+                log.info("[FAMILY_LOGIN] Active workflow matched buyer: ID={}, Email={}", b.getId(), b.getEmail());
+                return b;
+            }
+        }
 
-        if (activeUnitId != null) {
-            Optional<Buyer> activeBuyerOpt = buyerRepository.findById(activeUnitId);
+        UUID activeBuyerId = com.goodearth.postsales.client.context.ActivePropertyContext.getBuyerId();
+        if (activeBuyerId == null) {
+            activeBuyerId = com.goodearth.postsales.client.context.ActiveUnitContext.getActiveUnitId();
+        }
+        if (activeBuyerId != null) {
+            Optional<Buyer> activeBuyerOpt = buyerRepository.findById(activeBuyerId);
             if (activeBuyerOpt.isPresent()) {
                 Buyer b = activeBuyerOpt.get();
-                log.info("[FAMILY_LOGIN] Active unit matched buyer ID: ID={}, Email={}, Unit={}", b.getId(), b.getEmail(), b.getUnitName());
+                log.info("[FAMILY_LOGIN] Active buyer matched ID: ID={}, Email={}", b.getId(), b.getEmail());
                 return b;
             }
 
-            Optional<Workflow> wfOpt = workflowRepository.findById(activeUnitId);
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeBuyerId);
             if (wfOpt.isPresent() && wfOpt.get().getBuyer() != null) {
                 Buyer b = wfOpt.get().getBuyer();
-                log.info("[FAMILY_LOGIN] Active unit matched workflow buyer: ID={}, Email={}, Unit={}", b.getId(), b.getEmail(), b.getUnitName());
+                log.info("[FAMILY_LOGIN] Active unit matched workflow buyer: ID={}, Email={}", b.getId(), b.getEmail());
                 return b;
+            }
+        }
+
+        String dealId = com.goodearth.postsales.client.context.ActivePropertyContext.getDealId();
+        if (dealId != null && !dealId.isBlank()) {
+            Optional<Buyer> buyerOpt = buyerRepository.findFirstByZohoDealId(dealId);
+            if (buyerOpt.isPresent()) {
+                return buyerOpt.get();
             }
         }
 
@@ -125,21 +145,47 @@ public class ClientPortalServiceHelper {
     }
 
     public Workflow getBuyerWorkflow(Buyer buyer) {
-        System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Buyer ID = " + (buyer != null ? buyer.getId() : "null"));
+        log.info("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Buyer ID = {}", buyer != null ? buyer.getId() : "null");
         if (buyer == null) {
             throw new CustomException("Buyer object is null", HttpStatus.BAD_REQUEST);
         }
+
+        // 1. Check if specific workflowId is present in ActivePropertyContext
+        UUID activeWfId = com.goodearth.postsales.client.context.ActivePropertyContext.getWorkflowId();
+        if (activeWfId != null) {
+            Optional<Workflow> wfOpt = workflowRepository.findById(activeWfId);
+            if (wfOpt.isPresent()) {
+                log.info("[AUTH_LOG] Resolved workflow by ActivePropertyContext.workflowId: {}", wfOpt.get().getId());
+                return wfOpt.get();
+            }
+        }
+
+        // 2. Check if active bookingId/dealId is present in ActivePropertyContext
+        String activeDealId = com.goodearth.postsales.client.context.ActivePropertyContext.getDealId();
+        if (activeDealId == null || activeDealId.isBlank()) {
+            activeDealId = com.goodearth.postsales.client.context.ActivePropertyContext.getBookingId();
+        }
+        if (activeDealId != null && !activeDealId.isBlank()) {
+            final String targetDealId = activeDealId.trim();
+            Optional<Workflow> wfOpt = workflowRepository.findByBuyerId(buyer.getId()).stream()
+                    .filter(w -> w.getProject() != null && targetDealId.equalsIgnoreCase(w.getProject().getZohoDealId()))
+                    .findFirst();
+            if (wfOpt.isPresent()) {
+                log.info("[AUTH_LOG] Resolved workflow by ActivePropertyContext.dealId ({}): {}", targetDealId, wfOpt.get().getId());
+                return wfOpt.get();
+            }
+        }
+
+        // 3. Fallback to active workflow or first workflow for buyer
         java.util.Optional<Workflow> activeWfOpt = workflowRepository.findFirstByBuyerIdAndStatus(buyer.getId(), WorkflowStatus.ACTIVE);
-        System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Active workflow found? = " + activeWfOpt.isPresent());
         if (activeWfOpt.isPresent()) {
-            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Workflow ID = " + activeWfOpt.get().getId());
+            log.info("[AUTH_LOG] Resolved active workflow: {}", activeWfOpt.get().getId());
             return activeWfOpt.get();
         }
 
         java.util.Optional<Workflow> anyWfOpt = workflowRepository.findFirstByBuyerId(buyer.getId());
-        System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Any workflow found? = " + anyWfOpt.isPresent());
         if (anyWfOpt.isPresent()) {
-            System.out.println("[AUTH_LOG] ClientPortalServiceHelper.getBuyerWorkflow: Workflow ID = " + anyWfOpt.get().getId());
+            log.info("[AUTH_LOG] Resolved first available workflow: {}", anyWfOpt.get().getId());
             return anyWfOpt.get();
         }
 
