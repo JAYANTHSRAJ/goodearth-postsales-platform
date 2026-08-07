@@ -52,18 +52,20 @@ public class KycController {
         this.kycService = kycService;
     }
 
-    @GetMapping({"/available-sources", "/client/kyc/available-sources"})
+    @GetMapping({"/available-sources", "/sources"})
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Get available completed KYC sources for copying", description = "Lists other verified/completed KYCs owned by the same buyer")
     public ResponseEntity<ApiResponse<List<KycCopySourceDto>>> getAvailableSources(
             @RequestParam(required = false) UUID workflowId,
             Authentication authentication) {
         String userEmail = authentication != null ? authentication.getName() : null;
+        log.info("[KYC_COPY] Controller GET /api/v1/client/kyc/available-sources hit. User: {}, Target Workflow: {}", userEmail, workflowId);
         List<KycCopySourceDto> sources = kycService.getAvailableKycCopySources(workflowId, userEmail);
+        log.info("[KYC_COPY] Returning {} available sources to frontend", sources != null ? sources.size() : 0);
         return ResponseEntity.ok(new ApiResponse<>(sources));
     }
 
-    @PostMapping({"/{targetWorkflowId}/copy", "/client/kyc/{targetWorkflowId}/copy"})
+    @PostMapping({"/{targetWorkflowId}/copy"})
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CRM', 'CLIENT')")
     @Operation(summary = "Copy KYC details from a source workflow to target workflow", description = "Clones applicant and document information from a completed KYC to target property")
     public ResponseEntity<ApiResponse<KycApplicationResponseDto>> copyKyc(
@@ -71,6 +73,7 @@ public class KycController {
             @RequestBody KycCopyRequestDto request,
             Authentication authentication) {
         String actorId = authentication != null ? authentication.getName() : "CLIENT";
+        log.info("[KYC_COPY] Controller POST /api/v1/client/kyc/{}/copy hit. Actor: {}, Request: {}", targetWorkflowId, actorId, request);
         KycApplicationResponseDto response = kycService.copyKycFromSource(targetWorkflowId, request, actorId);
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
