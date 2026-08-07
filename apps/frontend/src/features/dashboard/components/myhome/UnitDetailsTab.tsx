@@ -6,8 +6,6 @@ import {
   Maximize2,
   Grid3x3,
   Layers,
-  Bed,
-  Bath,
   Car,
   FileCheck,
   FileSpreadsheet,
@@ -66,73 +64,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
     );
   }
 
-  // Specifications Cards from Home Details (Data-driven, no demo placeholders)
-  const specCards = [
-    {
-      title: 'Unit Type',
-      value: details?.unitType || 'Not Available',
-      subtitle: 'Property Type',
-      icon: Building2,
-      badge: details?.unitType ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Bedrooms',
-      value: details?.bedrooms || 'Not Available',
-      subtitle: 'Bedroom Count',
-      icon: Bed,
-      badge: details?.bedrooms ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Bathrooms',
-      value: details?.bathrooms || 'Not Available',
-      subtitle: 'Bathroom Count',
-      icon: Bath,
-      badge: details?.bathrooms ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Floor Elevation',
-      value: details?.floor || 'Not Available',
-      subtitle: 'Floor Level',
-      icon: Layers,
-      badge: details?.floor ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Property Orientation',
-      value: details?.facing || 'Not Available',
-      subtitle: 'Facing Direction',
-      icon: Compass,
-      badge: details?.facing ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Super Built-up Area',
-      value: details?.area || (offerLetter?.superBuiltUpAreaSqm ? `${offerLetter.superBuiltUpAreaSqm} Sq.m` : 'Not Available'),
-      subtitle: 'Constructed Area',
-      icon: Maximize2,
-      badge: (details?.area || offerLetter?.superBuiltUpAreaSqm) ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Carpet Area',
-      value: details?.carpetArea || (offerLetter?.carpetAreaSqm ? `${offerLetter.carpetAreaSqm} Sq.m` : 'Not Available'),
-      subtitle: 'Net Carpet Space',
-      icon: Grid3x3,
-      badge: (details?.carpetArea || offerLetter?.carpetAreaSqm) ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Parking Allocation',
-      value: details?.parking || (offerLetter?.coveredCarParks ? `${offerLetter.coveredCarParks} Car Park(s)` : 'Not Available'),
-      subtitle: 'Parking Space',
-      icon: Car,
-      badge: (details?.parking || offerLetter?.coveredCarParks) ? 'Registered Spec' : 'Not Available',
-    },
-    {
-      title: 'Registration Status',
-      value: details?.registrationStatus || 'Not Available',
-      subtitle: 'Agreement Status',
-      icon: FileCheck,
-      badge: details?.registrationStatus ? 'Registered Spec' : 'Not Available',
-      isGreenBadge: true,
-    },
-  ];
+
 
   // Offer Letter Table 1: Unit Details & Schedule of Area
   const offerLetterTable1Fields = [
@@ -214,52 +146,7 @@ export const UnitDetailsTab: React.FC<UnitDetailsTabProps> = ({ details, isLoadi
 
   return (
     <div className="space-y-10 text-left">
-      {/* 1. PROPERTY SPECIFICATIONS CARDS */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-serif text-xl font-bold text-brand-900 dark:text-white flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-amber-500" />
-            Property Specifications & Details
-          </h3>
-          <span className="text-xs font-semibold text-brand-400">Official Unit Data</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {specCards.map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <Card key={idx} className="hover:border-amber-500/40 transition-all duration-300 shadow-sm hover:shadow-md">
-                <div className="p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        card.isGreenBadge
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                      }`}
-                    >
-                      {card.badge}
-                    </span>
-                    <div className="h-9 w-9 rounded-xl bg-brand-100/70 dark:bg-brand-850 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-bold text-brand-400 uppercase tracking-wider">{card.title}</div>
-                    <div className="text-base sm:text-lg font-bold text-brand-900 dark:text-white font-serif mt-0.5">
-                      {card.value}
-                    </div>
-                    <div className="text-[11px] font-medium text-brand-500 dark:text-brand-400 mt-1">{card.subtitle}</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. ENHANCED SECTION: UNIT DETAILS (Offer Letter Table 1 Data) */}
+      {/* 1. ENHANCED SECTION: UNIT DETAILS (Offer Letter Table 1 Data) */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
