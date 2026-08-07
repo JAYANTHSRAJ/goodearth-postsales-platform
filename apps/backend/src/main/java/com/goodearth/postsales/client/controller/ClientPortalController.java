@@ -135,20 +135,22 @@ public class ClientPortalController {
                     ClientUnitDto dto = new ClientUnitDto();
                     dto.setId(b.getId());
                     dto.setWorkflowId(wf.getId());
-                    dto.setBookingId(b.getZohoDealId() != null ? b.getZohoDealId() : wf.getId().toString());
-                    dto.setUnitId(b.getUnitName() != null ? b.getUnitName() : b.getId().toString());
-                    dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + (b.getZohoDealId() != null ? b.getZohoDealId() : b.getId()));
-                    dto.setZohoDealId(b.getZohoDealId());
+
+                    String dealRef = (wf.getProject() != null && wf.getProject().getZohoDealId() != null)
+                            ? wf.getProject().getZohoDealId()
+                            : (b.getZohoDealId() != null ? b.getZohoDealId() : wf.getId().toString());
+                    String unitTitleName = wf.getUnitName() != null ? wf.getUnitName() : (b.getUnitName() != null ? b.getUnitName() : "Unit " + dealRef);
+
+                    dto.setBookingId(dealRef);
+                    dto.setUnitId(dealRef);
+                    dto.setUnitName(unitTitleName);
+                    dto.setZohoDealId(dealRef);
                     dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
 
                     if (wf.getProject() != null) {
                         dto.setProjectName(wf.getProject().getProjectName());
                         dto.setProjectCode(wf.getProject().getProjectCode());
                         dto.setZohoDealName(wf.getProject().getProjectName());
-                        if (dto.getZohoDealId() == null) {
-                            dto.setZohoDealId(wf.getProject().getZohoDealId());
-                            dto.setBookingId(wf.getProject().getZohoDealId());
-                        }
                     }
 
                     if (wf.getCurrentStageId() != null) {

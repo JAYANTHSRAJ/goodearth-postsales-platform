@@ -175,13 +175,25 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         return response;
     }
 
-    private void processSingleDeal(ZohoDealResponse.ZohoDeal crmDeal, Map<String, Object> summary) {
-        log.info(">>> ENTER processSingleDeal for Deal ID: {}", crmDeal.getId());
-        String dealId = crmDeal.getId();
-        if (dealId == null || dealId.trim().isEmpty()) {
-            summary.put("buyersSkipped", (int) summary.get("buyersSkipped") + 1);
+    @Override
+    public void processSingleDeal(ZohoDealResponse.ZohoDeal crmDeal, Map<String, Object> summary) {
+        log.info(">>> ENTER processSingleDeal for Deal ID: {}", crmDeal != null ? crmDeal.getId() : null);
+        if (summary == null) {
+            summary = new HashMap<>();
+        }
+        summary.putIfAbsent("buyersCreated", 0);
+        summary.putIfAbsent("buyersUpdated", 0);
+        summary.putIfAbsent("buyersSkipped", 0);
+        summary.putIfAbsent("projectsCreated", 0);
+        summary.putIfAbsent("projectsUpdated", 0);
+        summary.putIfAbsent("workflowsCreated", 0);
+        summary.putIfAbsent("workflowsUpdated", 0);
+
+        if (crmDeal == null || crmDeal.getId() == null || crmDeal.getId().trim().isEmpty()) {
+            summary.put("buyersSkipped", ((Number) summary.get("buyersSkipped")).intValue() + 1);
             return;
         }
+        String dealId = crmDeal.getId();
 
         // Extract Deal attributes
         String email = crmDeal.getEmail();
@@ -281,6 +293,8 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyerOpt = buyerRepository.findFirstByEmailIgnoreCaseOrderByIdDesc(email);
         }
 
+        String resolvedUnit = crmDeal.getResolvedUnitName();
+
         Buyer buyer;
         if (buyerOpt.isPresent()) {
             buyer = buyerOpt.get();
@@ -295,10 +309,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyer.setLastSyncAt(LocalDateTime.now());
             buyer.setCoApplicantName(crmDeal.getResolvedCoApplicantName() != null 
                     ? crmDeal.getResolvedCoApplicantName() : buyer.getCoApplicantName());
-            String resolvedUnit = crmDeal.getUnitName() != null ? crmDeal.getUnitName().getName() : null;
-            if (resolvedUnit == null || resolvedUnit.isBlank()) {
-                resolvedUnit = crmDeal.getDealName();
-            }
             buyer.setUnitName(resolvedUnit);
             log.info("Saving Buyer entity for email: {}", email);
             buyerRepository.save(buyer);
@@ -317,11 +327,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyer.setLastSyncAt(LocalDateTime.now());
             buyer.setSyncStatus("PENDING");
             buyer.setCoApplicantName(crmDeal.getResolvedCoApplicantName());
-            
-            String resolvedUnit = crmDeal.getUnitName() != null ? crmDeal.getUnitName().getName() : null;
-            if (resolvedUnit == null || resolvedUnit.isBlank()) {
-                resolvedUnit = crmDeal.getDealName();
-            }
             buyer.setUnitName(resolvedUnit);
             log.info("Saving Buyer entity for email: {}", email);
             buyerRepository.save(buyer);
@@ -357,9 +362,6 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
 
         Project project;
         Optional<Project> projOpt = projectRepository.findFirstByZohoDealId(dealId);
-        if (projOpt.isEmpty()) {
-            projOpt = projectRepository.findFirstByProjectNameIgnoreCaseOrderByIdDesc(projectName);
-        }
 
         if (projOpt.isPresent()) {
             project = projOpt.get();
@@ -393,6 +395,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
         Workflow targetWorkflow;
         if (workflowOpt.isPresent()) {
             targetWorkflow = workflowOpt.get();
+            targetWorkflow.setUnitName(resolvedUnit);
             if (resolvedStage != null) {
                 targetWorkflow.setCurrentStageId(resolvedStage.getId());
             }
@@ -402,6 +405,7 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             targetWorkflow = new Workflow();
             targetWorkflow.setBuyer(buyer);
             targetWorkflow.setProject(project);
+            targetWorkflow.setUnitName(resolvedUnit);
             targetWorkflow.setStatus(WorkflowStatus.ACTIVE);
             targetWorkflow.setStartedAt(LocalDateTime.now());
             if (resolvedStage != null) {
@@ -428,13 +432,20 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             log.error("WorkDrive folder auto-provisioning exception for unit {}: {}", buyer.getUnitName(), ex.getMessage(), ex);
         }
 
-        // 5. Send Welcome Email (Triggers whenever welcomeEmailSent is false)
-        log.info("Evaluating welcome email condition for buyer: {}, welcomeEmailSent={}", email, buyer.isWelcomeEmailSent());
+        boolean isNewWorkflow = workflowOpt.isEmpty();
+
+        // 5. Send Welcome Email or New Property Purchase Email
+        log.info("Evaluating email condition for buyer: {}, welcomeEmailSent={}, isNewWorkflow={}", email, buyer.isWelcomeEmailSent(), isNewWorkflow);
         if (!buyer.isWelcomeEmailSent()) {
             log.info(">>> CALLING sendWelcomeEmail for buyer: {}", email);
             sendWelcomeEmail(buyer);
+        } else if (isNewWorkflow) {
+            log.info(">>> CALLING sendNewPropertyNotificationEmail for existing buyer purchasing new property: {}", email);
+            sendNewPropertyNotificationEmail(buyer, project, crmDeal, resolvedStage);
+            buyer.setSyncStatus("SUCCESS");
+            buyerRepository.save(buyer);
         } else {
-            log.info("Skipping welcome email send because welcomeEmailSent=true for buyer: {}", email);
+            log.info("Skipping welcome/notification email send because workflow already exists for deal ID: {}", dealId);
             buyer.setSyncStatus("SUCCESS");
             buyerRepository.save(buyer);
         }
@@ -500,5 +511,33 @@ public class ZohoBuyerSyncServiceImpl implements ZohoBuyerSyncService {
             buyerRepository.save(buyer);
         }
         log.info(">>> EXIT sendWelcomeEmail for buyer: {}", buyer.getEmail());
+    }
+
+    private void sendNewPropertyNotificationEmail(Buyer buyer, Project project, ZohoDealResponse.ZohoDeal crmDeal, Stage stage) {
+        log.info("ENTER sendNewPropertyNotificationEmail for buyer email: {}", buyer.getEmail());
+        if (buyer.getEmail() == null || buyer.getEmail().isBlank()) {
+            return;
+        }
+
+        String buyerName = buyer.getFullName();
+        String projectName = project != null ? project.getProjectName() : "GoodEarth Community";
+        String unitName = (crmDeal.getUnitName() != null && crmDeal.getUnitName().getName() != null && !crmDeal.getUnitName().getName().isBlank())
+                ? crmDeal.getUnitName().getName()
+                : (buyer.getUnitName() != null ? buyer.getUnitName() : "Unit " + crmDeal.getId());
+        String unitReference = crmDeal.getId() != null ? crmDeal.getId() : "N/A";
+        String constructionStage = stage != null ? stage.getName() : "Structure Completed";
+        String possessionDate = "Dec 2026";
+        String portalUrl = "https://goodearth-postsales-platform.vercel.app/login";
+
+        String htmlBody = com.goodearth.postsales.buyer.template.NewPropertyPurchaseEmailTemplate.buildHtmlEmail(
+                buyerName, projectName, unitName, unitReference, constructionStage, possessionDate, portalUrl);
+        String subject = "Congratulations on your new property - " + projectName + " (" + unitName + ")";
+
+        try {
+            emailService.sendEmail(buyer.getEmail(), subject, htmlBody);
+            log.info("[PROPERTY_PURCHASE_EMAIL] Property purchase notification sent successfully to {}", buyer.getEmail());
+        } catch (Exception ex) {
+            log.error("[PROPERTY_PURCHASE_EMAIL] Error sending property purchase email to {}: {}", buyer.getEmail(), ex.getMessage(), ex);
+        }
     }
 }
