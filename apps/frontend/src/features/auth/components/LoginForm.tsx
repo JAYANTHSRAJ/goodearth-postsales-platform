@@ -65,10 +65,13 @@ export const LoginForm: React.FC = () => {
 
       // Route users after login based on role & KYC onboarding state
       if (mappedRole === 'buyer') {
+        console.log('[LOGIN] Navigating buyer to destination: /select-home');
         navigate('/select-home');
       } else if (mappedRole === 'admin') {
+        console.log('[LOGIN] Navigating admin to destination: /admin');
         navigate('/admin');
       } else {
+        console.log('[LOGIN] Navigating user to destination: /');
         navigate('/');
       }
     } catch (err: any) {

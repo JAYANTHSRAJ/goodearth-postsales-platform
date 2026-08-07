@@ -92,10 +92,16 @@ public class ClientPortalController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<ClientUnitDto>>> getOwnedUnits(
             @AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Endpoint: GET /api/v1/client/units, User: {}", userDetails.getUsername());
-        String email = userDetails.getUsername();
+        String email = userDetails != null ? userDetails.getUsername() : "";
+        log.info("[UNITS_TRACE] Endpoint: GET /api/v1/client/units, Authenticated Email: {}", email);
 
         List<Buyer> buyers = buyerRepository.findAllByEmailIgnoreCase(email);
+        log.info("[UNITS_TRACE] Direct buyers found for email {}: count={}", email, buyers.size());
+        for (Buyer b : buyers) {
+            log.info("[UNITS_TRACE]   Buyer ID={}, ZohoDealId={}, UnitName={}, ContactId={}",
+                    b.getId(), b.getZohoDealId(), b.getUnitName(), b.getZohoContactId());
+        }
+
         if (buyers.isEmpty()) {
             List<FamilyMember> familyMembers = familyMemberRepository.findAllByEmailIgnoreCase(email);
             buyers = familyMembers.stream()
@@ -103,6 +109,7 @@ public class ClientPortalController {
                     .filter(java.util.Objects::nonNull)
                     .distinct()
                     .collect(Collectors.toList());
+            log.info("[UNITS_TRACE] Family member buyers found for email {}: count={}", email, buyers.size());
         }
 
         if (buyers.isEmpty()) {
@@ -110,52 +117,74 @@ public class ClientPortalController {
                 Buyer primaryBuyer = helper.getAuthenticatedBuyer(userDetails);
                 if (primaryBuyer != null) {
                     buyers = List.of(primaryBuyer);
+                    log.info("[UNITS_TRACE] Fallback helper buyer found: ID={}, Unit={}", primaryBuyer.getId(), primaryBuyer.getUnitName());
                 }
             } catch (Exception ex) {
+                log.warn("[UNITS_TRACE] Fallback buyer resolution failed: {}", ex.getMessage());
                 buyers = Collections.emptyList();
             }
         }
 
-        List<ClientUnitDto> dtos = buyers.stream().map(b -> {
-            ClientUnitDto dto = new ClientUnitDto();
-            dto.setId(b.getId());
-            dto.setBookingId(b.getZohoDealId() != null ? b.getZohoDealId() : b.getId().toString());
-            dto.setUnitId(b.getUnitName() != null ? b.getUnitName() : b.getId().toString());
-            dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + b.getZohoDealId());
-            dto.setZohoDealId(b.getZohoDealId());
-            dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
+        List<ClientUnitDto> dtos = new java.util.ArrayList<>();
+        for (Buyer b : buyers) {
+            List<Workflow> workflows = workflowRepository.findByBuyerId(b.getId());
+            log.info("[UNITS_TRACE] Workflows for buyer ID {}: count={}", b.getId(), workflows.size());
 
-            Optional<Workflow> wf = workflowRepository.findFirstByBuyerId(b.getId());
-            wf.ifPresent(workflow -> {
-                dto.setWorkflowId(workflow.getId());
-                if (workflow.getProject() != null) {
-                    dto.setProjectName(workflow.getProject().getProjectName());
-                    dto.setProjectCode(workflow.getProject().getProjectCode());
-                    dto.setZohoDealName(workflow.getProject().getProjectName());
-                    if (dto.getZohoDealId() == null) {
-                        dto.setZohoDealId(workflow.getProject().getZohoDealId());
-                        dto.setBookingId(workflow.getProject().getZohoDealId());
+            if (!workflows.isEmpty()) {
+                for (Workflow wf : workflows) {
+                    ClientUnitDto dto = new ClientUnitDto();
+                    dto.setId(b.getId());
+                    dto.setWorkflowId(wf.getId());
+                    dto.setBookingId(b.getZohoDealId() != null ? b.getZohoDealId() : wf.getId().toString());
+                    dto.setUnitId(b.getUnitName() != null ? b.getUnitName() : b.getId().toString());
+                    dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + (b.getZohoDealId() != null ? b.getZohoDealId() : b.getId()));
+                    dto.setZohoDealId(b.getZohoDealId());
+                    dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
+
+                    if (wf.getProject() != null) {
+                        dto.setProjectName(wf.getProject().getProjectName());
+                        dto.setProjectCode(wf.getProject().getProjectCode());
+                        dto.setZohoDealName(wf.getProject().getProjectName());
+                        if (dto.getZohoDealId() == null) {
+                            dto.setZohoDealId(wf.getProject().getZohoDealId());
+                            dto.setBookingId(wf.getProject().getZohoDealId());
+                        }
                     }
-                }
-                if (workflow.getCurrentStageId() != null) {
-                    stageRepository.findById(workflow.getCurrentStageId()).ifPresent(stage -> {
-                        dto.setConstructionStage(stage.getName());
-                    });
-                }
-            });
 
-            if (dto.getConstructionStage() == null) {
+                    if (wf.getCurrentStageId() != null) {
+                        stageRepository.findById(wf.getCurrentStageId()).ifPresent(stage -> {
+                            dto.setConstructionStage(stage.getName());
+                        });
+                    }
+
+                    if (dto.getConstructionStage() == null) {
+                        dto.setConstructionStage("Structure Completed");
+                    }
+                    dto.setPossessionDate("Dec 2026");
+                    dto.setThumbnail("/assets/unit-placeholder.jpg");
+
+                    dtos.add(dto);
+                    log.info("[UNITS_TRACE]   Mapped Unit DTO: ID={}, UnitName={}, WorkflowID={}, Project={}",
+                            dto.getId(), dto.getUnitName(), dto.getWorkflowId(), dto.getProjectName());
+                }
+            } else {
+                ClientUnitDto dto = new ClientUnitDto();
+                dto.setId(b.getId());
+                dto.setBookingId(b.getZohoDealId() != null ? b.getZohoDealId() : b.getId().toString());
+                dto.setUnitId(b.getUnitName() != null ? b.getUnitName() : b.getId().toString());
+                dto.setUnitName(b.getUnitName() != null ? b.getUnitName() : "Unit " + b.getZohoDealId());
+                dto.setZohoDealId(b.getZohoDealId());
+                dto.setStatus(b.getStatus() != null ? b.getStatus() : "ACTIVE");
                 dto.setConstructionStage("Structure Completed");
+                dto.setPossessionDate("Dec 2026");
+                dto.setThumbnail("/assets/unit-placeholder.jpg");
+
+                dtos.add(dto);
+                log.info("[UNITS_TRACE]   Mapped Buyer Fallback DTO: ID={}, UnitName={}", dto.getId(), dto.getUnitName());
             }
-            dto.setPossessionDate("Dec 2026");
-            dto.setThumbnail("/assets/unit-placeholder.jpg");
+        }
 
-            log.info("[TRACE_IDENTIFIER]\nStage: Client Login -> getOwnedUnits()\nUser Email: {}\nBuyer ID: {}\nWorkflow ID: {}\nUnit Name: {}\nBooking Reference: {}\nDeal Name: {}\nZoho Deal Record ID: {}",
-                    userDetails.getUsername(), b.getId(), dto.getWorkflowId(), b.getUnitName(), dto.getUnitName(), dto.getZohoDealName(), dto.getZohoDealId());
-
-            return dto;
-        }).collect(Collectors.toList());
-
+        log.info("[UNITS_TRACE] Final returning ClientUnitDtos count={}", dtos.size());
         return ResponseEntity.ok(new ApiResponse<>(dtos));
     }
 

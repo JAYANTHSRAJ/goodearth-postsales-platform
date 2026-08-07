@@ -8,26 +8,37 @@ import { clientService } from '../../../services/client.service';
 export const SelectHomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { units, setUnits, setActiveUnit } = useUnitStore();
+  const { units, activeUnit, setUnits, setActiveUnit } = useUnitStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[SELECT_HOME] Page mounted for user:', user?.email);
+    console.log('[SELECT_HOME] Current unitStore state -> units.length:', units.length, '| activeUnit:', activeUnit?.unitName);
+    
     clientService
       .getOwnedUnits()
       .then((data) => {
+        console.log('[SELECT_HOME] RAW GET /api/v1/client/units response:', JSON.stringify(data, null, 2));
         if (Array.isArray(data)) {
           setUnits(data);
+          console.log('[SELECT_HOME] Evaluation -> units.length:', data.length);
           if (data.length === 1) {
+            console.log('[SELECT_HOME] Single unit found:', data[0].unitName, '-> Auto-selecting unit & navigating to /my-home');
             setActiveUnit(data[0]);
             navigate('/my-home', { replace: true });
+          } else if (data.length > 1) {
+            console.log('[SELECT_HOME] Multiple units found (', data.length, ') -> Displaying Select Your Home grid');
+          } else {
+            console.warn('[SELECT_HOME] No units found for user.');
           }
         }
       })
-      .catch((err) => console.error('Failed to load owned units', err))
+      .catch((err) => console.error('[SELECT_HOME] Error loading owned units:', err))
       .finally(() => setLoading(false));
-  }, [setUnits, setActiveUnit, navigate]);
+  }, [setUnits, setActiveUnit, navigate, user?.email]);
 
   const handleSelectProperty = (unit: ClientUnit) => {
+    console.log('[SELECT_HOME] User selected property card:', unit.unitName, '| ID:', unit.id);
     setActiveUnit(unit);
     navigate('/my-home');
   };
