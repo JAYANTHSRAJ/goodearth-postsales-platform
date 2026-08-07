@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
+import { GoodEarthLogo } from '../common/GoodEarthLogo';
 
 export const Header: React.FC = () => {
   const queryClient = useQueryClient();
@@ -25,7 +26,7 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-brand-200 bg-white/90 backdrop-blur-md px-4 shadow-sm transition-all duration-300 dark:border-brand-800 dark:bg-brand-900/90">
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-brand-200 bg-white/95 backdrop-blur-md px-4 shadow-sm transition-all duration-300 dark:border-brand-800 dark:bg-brand-900/95">
       {/* Left: Toggles & Branding */}
       <div className="flex items-center gap-3">
         {/* Mobile menu trigger */}
@@ -46,9 +47,12 @@ export const Header: React.FC = () => {
           <Menu className="h-5 w-5" />
         </button>
 
-        <span className="font-serif text-lg font-semibold tracking-wide text-brand-900 dark:text-white sm:text-xl">
-          GoodEarth <span className="text-accent-600 dark:text-accent-400">Post-Sales</span>
-        </span>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <GoodEarthLogo size="sm" showTagline={false} />
+          <span className="hidden sm:inline-block font-sans text-xs font-bold uppercase tracking-wider text-geochre dark:text-geochre-400 bg-geochre-50 border border-geochre-200 px-2 py-0.5 rounded-full dark:bg-brand-850 dark:border-brand-800">
+            Post-Sales
+          </span>
+        </div>
       </div>
 
       {/* Center: Active Unit Selector for Buyers */}

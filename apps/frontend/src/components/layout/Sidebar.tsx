@@ -14,6 +14,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUnitStore } from '../../store/unitStore';
 import { clientService } from '../../services/client.service';
 import kycService from '../../features/kyc/services/kyc.service';
+import { GoodEarthLogo } from '../common/GoodEarthLogo';
 
 interface NavItem {
   name: string;
@@ -104,13 +105,10 @@ export const Sidebar: React.FC = () => {
         {/* Header */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-brand-100 dark:border-brand-800">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand-700 dark:bg-brand-500 flex items-center justify-center text-white font-serif font-bold text-lg">
-              G
-            </div>
-            {!sidebarCollapsed && (
-              <span className="font-serif text-sm font-semibold text-brand-800 dark:text-brand-200 uppercase tracking-wider">
-                Post-Sales
-              </span>
+            {sidebarCollapsed ? (
+              <GoodEarthLogo variant="mark-only" size="sm" />
+            ) : (
+              <GoodEarthLogo size="sm" showTagline={false} />
             )}
           </div>
           {mobileSidebarOpen && (

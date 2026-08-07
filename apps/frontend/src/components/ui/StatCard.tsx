@@ -17,12 +17,12 @@ export const StatCard: React.FC<StatCardProps> = ({
   badge,
 }) => {
   return (
-    <div className="rounded-2xl border border-brand-200 bg-white p-6 shadow-sm dark:border-brand-800 dark:bg-brand-900 transition-all duration-300 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700">
+    <div className="rounded-3xl border border-brand-200/80 bg-white p-5 sm:p-6 shadow-sm dark:border-brand-800 dark:bg-brand-900 transition-all duration-300 hover:shadow-md hover:border-geochre/40 dark:hover:border-brand-700">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-brand-500 dark:text-brand-400">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-500 dark:text-brand-400">
           {title}
         </span>
-        <div className="rounded-xl bg-brand-50 p-2.5 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+        <div className="rounded-2xl bg-brand-50 border border-brand-200/50 p-2.5 text-geolive dark:bg-brand-950/50 dark:border-brand-800 dark:text-gegreen-400">
           <Icon className="h-5 w-5" />
         </div>
       </div>

@@ -2,8 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* GoodEarth Official Brand Book Color Tokens */
+  --ge-blue: #0053a4;
+  --ge-green: #a6be4b;
+  --ge-olive: #666b4a;
+  --ge-terracotta: #874545;
+  --ge-ochre: #ba965e;
+  --ge-gold: #d69100;
+  --ge-sage: #859ea6;
+  --ge-sand-bg: #f8f6f2;
+  --ge-sand-tint: #d6d1c4;
+
+  /* Typography */
+  --font-heading: 'Averia Serif Libre', Georgia, serif;
+  --font-body: 'Work Sans', system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
   html, body {
-    @apply h-full w-full overflow-x-hidden;
+    @apply h-full w-full overflow-x-hidden bg-brand-50 text-brand-950 font-sans antialiased selection:bg-gegreen-100 selection:text-geblue-700;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    @apply tracking-tight;
   }
 }
+
+@layer components {
+  /* Brand Book Cards with Friendly Rounded Corners (Page 25 & Page 37) */
+  .ge-card {
+    @apply rounded-3xl border border-brand-200/80 bg-white p-6 shadow-sm transition-all duration-300 dark:border-brand-800 dark:bg-brand-900;
+  }
+
+  .ge-card-interactive {
+    @apply ge-card hover:-translate-y-0.5 hover:border-geochre/50 hover:shadow-md;
+  }
+
+  /* Brand Book Action Buttons */
+  .ge-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-geblue px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-200 hover:bg-geblue-600 active:scale-95 disabled:opacity-50;
+  }
+
+  .ge-btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-geochre px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-200 hover:bg-geochre-600 active:scale-95 disabled:opacity-50;
+  }
+
+  .ge-btn-olive {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-geolive px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-200 hover:bg-geolive-600 active:scale-95 disabled:opacity-50;
+  }
+
+  .ge-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-200 bg-white px-5 py-2.5 text-xs font-bold text-brand-800 transition-all duration-200 hover:bg-brand-100/60 dark:border-brand-800 dark:bg-brand-850 dark:text-brand-200 dark:hover:bg-brand-800 active:scale-95;
+  }
+
+  /* Brand Badges */
+  .ge-badge-green {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-gegreen-400/40 bg-gegreen-50 px-3 py-1 text-[11px] font-bold text-brand-700 dark:bg-brand-850 dark:text-gegreen-400;
+  }
+
+  .ge-badge-ochre {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-geochre-500/40 bg-geochre-50 px-3 py-1 text-[11px] font-bold text-geochre-600 dark:bg-brand-850 dark:text-geochre-500;
+  }
+
+  .ge-badge-blue {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-geblue-500/30 bg-geblue-50 px-3 py-1 text-[11px] font-bold text-geblue-600 dark:bg-brand-850 dark:text-geblue-500;
+  }
+
+  .ge-badge-terracotta {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-geterracotta-500/30 bg-geterracotta-50 px-3 py-1 text-[11px] font-bold text-geterracotta-600 dark:bg-brand-850 dark:text-geterracotta-500;
+  }
+}
+
